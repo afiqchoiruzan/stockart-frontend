@@ -5,11 +5,20 @@ import { INITIAL_PRODUCTS, LOW_STOCK_THRESHOLD } from "@/lib/mockProducts";
 import LowStockDropdown from "@/components/owner/LowStockDropdown";
 import ProductToolbar from "@/components/owner/ProductToolbar";
 import ProductCard from "@/components/owner/ProductCard";
+import ProductFormDrawer from "@/components/owner/ProductFormDrawer";
 
 export default function OwnerProdukPage() {
-  const [products] = useState(INITIAL_PRODUCTS);
+  const [products, setProducts] = useState(INITIAL_PRODUCTS);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Semua Kategori");
+
+  // Drawer state
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [drawerMode, setDrawerMode] = useState("add"); // 'add' | 'edit'
+  const [activeProduct, setActiveProduct] = useState(null);
+
+  // Success flash message
+  const [statusMessage, setStatusMessage] = useState("");
 
   // Filter low stock products for the header dropdown
   const lowStockProducts = useMemo(() => {
@@ -31,12 +40,38 @@ export default function OwnerProdukPage() {
   }, [products, searchQuery, selectedCategory]);
 
   const handleOpenEdit = (product) => {
-    // Will be wired to the Drawer in Task 5
-    void product;
+    setDrawerMode("edit");
+    setActiveProduct(product);
+    setIsDrawerOpen(true);
   };
 
   const handleOpenAdd = () => {
-    // Will be wired to the Drawer in Task 5
+    setDrawerMode("add");
+    setActiveProduct(null);
+    setIsDrawerOpen(true);
+  };
+
+  const handleCloseDrawer = () => {
+    setIsDrawerOpen(false);
+    setActiveProduct(null);
+  };
+
+  const handleSaveProduct = (productData, mode) => {
+    if (mode === "edit") {
+      setProducts((prev) =>
+        prev.map((item) => (item.id === productData.id ? productData : item))
+      );
+      setStatusMessage(`Produk "${productData.nama}" berhasil diperbarui.`);
+    } else {
+      setProducts((prev) => [productData, ...prev]);
+      setStatusMessage(`Produk "${productData.nama}" berhasil ditambahkan.`);
+    }
+    handleCloseDrawer();
+
+    // Auto-clear message after 4s
+    setTimeout(() => {
+      setStatusMessage("");
+    }, 4000);
   };
 
   return (
@@ -66,6 +101,28 @@ export default function OwnerProdukPage() {
           </button>
         </div>
       </header>
+
+      {/* Status Alert Banner when changes are saved */}
+      {statusMessage && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="p-3 border-2 border-black rounded bg-neutral-100 flex items-center justify-between text-sm font-medium text-black"
+        >
+          <div className="flex items-center gap-2">
+            <span className="font-mono font-bold">[OK]</span>
+            <span>{statusMessage}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setStatusMessage("")}
+            className="text-xs font-mono font-bold hover:underline"
+            aria-label="Tutup pesan status"
+          >
+            [Tutup]
+          </button>
+        </div>
+      )}
 
       {/* Product Search & Filter Toolbar */}
       <ProductToolbar
@@ -109,6 +166,15 @@ export default function OwnerProdukPage() {
           </div>
         )}
       </section>
+
+      {/* Slide-Over Drawer for Add & Edit Product */}
+      <ProductFormDrawer
+        isOpen={isDrawerOpen}
+        mode={drawerMode}
+        initialData={activeProduct}
+        onClose={handleCloseDrawer}
+        onSubmit={handleSaveProduct}
+      />
     </div>
   );
 }
