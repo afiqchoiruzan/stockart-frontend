@@ -3,14 +3,32 @@
 import { useState, useMemo } from "react";
 import { INITIAL_PRODUCTS, LOW_STOCK_THRESHOLD } from "@/lib/mockProducts";
 import LowStockDropdown from "@/components/owner/LowStockDropdown";
+import ProductToolbar from "@/components/owner/ProductToolbar";
+import ProductCard from "@/components/owner/ProductCard";
 
 export default function OwnerProdukPage() {
   const [products] = useState(INITIAL_PRODUCTS);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("Semua Kategori");
 
-  // Filter low stock products
+  // Filter low stock products for the header dropdown
   const lowStockProducts = useMemo(() => {
     return products.filter((p) => Number(p.stok) <= LOW_STOCK_THRESHOLD);
   }, [products]);
+
+  // Filter products based on search and category
+  const filteredProducts = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    return products.filter((p) => {
+      const matchCategory =
+        selectedCategory === "Semua Kategori" || p.kategori === selectedCategory;
+      const matchSearch =
+        q === "" ||
+        p.nama.toLowerCase().includes(q) ||
+        p.kategori.toLowerCase().includes(q);
+      return matchCategory && matchSearch;
+    });
+  }, [products, searchQuery, selectedCategory]);
 
   const handleOpenEdit = (product) => {
     // Will be wired to the Drawer in Task 5
@@ -49,10 +67,48 @@ export default function OwnerProdukPage() {
         </div>
       </header>
 
-      {/* Main Content Placeholder for Task 4 */}
-      <div className="p-8 border-2 border-dashed border-black/40 rounded text-center text-neutral-500 font-mono text-sm">
-        [Area Kontrol Pencarian & Grid Produk - Task 4]
-      </div>
+      {/* Product Search & Filter Toolbar */}
+      <ProductToolbar
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        selectedCategory={selectedCategory}
+        onCategoryChange={setSelectedCategory}
+        totalResults={filteredProducts.length}
+      />
+
+      {/* Full-Width Lo-Fi Product Grid */}
+      <section aria-label="Daftar Produk Toko">
+        {filteredProducts.length === 0 ? (
+          <div className="p-12 border-2 border-dashed border-black/50 rounded text-center flex flex-col items-center justify-center gap-3 bg-neutral-50">
+            <p className="font-bold text-base text-black">
+              Tidak ada produk yang cocok
+            </p>
+            <p className="text-xs text-neutral-600 max-w-sm">
+              Coba gunakan kata kunci pencarian lain atau pilih kategori &quot;Semua Kategori&quot;.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setSearchQuery("");
+                setSelectedCategory("Semua Kategori");
+              }}
+              className="mt-2 px-4 py-2 min-h-[40px] border border-black rounded text-xs font-bold bg-white hover:bg-neutral-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black"
+            >
+              Reset Filter Pencarian
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+            {filteredProducts.map((product) => (
+              <ProductCard
+                key={product.id}
+                product={product}
+                onEdit={handleOpenEdit}
+              />
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }
