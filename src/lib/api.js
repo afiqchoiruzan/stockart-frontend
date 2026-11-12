@@ -208,20 +208,41 @@ export async function apiRequest(path, options = {}) {
     ...(options.headers || {}),
   };
 
-  let response = await fetch(`${API_BASE_URL}${path}`, {
-    ...options,
-    headers,
-  });
+  let response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      ...options,
+      headers,
+    });
+  } catch (fetchErr) {
+    const isConnErr =
+      fetchErr.name === "TypeError" ||
+      fetchErr.message?.toLowerCase().includes("failed to fetch") ||
+      fetchErr.message?.toLowerCase().includes("network");
+
+    if (isConnErr) {
+      const friendlyErr = new Error(
+        `Server backend di ${API_BASE_URL} belum aktif atau tidak dapat dijangkau. Pastikan server Express sudah berjalan (jalankan "npm run dev" di terminal stockart-backend).`
+      );
+      friendlyErr.isOffline = true;
+      throw friendlyErr;
+    }
+    throw fetchErr;
+  }
 
   // Jika token kadaluarsa (401) di browser, coba login owner sekali lagi
   if (response.status === 401 && typeof window !== "undefined") {
-    const freshToken = await ensureOwnerAuthSession();
-    if (freshToken) {
-      headers["Authorization"] = `Bearer ${freshToken}`;
-      response = await fetch(`${API_BASE_URL}${path}`, {
-        ...options,
-        headers,
-      });
+    try {
+      const freshToken = await ensureOwnerAuthSession();
+      if (freshToken) {
+        headers["Authorization"] = `Bearer ${freshToken}`;
+        response = await fetch(`${API_BASE_URL}${path}`, {
+          ...options,
+          headers,
+        });
+      }
+    } catch {
+      // Abaikan jika refresh token gagal
     }
   }
 

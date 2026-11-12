@@ -52,13 +52,16 @@ export default function OwnerProdukPage() {
       setApiProducts(allProducts);
       setLowStockProductsApi(lowStockItems);
       setDataSource("api");
+      showFlashMessage(`Berhasil menyinkronkan ${allProducts.length} produk dari backend.`);
     } catch (err) {
-      setApiError(err.message || "Server backend belum berjalan");
-      setDataSource("mock");
+      const errMsg = err.message || "Server backend belum berjalan";
+      setApiError(errMsg);
+      // Jangan otomatis melempar ke mock agar page tidak bergeser sendiri saat klik Sinkron API
+      showFlashMessage(`! Gagal sinkron API: ${errMsg}`);
     } finally {
       setIsLoadingApi(false);
     }
-  }, []);
+  }, [showFlashMessage]);
 
   useEffect(() => {
     let ignore = false;
@@ -74,8 +77,9 @@ export default function OwnerProdukPage() {
       })
       .catch((err) => {
         if (ignore) return;
-        setApiError(err.message || "Server backend belum berjalan");
-        setDataSource("mock");
+        const errMsg = err.message || "Server backend belum berjalan";
+        setApiError(errMsg);
+        // Tetap biarkan dataSource "api" dan tampilkan status offline di bar
       })
       .finally(() => {
         if (!ignore) setIsLoadingApi(false);
@@ -271,24 +275,62 @@ export default function OwnerProdukPage() {
       {/* Full-Width Lo-Fi Product Grid */}
       <section aria-label="Daftar Produk Toko">
         {filteredProducts.length === 0 ? (
-          <div className="p-12 border-2 border-dashed border-black/50 rounded text-center flex flex-col items-center justify-center gap-3 bg-neutral-50">
-            <p className="font-bold text-base text-black">
-              Tidak ada produk yang cocok
-            </p>
-            <p className="text-xs text-neutral-600 max-w-sm">
-              Coba gunakan kata kunci pencarian lain atau pilih kategori &quot;Semua Kategori&quot;.
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                setSearchQuery("");
-                setSelectedCategory("Semua Kategori");
-              }}
-              className="mt-2 px-4 py-2 min-h-[40px] border border-black rounded text-xs font-bold bg-white hover:bg-neutral-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black"
-            >
-              Reset Filter Pencarian
-            </button>
-          </div>
+          dataSource === "api" && apiError && apiProducts.length === 0 ? (
+            <div className="p-10 border-2 border-dashed border-black/50 rounded text-center flex flex-col items-center justify-center gap-3 bg-neutral-100">
+              <span className="px-2.5 py-0.5 border border-black rounded font-mono font-bold text-xs bg-white text-black">
+                [SERVER BACKEND OFFLINE]
+              </span>
+              <p className="font-bold text-base text-black">
+                Server Backend Belum Dijalankan
+              </p>
+              <p className="text-xs text-neutral-700 max-w-md leading-relaxed">
+                Halaman diatur ke mode <strong>Live API</strong> (<code className="font-mono">http://localhost:5000/api/products</code>), namun server Express backend belum aktif di port 5000.
+              </p>
+              <div className="p-3 bg-white border border-black rounded text-left font-mono text-xs w-full max-w-md flex flex-col gap-1">
+                <p className="text-neutral-600 font-bold">Langkah menyalakan backend:</p>
+                <p className="text-black">1. Buka terminal baru (PowerShell / Command Prompt)</p>
+                <p className="text-black">2. Masuk ke folder backend: <span className="font-bold">cd stockart-backend</span></p>
+                <p className="text-black">3. Jalankan server: <span className="font-bold bg-neutral-200 px-1 py-0.5 rounded">npm run dev</span></p>
+                <p className="text-black">4. Klik tombol <strong>[ Sinkron Ulang API ]</strong> di bawah</p>
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
+                <button
+                  type="button"
+                  onClick={loadFromBackend}
+                  disabled={isLoadingApi}
+                  className="px-4 py-2 min-h-[40px] border-2 border-black rounded text-xs font-bold bg-black text-white hover:bg-neutral-800 transition-colors shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] disabled:opacity-50"
+                >
+                  {isLoadingApi ? "Memeriksa Koneksi..." : "[ Sinkron Ulang API ]"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDataSource("mock")}
+                  className="px-4 py-2 min-h-[40px] border border-black rounded text-xs font-bold bg-white hover:bg-neutral-200 transition-colors"
+                >
+                  [ Beralih ke Mode Mock Sementara ]
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="p-12 border-2 border-dashed border-black/50 rounded text-center flex flex-col items-center justify-center gap-3 bg-neutral-50">
+              <p className="font-bold text-base text-black">
+                Tidak ada produk yang cocok
+              </p>
+              <p className="text-xs text-neutral-600 max-w-sm">
+                Coba gunakan kata kunci pencarian lain atau pilih kategori &quot;Semua Kategori&quot;.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery("");
+                  setSelectedCategory("Semua Kategori");
+                }}
+                className="mt-2 px-4 py-2 min-h-[40px] border border-black rounded text-xs font-bold bg-white hover:bg-neutral-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black"
+              >
+                Reset Filter Pencarian
+              </button>
+            </div>
+          )
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredProducts.map((product) => (
