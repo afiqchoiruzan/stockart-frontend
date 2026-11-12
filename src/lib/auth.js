@@ -2,7 +2,8 @@ const TOKEN_KEY = "stockart_token";
 const USER_KEY = "stockart_user";
 
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+  process.env.NEXT_PUBLIC_API_URL ||
+  "https://stockart-backend-production-5896718b.up.railway.app/api";
 
 export function getAuthToken() {
   if (typeof window !== "undefined") {
