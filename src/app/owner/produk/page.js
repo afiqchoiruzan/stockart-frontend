@@ -173,7 +173,9 @@ export default function OwnerProdukPage() {
           className="p-3 border-2 border-black rounded bg-neutral-100 flex items-center justify-between text-sm font-medium text-black"
         >
           <div className="flex items-center gap-2">
-            <span className="font-mono font-bold">[OK]</span>
+            <span className="font-mono font-bold">
+              {statusMessage.startsWith("!") ? "[!]" : "[OK]"}
+            </span>
             <span>{statusMessage}</span>
           </div>
           <button
