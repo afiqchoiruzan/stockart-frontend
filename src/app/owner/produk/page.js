@@ -1,14 +1,21 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { INITIAL_PRODUCTS, LOW_STOCK_THRESHOLD } from "@/lib/mockProducts";
+import { useState, useMemo, useEffect, useCallback } from "react";
+import { LOW_STOCK_THRESHOLD } from "@/lib/mockProducts";
+import {
+  fetchProductsFromApi,
+  fetchLowStockProductsFromApi,
+  createProductInApi,
+  updateProductInApi,
+} from "@/lib/api";
 import LowStockDropdown from "@/components/owner/LowStockDropdown";
 import ProductToolbar from "@/components/owner/ProductToolbar";
 import ProductCard from "@/components/owner/ProductCard";
 import ProductFormDrawer from "@/components/owner/ProductFormDrawer";
 
 export default function OwnerProdukPage() {
-  const [products, setProducts] = useState(INITIAL_PRODUCTS);
+  const [products, setProducts] = useState([]);
+  const [lowStockProductsApi, setLowStockProductsApi] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Semua Kategori");
 
@@ -20,10 +27,57 @@ export default function OwnerProdukPage() {
   // Success flash message
   const [statusMessage, setStatusMessage] = useState("");
 
+  const showFlashMessage = useCallback((msg) => {
+    setStatusMessage(msg);
+    setTimeout(() => {
+      setStatusMessage("");
+    }, 4500);
+  }, []);
+
+  // Memuat data produk dan low stock dari backend API
+  const loadProducts = useCallback(async () => {
+    try {
+      const [allProducts, lowStockItems] = await Promise.all([
+        fetchProductsFromApi(),
+        fetchLowStockProductsFromApi().catch(() => []),
+      ]);
+      setProducts(allProducts);
+      setLowStockProductsApi(lowStockItems);
+    } catch (err) {
+      showFlashMessage(`! Gagal memuat data produk: ${err.message}`);
+    }
+  }, [showFlashMessage]);
+
+  useEffect(() => {
+    let ignore = false;
+    Promise.all([
+      fetchProductsFromApi(),
+      fetchLowStockProductsFromApi().catch(() => []),
+    ])
+      .then(([allProducts, lowStockItems]) => {
+        if (ignore) return;
+        setProducts(allProducts);
+        setLowStockProductsApi(lowStockItems);
+      })
+      .catch((err) => {
+        if (ignore) return;
+        showFlashMessage(`! Gagal memuat data produk: ${err.message}`);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [showFlashMessage]);
+
   // Filter low stock products for the header dropdown
   const lowStockProducts = useMemo(() => {
-    return products.filter((p) => Number(p.stok) <= LOW_STOCK_THRESHOLD);
-  }, [products]);
+    if (lowStockProductsApi.length > 0) {
+      return lowStockProductsApi;
+    }
+    return products.filter(
+      (p) => Number(p.stok) <= Number(p.stokMinimum ?? LOW_STOCK_THRESHOLD)
+    );
+  }, [lowStockProductsApi, products]);
 
   // Filter products based on search and category
   const filteredProducts = useMemo(() => {
@@ -34,7 +88,8 @@ export default function OwnerProdukPage() {
       const matchSearch =
         q === "" ||
         p.nama.toLowerCase().includes(q) ||
-        p.kategori.toLowerCase().includes(q);
+        p.kategori.toLowerCase().includes(q) ||
+        (p.kodeProduk && p.kodeProduk.toLowerCase().includes(q));
       return matchCategory && matchSearch;
     });
   }, [products, searchQuery, selectedCategory]);
@@ -56,22 +111,30 @@ export default function OwnerProdukPage() {
     setActiveProduct(null);
   };
 
-  const handleSaveProduct = (productData, mode) => {
-    if (mode === "edit") {
-      setProducts((prev) =>
-        prev.map((item) => (item.id === productData.id ? productData : item))
-      );
-      setStatusMessage(`Produk "${productData.nama}" berhasil diperbarui.`);
-    } else {
-      setProducts((prev) => [productData, ...prev]);
-      setStatusMessage(`Produk "${productData.nama}" berhasil ditambahkan.`);
-    }
-    handleCloseDrawer();
+  const handleSaveProduct = async (productData, mode, initialData = null) => {
+    try {
+      if (mode === "edit") {
+        const targetId = productData.id || productData._id;
+        const updated = await updateProductInApi(targetId, productData, initialData || activeProduct);
+        setProducts((prev) =>
+          prev.map((item) => (item.id === targetId ? updated : item))
+        );
+        showFlashMessage(`Produk "${updated.nama}" berhasil diperbarui.`);
+      } else {
+        const created = await createProductInApi(productData);
+        setProducts((prev) => [created, ...prev]);
+        showFlashMessage(`Produk "${created.nama}" berhasil ditambahkan.`);
+      }
 
-    // Auto-clear message after 4s
-    setTimeout(() => {
-      setStatusMessage("");
-    }, 4000);
+      // Refresh low stock items dari backend
+      fetchLowStockProductsFromApi()
+        .then(setLowStockProductsApi)
+        .catch(() => {});
+
+      handleCloseDrawer();
+    } catch (err) {
+      showFlashMessage(`! Gagal menyimpan produk: ${err.message}`);
+    }
   };
 
   return (

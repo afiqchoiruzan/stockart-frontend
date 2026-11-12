@@ -58,14 +58,14 @@ function DrawerFormInner({
     if (!validate()) return;
 
     const submittedProduct = {
-      ...(initialData?.id ? { id: initialData.id } : { id: `p_${Date.now()}` }),
+      ...(initialData || {}),
       nama: formData.nama.trim(),
       kategori: formData.kategori,
       harga: Math.round(Number(formData.harga)),
       stok: Math.round(Number(formData.stok)),
     };
 
-    onSubmit(submittedProduct, mode);
+    onSubmit(submittedProduct, mode, initialData);
   };
 
   const submitText = mode === "edit" ? "Simpan Perubahan" : "Tambah Produk";
