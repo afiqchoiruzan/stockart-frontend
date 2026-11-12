@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useState, useMemo, Suspense } from "react";
+import { use, useState, useMemo, useEffect, useCallback, Suspense } from "react";
 import Link from "next/link";
 import {
   CASHIERS,
@@ -9,19 +9,94 @@ import {
   formatRupiah,
   getTotalItemCount,
 } from "@/lib/mockTransactions";
+import {
+  fetchTransactionsFromApi,
+  fetchTransactionDetailFromApi,
+  voidTransactionInApi,
+  buildCashierRoster,
+} from "@/lib/api";
+import ApiSourceBar from "@/components/owner/ApiSourceBar";
 import TransactionToolbar from "@/components/owner/TransactionToolbar";
 import TransactionTable from "@/components/owner/TransactionTable";
 import TransactionDetailPanel from "@/components/owner/TransactionDetailPanel";
 
 function KasirDetailView({ kasirId }) {
-  const kasir = getCashierById(kasirId);
+  const isMockKasirId = kasirId.startsWith("kasir-");
+  const [dataSource, setDataSource] = useState(isMockKasirId ? "mock" : "api");
+  const [apiTransactions, setApiTransactions] = useState([]);
+  const [mockTransactions, setMockTransactions] = useState(INITIAL_TRANSACTIONS);
+  const [isLoadingApi, setIsLoadingApi] = useState(!isMockKasirId);
+  const [apiError, setApiError] = useState("");
 
-  const [transactions, setTransactions] = useState(INITIAL_TRANSACTIONS);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("semua");
   const [selectedTrxId, setSelectedTrxId] = useState(null);
   const [statusMessage, setStatusMessage] = useState("");
+
+  const showTempMessage = useCallback((msg) => {
+    setStatusMessage(msg);
+    setTimeout(() => {
+      setStatusMessage("");
+    }, 5000);
+  }, []);
+
+  const loadFromBackend = useCallback(async () => {
+    setIsLoadingApi(true);
+    setApiError("");
+    try {
+      const data = await fetchTransactionsFromApi();
+      setApiTransactions(data);
+      if (!isMockKasirId) {
+        setDataSource("api");
+      }
+    } catch (err) {
+      setApiError(err.message || "Server backend belum berjalan");
+      setDataSource("mock");
+    } finally {
+      setIsLoadingApi(false);
+    }
+  }, [isMockKasirId]);
+
+  useEffect(() => {
+    let ignore = false;
+    fetchTransactionsFromApi()
+      .then((data) => {
+        if (ignore) return;
+        setApiTransactions(data);
+        if (!isMockKasirId) {
+          setDataSource("api");
+        }
+      })
+      .catch((err) => {
+        if (ignore) return;
+        setApiError(err.message || "Server backend belum berjalan");
+        setDataSource("mock");
+      })
+      .finally(() => {
+        if (!ignore) setIsLoadingApi(false);
+      });
+    return () => {
+      ignore = true;
+    };
+  }, [isMockKasirId]);
+
+  const transactions = dataSource === "api" ? apiTransactions : mockTransactions;
+
+  const activeCashiers = useMemo(() => {
+    if (dataSource === "api") {
+      return buildCashierRoster(apiTransactions, true);
+    }
+    return CASHIERS;
+  }, [dataSource, apiTransactions]);
+
+  const kasir = useMemo(() => {
+    return (
+      activeCashiers.find((k) => k.id === kasirId) ||
+      getCashierById(kasirId) ||
+      null
+    );
+  }, [activeCashiers, kasirId]);
 
   // Semua transaksi milik kasir ini
   const kasirTransactions = useMemo(() => {
@@ -79,16 +154,48 @@ function KasirDetailView({ kasirId }) {
     return found || filteredTransactions[0];
   }, [filteredTransactions, selectedTrxId]);
 
-  const showTempMessage = (msg) => {
-    setStatusMessage(msg);
-    setTimeout(() => {
-      setStatusMessage("");
-    }, 4500);
+  const handleSelectTransaction = async (trx) => {
+    setSelectedTrxId(trx.id);
+    if (dataSource === "api" && trx.isFromBackend) {
+      try {
+        const freshDetail = await fetchTransactionDetailFromApi(trx.id);
+        if (freshDetail) {
+          setApiTransactions((prev) =>
+            prev.map((item) => (item.id === freshDetail.id ? freshDetail : item))
+          );
+        }
+      } catch {
+        // Fallback ke data yang ada
+      }
+    }
   };
 
-  const handleVoidTransaction = (trxId, reason) => {
+  const handleVoidTransaction = async (trxId, reason) => {
     const target = transactions.find((t) => t.id === trxId);
-    setTransactions((prev) =>
+
+    if (dataSource === "api") {
+      try {
+        const updated = await voidTransactionInApi(trxId);
+        setApiTransactions((prev) =>
+          prev.map((item) =>
+            item.id === trxId
+              ? {
+                  ...updated,
+                  alasanBatal: reason || updated.alasanBatal,
+                }
+              : item
+          )
+        );
+        showTempMessage(
+          `[API MongoDB] Struk ${target?.noInvoice || trxId} berhasil dibatalkan (Void) & stok produk telah dikembalikan.`
+        );
+      } catch (err) {
+        showTempMessage(`! Gagal membatalkan transaksi di API: ${err.message}`);
+      }
+      return;
+    }
+
+    setMockTransactions((prev) =>
       prev.map((item) =>
         item.id === trxId
           ? {
@@ -103,14 +210,14 @@ function KasirDetailView({ kasirId }) {
     );
     if (target) {
       showTempMessage(
-        `Struk ${target.noInvoice} milik ${target.namaKasir} berhasil dibatalkan (Void).`
+        `[Mode Mock] Struk ${target.noInvoice} milik ${target.namaKasir} berhasil dibatalkan (Void).`
       );
     }
   };
 
   const handlePrintReceipt = (trx) => {
     showTempMessage(
-      `Simulasi Lo-Fi: Menyiapkan cetak / unduh PDF struk ${trx.noInvoice} (${trx.namaKasir}).`
+      `Menyiapkan cetak / unduh PDF struk ${trx.noInvoice} (${trx.namaKasir}).`
     );
   };
 
@@ -119,6 +226,14 @@ function KasirDetailView({ kasirId }) {
     setSelectedDate("");
     setSelectedStatus("semua");
   };
+
+  if (isLoadingApi) {
+    return (
+      <div className="p-6 border-2 border-black rounded bg-neutral-50 font-mono text-sm">
+        Memuat data riwayat transaksi kasir dari API Backend...
+      </div>
+    );
+  }
 
   // Jika ID Kasir tidak ditemukan
   if (!kasir) {
@@ -132,7 +247,7 @@ function KasirDetailView({ kasirId }) {
         </h1>
         <p className="text-xs sm:text-sm text-neutral-600">
           Kasir dengan ID <code className="font-mono font-bold">{kasirId}</code>{" "}
-          tidak terdaftar pada sistem StockArt POS.
+          tidak ditemukan pada sumber data aktif ({dataSource.toUpperCase()}).
         </p>
         <Link
           href="/owner/transaksi"
@@ -161,7 +276,7 @@ function KasirDetailView({ kasirId }) {
           <span className="text-xs font-bold text-neutral-600 mr-1">
             Pilih Kasir:
           </span>
-          {CASHIERS.map((k) => {
+          {activeCashiers.map((k) => {
             const isActive = k.id === kasir.id;
             return (
               <Link
@@ -182,6 +297,15 @@ function KasirDetailView({ kasirId }) {
           })}
         </div>
       </div>
+
+      {/* Bar Status Integrasi API Backend */}
+      <ApiSourceBar
+        dataSource={dataSource}
+        isLoading={isLoadingApi}
+        apiError={apiError}
+        onRefreshApi={loadFromBackend}
+        onSwitchSource={(next) => setDataSource(next)}
+      />
 
       {/* Kartu Profil & Statistik Performa Kasir */}
       <section
@@ -260,7 +384,7 @@ function KasirDetailView({ kasirId }) {
           className="p-3 border-2 border-black rounded bg-neutral-100 flex items-center justify-between gap-3 text-sm font-medium text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
         >
           <div className="flex items-center gap-2">
-            <span className="font-mono font-bold">[OK]</span>
+            <span className="font-mono font-bold">[INFO]</span>
             <span>{statusMessage}</span>
           </div>
           <button
@@ -275,6 +399,7 @@ function KasirDetailView({ kasirId }) {
 
       {/* Toolbar Filter & Pencarian Khusus Kasir Ini */}
       <TransactionToolbar
+        cashiers={activeCashiers}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
         showKasirFilter={false}
@@ -294,7 +419,7 @@ function KasirDetailView({ kasirId }) {
           <TransactionTable
             transactions={filteredTransactions}
             selectedTransactionId={activeTransaction?.id}
-            onSelectTransaction={(trx) => setSelectedTrxId(trx.id)}
+            onSelectTransaction={handleSelectTransaction}
             showKasirColumn={false}
             onResetFilter={handleResetFilters}
           />

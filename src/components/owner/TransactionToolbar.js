@@ -3,6 +3,7 @@
 import { CASHIERS, TRANSACTION_STATUSES } from "@/lib/mockTransactions";
 
 export default function TransactionToolbar({
+  cashiers = CASHIERS,
   searchQuery,
   onSearchChange,
   selectedKasirId = "semua",
@@ -52,7 +53,7 @@ export default function TransactionToolbar({
             type="text"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Cari ID Struk (#TRX-091), nama barang, atau kasir..."
+            placeholder="Cari ID Struk (#TRX-...), nama barang, atau kasir..."
             className="w-full min-h-[42px] pl-9 pr-10 py-2 border-2 border-black rounded text-sm bg-white placeholder-neutral-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black"
           />
           {searchQuery && (
@@ -82,7 +83,7 @@ export default function TransactionToolbar({
                 className="w-full min-h-[42px] px-3 py-2 pr-8 border-2 border-black rounded text-xs sm:text-sm font-semibold bg-white text-black appearance-none cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]"
               >
                 <option value="semua">Filter Kasir: Semua Kasir</option>
-                {CASHIERS.map((k, idx) => (
+                {cashiers.map((k, idx) => (
                   <option key={k.id} value={k.id}>
                     Kasir {idx + 1} - {k.panggilan} ({k.nama})
                   </option>
@@ -153,7 +154,7 @@ export default function TransactionToolbar({
             <span className="font-bold">Filter Aktif:</span>
             {showKasirFilter && selectedKasirId !== "semua" && (
               <span className="px-2 py-0.5 border border-black rounded bg-white font-mono">
-                Kasir: {CASHIERS.find((k) => k.id === selectedKasirId)?.nama}
+                Kasir: {cashiers.find((k) => k.id === selectedKasirId)?.nama || selectedKasirId}
               </span>
             )}
             {selectedDate && (
@@ -184,4 +185,3 @@ export default function TransactionToolbar({
     </div>
   );
 }
-
