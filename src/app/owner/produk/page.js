@@ -1,21 +1,27 @@
 "use client";
 
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { LOW_STOCK_THRESHOLD } from "@/lib/mockProducts";
+import { LOW_STOCK_THRESHOLD, INITIAL_PRODUCTS } from "@/lib/mockProducts";
 import {
   fetchProductsFromApi,
   fetchLowStockProductsFromApi,
   createProductInApi,
   updateProductInApi,
 } from "@/lib/api";
+import ApiSourceBar from "@/components/owner/ApiSourceBar";
 import LowStockDropdown from "@/components/owner/LowStockDropdown";
 import ProductToolbar from "@/components/owner/ProductToolbar";
 import ProductCard from "@/components/owner/ProductCard";
 import ProductFormDrawer from "@/components/owner/ProductFormDrawer";
 
 export default function OwnerProdukPage() {
-  const [products, setProducts] = useState([]);
+  const [dataSource, setDataSource] = useState("api"); // 'api' | 'mock'
+  const [apiProducts, setApiProducts] = useState([]);
+  const [mockProducts, setMockProducts] = useState(INITIAL_PRODUCTS);
+  const [isLoadingApi, setIsLoadingApi] = useState(true);
+  const [apiError, setApiError] = useState("");
   const [lowStockProductsApi, setLowStockProductsApi] = useState([]);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Semua Kategori");
 
@@ -35,18 +41,24 @@ export default function OwnerProdukPage() {
   }, []);
 
   // Memuat data produk dan low stock dari backend API
-  const loadProducts = useCallback(async () => {
+  const loadFromBackend = useCallback(async () => {
+    setIsLoadingApi(true);
+    setApiError("");
     try {
       const [allProducts, lowStockItems] = await Promise.all([
         fetchProductsFromApi(),
         fetchLowStockProductsFromApi().catch(() => []),
       ]);
-      setProducts(allProducts);
+      setApiProducts(allProducts);
       setLowStockProductsApi(lowStockItems);
+      setDataSource("api");
     } catch (err) {
-      showFlashMessage(`! Gagal memuat data produk: ${err.message}`);
+      setApiError(err.message || "Server backend belum berjalan");
+      setDataSource("mock");
+    } finally {
+      setIsLoadingApi(false);
     }
-  }, [showFlashMessage]);
+  }, []);
 
   useEffect(() => {
     let ignore = false;
@@ -56,28 +68,36 @@ export default function OwnerProdukPage() {
     ])
       .then(([allProducts, lowStockItems]) => {
         if (ignore) return;
-        setProducts(allProducts);
+        setApiProducts(allProducts);
         setLowStockProductsApi(lowStockItems);
+        setDataSource("api");
       })
       .catch((err) => {
         if (ignore) return;
-        showFlashMessage(`! Gagal memuat data produk: ${err.message}`);
+        setApiError(err.message || "Server backend belum berjalan");
+        setDataSource("mock");
+      })
+      .finally(() => {
+        if (!ignore) setIsLoadingApi(false);
       });
 
     return () => {
       ignore = true;
     };
-  }, [showFlashMessage]);
+  }, []);
+
+  // Sumber data aktif (API Backend atau Mock)
+  const products = dataSource === "api" ? apiProducts : mockProducts;
 
   // Filter low stock products for the header dropdown
   const lowStockProducts = useMemo(() => {
-    if (lowStockProductsApi.length > 0) {
+    if (dataSource === "api" && lowStockProductsApi.length > 0) {
       return lowStockProductsApi;
     }
     return products.filter(
       (p) => Number(p.stok) <= Number(p.stokMinimum ?? LOW_STOCK_THRESHOLD)
     );
-  }, [lowStockProductsApi, products]);
+  }, [dataSource, lowStockProductsApi, products]);
 
   // Filter products based on search and category
   const filteredProducts = useMemo(() => {
@@ -113,23 +133,62 @@ export default function OwnerProdukPage() {
 
   const handleSaveProduct = async (productData, mode, initialData = null) => {
     try {
-      if (mode === "edit") {
-        const targetId = productData.id || productData._id;
-        const updated = await updateProductInApi(targetId, productData, initialData || activeProduct);
-        setProducts((prev) =>
-          prev.map((item) => (item.id === targetId ? updated : item))
-        );
-        showFlashMessage(`Produk "${updated.nama}" berhasil diperbarui.`);
-      } else {
-        const created = await createProductInApi(productData);
-        setProducts((prev) => [created, ...prev]);
-        showFlashMessage(`Produk "${created.nama}" berhasil ditambahkan.`);
-      }
+      if (dataSource === "api") {
+        if (mode === "edit") {
+          const targetId = productData.id || productData._id;
+          const updated = await updateProductInApi(targetId, productData, initialData || activeProduct);
+          setApiProducts((prev) =>
+            prev.map((item) => (item.id === targetId ? updated : item))
+          );
+          showFlashMessage(`Produk "${updated.nama}" berhasil diperbarui di backend.`);
+        } else {
+          const created = await createProductInApi(productData);
+          setApiProducts((prev) => [created, ...prev]);
+          showFlashMessage(`Produk "${created.nama}" berhasil ditambahkan ke backend.`);
+        }
 
-      // Refresh low stock items dari backend
-      fetchLowStockProductsFromApi()
-        .then(setLowStockProductsApi)
-        .catch(() => {});
+        // Refresh low stock items dari backend
+        fetchLowStockProductsFromApi()
+          .then(setLowStockProductsApi)
+          .catch(() => {});
+      } else {
+        // Mode Mock / Simulasi Lokal
+        if (mode === "edit") {
+          const targetId = productData.id || productData._id;
+          setMockProducts((prev) =>
+            prev.map((item) =>
+              item.id === targetId
+                ? {
+                    ...item,
+                    nama: productData.nama,
+                    kategori: productData.kategori,
+                    harga: Number(productData.harga),
+                    hargaJual: Number(productData.harga),
+                    stok: Number(productData.stok),
+                    isLowStock: Number(productData.stok) <= Number(item.stokMinimum ?? LOW_STOCK_THRESHOLD),
+                  }
+                : item
+            )
+          );
+          showFlashMessage(`[Mock] Produk "${productData.nama}" berhasil diperbarui.`);
+        } else {
+          const newMock = {
+            id: `mock-prd-${Date.now()}`,
+            kodeProduk: `PRD-MOCK-${Math.floor(100 + Math.random() * 900)}`,
+            nama: productData.nama,
+            kategori: productData.kategori,
+            harga: Number(productData.harga),
+            hargaJual: Number(productData.harga),
+            hargaBeli: Math.round(Number(productData.harga) * 0.85),
+            stok: Number(productData.stok),
+            satuan: "pcs",
+            stokMinimum: LOW_STOCK_THRESHOLD,
+            isLowStock: Number(productData.stok) <= LOW_STOCK_THRESHOLD,
+          };
+          setMockProducts((prev) => [newMock, ...prev]);
+          showFlashMessage(`[Mock] Produk "${productData.nama}" berhasil ditambahkan.`);
+        }
+      }
 
       handleCloseDrawer();
     } catch (err) {
@@ -164,6 +223,17 @@ export default function OwnerProdukPage() {
           </button>
         </div>
       </header>
+
+      {/* Developer Source Bar: Live API Backend vs Mode Mock */}
+      <ApiSourceBar
+        dataSource={dataSource}
+        isLoading={isLoadingApi}
+        apiError={apiError}
+        onRefreshApi={loadFromBackend}
+        onSwitchSource={setDataSource}
+        endpointPath="/products"
+        mockName="mockProducts.js"
+      />
 
       {/* Status Alert Banner when changes are saved */}
       {statusMessage && (

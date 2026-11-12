@@ -9,6 +9,8 @@ export default function ApiSourceBar({
   apiError = "",
   onRefreshApi,
   onSwitchSource,
+  endpointPath = "/transactions",
+  mockName = "mockTransactions.js",
 }) {
   const [showLoginBox, setShowLoginBox] = useState(false);
   const [username, setUsername] = useState("");
@@ -48,12 +50,12 @@ export default function ApiSourceBar({
           <span className="font-medium text-neutral-800">
             {dataSource === "api" ? (
               <>
-                Terhubung ke <code className="font-mono font-bold">{API_BASE_URL}/transactions</code>{" "}
-                (MongoDB Atlas)
+                Terhubung ke <code className="font-mono font-bold">{API_BASE_URL}{endpointPath}</code>{" "}
+                (MongoDB Atlas / Lokal)
               </>
             ) : (
               <>
-                Menampilkan data simulasi lokal (<code className="font-mono">mockTransactions.js</code>)
+                Menampilkan data simulasi lokal (<code className="font-mono">{mockName}</code>)
                 {apiError ? ` — ${apiError}` : ""}
               </>
             )}
