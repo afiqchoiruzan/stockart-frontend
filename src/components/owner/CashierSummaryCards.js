@@ -4,6 +4,7 @@ import Link from "next/link";
 import { CASHIERS, formatRupiah } from "@/lib/mockTransactions";
 
 export default function CashierSummaryCards({
+  cashiers = CASHIERS,
   transactions = [],
   selectedKasirId = "semua",
   onSelectKasir,
@@ -12,7 +13,7 @@ export default function CashierSummaryCards({
     <section aria-label="Ringkasan Transaksi Masing-Masing Kasir" className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-bold uppercase tracking-wider text-neutral-700">
-          Ringkasan Performa Masing-Masing Kasir
+          Ringkasan Performa Masing-Masing Kasir ({cashiers.length} Kasir)
         </h2>
         {selectedKasirId !== "semua" && (
           <button
@@ -25,8 +26,8 @@ export default function CashierSummaryCards({
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {CASHIERS.map((kasir) => {
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {cashiers.map((kasir) => {
           const kasirTrx = transactions.filter((t) => t.kasirId === kasir.id);
           const selesaiTrx = kasirTrx.filter((t) => t.status === "selesai");
           const batalTrx = kasirTrx.filter((t) => t.status === "batal");
@@ -88,7 +89,7 @@ export default function CashierSummaryCards({
                     {formatRupiah(totalOmzet)}
                   </span>
                   <span className="block text-[11px] text-neutral-600 truncate">
-                    {kasir.shift.replace("Shift ", "")}
+                    {(kasir.shift || "Shift POS").replace("Shift ", "")}
                   </span>
                 </div>
               </div>
@@ -123,4 +124,3 @@ export default function CashierSummaryCards({
     </section>
   );
 }
-

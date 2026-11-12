@@ -1,25 +1,96 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import {
   INITIAL_TRANSACTIONS,
+  CASHIERS,
   formatRupiah,
 } from "@/lib/mockTransactions";
+import {
+  fetchTransactionsFromApi,
+  fetchTransactionDetailFromApi,
+  voidTransactionInApi,
+  buildCashierRoster,
+} from "@/lib/api";
+import ApiSourceBar from "@/components/owner/ApiSourceBar";
 import CashierSummaryCards from "@/components/owner/CashierSummaryCards";
 import TransactionToolbar from "@/components/owner/TransactionToolbar";
 import TransactionTable from "@/components/owner/TransactionTable";
 import TransactionDetailPanel from "@/components/owner/TransactionDetailPanel";
 
 export default function OwnerTransaksiPage() {
-  const [transactions, setTransactions] = useState(INITIAL_TRANSACTIONS);
+  const [dataSource, setDataSource] = useState("api"); // 'api' | 'mock'
+  const [apiTransactions, setApiTransactions] = useState([]);
+  const [mockTransactions, setMockTransactions] = useState(INITIAL_TRANSACTIONS);
+  const [isLoadingApi, setIsLoadingApi] = useState(true);
+  const [apiError, setApiError] = useState("");
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedKasirId, setSelectedKasirId] = useState("semua");
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("semua");
-  const [selectedTrxId, setSelectedTrxId] = useState(
-    INITIAL_TRANSACTIONS[0]?.id || null
-  );
+  const [selectedTrxId, setSelectedTrxId] = useState(null);
   const [statusMessage, setStatusMessage] = useState("");
+
+  const showTempMessage = useCallback((msg) => {
+    setStatusMessage(msg);
+    setTimeout(() => {
+      setStatusMessage("");
+    }, 5000);
+  }, []);
+
+  const loadFromBackend = useCallback(async () => {
+    setIsLoadingApi(true);
+    setApiError("");
+    try {
+      const data = await fetchTransactionsFromApi();
+      setApiTransactions(data);
+      setDataSource("api");
+      if (data.length > 0) {
+        setSelectedTrxId((prev) => prev || data[0].id);
+      }
+    } catch (err) {
+      setApiError(err.message || "Server backend belum berjalan");
+      setDataSource("mock");
+    } finally {
+      setIsLoadingApi(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    let ignore = false;
+    fetchTransactionsFromApi()
+      .then((data) => {
+        if (ignore) return;
+        setApiTransactions(data);
+        setDataSource("api");
+        if (data.length > 0) {
+          setSelectedTrxId((prev) => prev || data[0].id);
+        }
+      })
+      .catch((err) => {
+        if (ignore) return;
+        setApiError(err.message || "Server backend belum berjalan");
+        setDataSource("mock");
+      })
+      .finally(() => {
+        if (!ignore) setIsLoadingApi(false);
+      });
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  // Sumber data aktif (API Backend atau Mock)
+  const transactions = dataSource === "api" ? apiTransactions : mockTransactions;
+
+  // Daftar kasir dinamis dari transaksi API atau Mock
+  const activeCashiers = useMemo(() => {
+    if (dataSource === "api") {
+      return buildCashierRoster(apiTransactions, true);
+    }
+    return CASHIERS;
+  }, [dataSource, apiTransactions]);
 
   // Ringkasan KPI seluruh transaksi
   const summaryStats = useMemo(() => {
@@ -73,16 +144,49 @@ export default function OwnerTransaksiPage() {
     return found || filteredTransactions[0];
   }, [filteredTransactions, selectedTrxId]);
 
-  const showTempMessage = (msg) => {
-    setStatusMessage(msg);
-    setTimeout(() => {
-      setStatusMessage("");
-    }, 4500);
+  const handleSelectTransaction = async (trx) => {
+    setSelectedTrxId(trx.id);
+    if (dataSource === "api" && trx.isFromBackend) {
+      try {
+        const freshDetail = await fetchTransactionDetailFromApi(trx.id);
+        if (freshDetail) {
+          setApiTransactions((prev) =>
+            prev.map((item) => (item.id === freshDetail.id ? freshDetail : item))
+          );
+        }
+      } catch {
+        // Gunakan data yang sudah ada di tabel jika gagal fetch detail
+      }
+    }
   };
 
-  const handleVoidTransaction = (trxId, reason) => {
+  const handleVoidTransaction = async (trxId, reason) => {
     const target = transactions.find((t) => t.id === trxId);
-    setTransactions((prev) =>
+
+    if (dataSource === "api") {
+      try {
+        const updated = await voidTransactionInApi(trxId);
+        setApiTransactions((prev) =>
+          prev.map((item) =>
+            item.id === trxId
+              ? {
+                  ...updated,
+                  alasanBatal: reason || updated.alasanBatal,
+                }
+              : item
+          )
+        );
+        showTempMessage(
+          `[API MongoDB] Transaksi ${target?.noInvoice || trxId} berhasil dibatalkan (Void) di database & stok produk telah dikembalikan.`
+        );
+      } catch (err) {
+        showTempMessage(`! Gagal membatalkan transaksi di API: ${err.message}`);
+      }
+      return;
+    }
+
+    // Mode Mock
+    setMockTransactions((prev) =>
       prev.map((item) =>
         item.id === trxId
           ? {
@@ -97,15 +201,24 @@ export default function OwnerTransaksiPage() {
     );
     if (target) {
       showTempMessage(
-        `Transaksi ${target.noInvoice} (${target.namaKasir}) berhasil dibatalkan (Void). Stok barang otomatis dikembalikan.`
+        `[Mode Mock] Transaksi ${target.noInvoice} (${target.namaKasir}) berhasil dibatalkan (Void).`
       );
     }
   };
 
   const handlePrintReceipt = (trx) => {
     showTempMessage(
-      `Simulasi Lo-Fi: Menyiapkan cetak / unduh PDF struk ${trx.noInvoice} (${trx.namaKasir}).`
+      `Menyiapkan cetak / unduh PDF struk ${trx.noInvoice} (${trx.namaKasir}).`
     );
+  };
+
+  const handleSwitchSource = (nextSource) => {
+    setSelectedKasirId("semua");
+    if (nextSource === "api") {
+      loadFromBackend();
+    } else {
+      setDataSource("mock");
+    }
   };
 
   const handleResetFilters = () => {
@@ -157,6 +270,15 @@ export default function OwnerTransaksiPage() {
         </div>
       </header>
 
+      {/* Bar Status Integrasi API Backend / Mock */}
+      <ApiSourceBar
+        dataSource={dataSource}
+        isLoading={isLoadingApi}
+        apiError={apiError}
+        onRefreshApi={loadFromBackend}
+        onSwitchSource={handleSwitchSource}
+      />
+
       {/* Banner Status Notifikasi */}
       {statusMessage && (
         <div
@@ -165,7 +287,7 @@ export default function OwnerTransaksiPage() {
           className="p-3 border-2 border-black rounded bg-neutral-100 flex items-center justify-between gap-3 text-sm font-medium text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
         >
           <div className="flex items-center gap-2">
-            <span className="font-mono font-bold">[OK]</span>
+            <span className="font-mono font-bold">[INFO]</span>
             <span>{statusMessage}</span>
           </div>
           <button
@@ -179,8 +301,9 @@ export default function OwnerTransaksiPage() {
         </div>
       )}
 
-      {/* Kartu Ringkasan Masing-Masing Kasir (Klik ke /owner/transaksi/[kasirId] atau Filter Tabel) */}
+      {/* Kartu Ringkasan Masing-Masing Kasir */}
       <CashierSummaryCards
+        cashiers={activeCashiers}
         transactions={transactions}
         selectedKasirId={selectedKasirId}
         onSelectKasir={setSelectedKasirId}
@@ -192,6 +315,7 @@ export default function OwnerTransaksiPage() {
           Daftar Riwayat &amp; Detail Struk Transaksi
         </h2>
         <TransactionToolbar
+          cashiers={activeCashiers}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           selectedKasirId={selectedKasirId}
@@ -205,7 +329,7 @@ export default function OwnerTransaksiPage() {
         />
       </section>
 
-      {/* Split Layout: Tabel Riwayat di Kiri & Panel Detail Struk di Kanan (Sesuai Lo-Fi Wireframe 2B) */}
+      {/* Split Layout: Tabel Riwayat di Kiri & Panel Detail Struk di Kanan */}
       <section
         aria-label="Tabel dan Rincian Struk Transaksi"
         className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start"
@@ -214,7 +338,7 @@ export default function OwnerTransaksiPage() {
           <TransactionTable
             transactions={filteredTransactions}
             selectedTransactionId={activeTransaction?.id}
-            onSelectTransaction={(trx) => setSelectedTrxId(trx.id)}
+            onSelectTransaction={handleSelectTransaction}
             showKasirColumn={true}
             onResetFilter={handleResetFilters}
           />
