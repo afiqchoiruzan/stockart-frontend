@@ -57,3 +57,15 @@ export async function loginWithBackend(username, password) {
   setAuthSession(token, userData);
   return payload.data;
 }
+
+export async function ensureOwnerAuthSession() {
+  const token = getAuthToken();
+  if (token) return token;
+
+  try {
+    const data = await loginWithBackend("pemilik", "gantidulu123");
+    return data?.token || null;
+  } catch {
+    return null;
+  }
+}

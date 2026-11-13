@@ -3,7 +3,10 @@
 import { LOW_STOCK_THRESHOLD, formatRupiah } from "@/lib/mockProducts";
 
 export default function ProductCard({ product, onEdit }) {
-  const isLowStock = Number(product.stok) <= LOW_STOCK_THRESHOLD;
+  const isLowStock =
+    product.isLowStock !== undefined
+      ? Boolean(product.isLowStock)
+      : Number(product.stok) <= Number(product.stokMinimum ?? LOW_STOCK_THRESHOLD);
 
   return (
     <article

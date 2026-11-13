@@ -9,6 +9,8 @@ export default function ApiSourceBar({
   apiError = "",
   onRefreshApi,
   onSwitchSource,
+  endpointPath = "/transactions",
+  mockName = "mockTransactions.js",
 }) {
   const [showLoginBox, setShowLoginBox] = useState(false);
   const [username, setUsername] = useState("");
@@ -38,22 +40,38 @@ export default function ApiSourceBar({
     <div className="border-2 border-black rounded bg-neutral-100 p-3 flex flex-col gap-2.5 text-xs">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="px-2 py-0.5 border border-black rounded font-mono font-bold bg-white text-black">
+          <span
+            className={`px-2 py-0.5 border border-black rounded font-mono font-bold ${
+              apiError && dataSource === "api"
+                ? "bg-neutral-300 text-black"
+                : "bg-white text-black"
+            }`}
+          >
             {isLoading
               ? "[SYNC...]"
               : dataSource === "api"
-              ? "[LIVE API BACKEND]"
+              ? apiError
+                ? "[API BACKEND: OFFLINE]"
+                : "[LIVE API BACKEND]"
               : "[MODE DATA MOCK]"}
           </span>
           <span className="font-medium text-neutral-800">
             {dataSource === "api" ? (
-              <>
-                Terhubung ke <code className="font-mono font-bold">{API_BASE_URL}/transactions</code>{" "}
-                (MongoDB Atlas)
-              </>
+              apiError ? (
+                <>
+                  <span className="text-black font-semibold">Offline:</span> Belum terhubung ke{" "}
+                  <code className="font-mono font-bold">{API_BASE_URL}{endpointPath}</code>{" "}
+                  (Jalankan <code className="font-mono bg-neutral-200 px-1 rounded">npm run dev</code> di terminal stockart-backend)
+                </>
+              ) : (
+                <>
+                  Terhubung ke <code className="font-mono font-bold">{API_BASE_URL}{endpointPath}</code>{" "}
+                  (MongoDB Atlas / Lokal)
+                </>
+              )
             ) : (
               <>
-                Menampilkan data simulasi lokal (<code className="font-mono">mockTransactions.js</code>)
+                Menampilkan data simulasi lokal (<code className="font-mono">{mockName}</code>)
                 {apiError ? ` — ${apiError}` : ""}
               </>
             )}
