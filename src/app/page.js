@@ -1,6 +1,9 @@
 import { redirect } from "next/navigation";
 
-export default function Home() {
-  redirect("/owner/produk");
-}
+// Halaman ini hanya redirect ke /login, jadi tidak ada konten yang bisa
+// di-prerender untuk validasi instant navigation.
+export const instant = false;
 
+export default function Home() {
+  redirect("/login");
+}

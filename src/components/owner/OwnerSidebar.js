@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/lib/auth";
 
 export default function OwnerSidebar() {
   const pathname = usePathname();
+  const { user, logout } = useAuth();
 
   const navItems = [
     {
@@ -77,7 +79,12 @@ export default function OwnerSidebar() {
           <div className="w-10 h-10 rounded-full border-2 border-black flex items-center justify-center font-bold text-sm tracking-tighter bg-neutral-100">
             OW
           </div>
-          <span className="font-bold text-lg tracking-tight">Owner Panel</span>
+          <div className="flex flex-col min-w-0">
+            <span className="font-bold text-lg tracking-tight truncate">Owner Panel</span>
+            {user?.nama && (
+              <span className="text-xs text-neutral-600 truncate">{user.nama}</span>
+            )}
+          </div>
         </div>
 
         {/* Navigation Menu */}
@@ -108,12 +115,13 @@ export default function OwnerSidebar() {
 
       {/* Bottom Logout Button */}
       <div className="pt-4 border-t-2 border-black">
-        <Link
-          href="/login"
+        <button
+          type="button"
+          onClick={logout}
           className="w-full flex items-center justify-center min-h-[44px] px-4 py-2 border-2 border-black rounded text-sm font-bold bg-white hover:bg-neutral-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]"
         >
           Logout
-        </Link>
+        </button>
       </div>
     </aside>
   );

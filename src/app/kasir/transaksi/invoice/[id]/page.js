@@ -1,14 +1,9 @@
-import { Suspense } from "react";
+import InvoiceClient from "./InvoiceClient";
 
-async function InvoiceContent({ params }) {
-  const { id } = await params;
-  return <div className="p-4">Invoice #{id}</div>;
-}
+// Halaman ini berada di balik RoleGuard (cek sesi di client), sehingga
+// tidak bisa di-prerender untuk validasi instant navigation.
+export const instant = false;
 
 export default function InvoicePage({ params }) {
-  return (
-    <Suspense fallback={<div className="p-4">Memuat...</div>}>
-      <InvoiceContent params={params} />
-    </Suspense>
-  );
+  return <InvoiceClient params={params} />;
 }

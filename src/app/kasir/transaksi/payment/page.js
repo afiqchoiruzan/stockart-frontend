@@ -1,4 +1,6 @@
-export default function PaymentPage() {
-  return <div className="p-4">Payment</div>;
-}
+import { redirect } from "next/navigation";
 
+// Proses payment sudah terintegrasi di halaman POS (/kasir/transaksi)
+export default function PaymentPage() {
+  redirect("/kasir/transaksi");
+}
