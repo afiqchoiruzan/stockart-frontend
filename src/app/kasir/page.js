@@ -1,4 +1,5 @@
-export default function KasirPage() {
-  return <div className="p-4">Kasir Dashboard</div>;
-}
+import { redirect } from "next/navigation";
 
+export default function KasirPage() {
+  redirect("/kasir/produk");
+}
