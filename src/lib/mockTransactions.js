@@ -1,6 +1,166 @@
+// Helper data transaksi. Data transaksi sekarang diambil dari backend (/api/transactions);
+// file ini berisi konstanta, normalisasi respons backend, dan util format.
 import { formatRupiah } from "./mockProducts";
 
 export { formatRupiah };
+
+const TIMEZONE = "Asia/Jakarta"; // backend memfilter tanggal dengan offset +07:00
+
+export const TRANSACTION_STATUSES = [
+  { value: "semua", label: "Semua Status" },
+  { value: "selesai", label: "Selesai (Lunas)" },
+  { value: "batal", label: "Dibatalkan (Void)" },
+];
+
+// ---------- Info pembayaran (uang bayar & kembalian) ----------
+// Backend belum menyimpan uang bayar/kembalian, jadi disimpan lokal di browser kasir.
+const PAYMENT_KEY = "stockart_payments";
+
+function readPayments() {
+  if (typeof window === "undefined") return {};
+  try {
+    return JSON.parse(localStorage.getItem(PAYMENT_KEY) || "{}") || {};
+  } catch {
+    return {};
+  }
+}
+
+export function savePaymentInfo(trxId, info) {
+  if (typeof window === "undefined" || !trxId) return;
+  try {
+    const all = readPayments();
+    all[trxId] = info;
+    localStorage.setItem(PAYMENT_KEY, JSON.stringify(all));
+  } catch {
+    // abaikan jika storage tidak tersedia
+  }
+}
+
+// ---------- Format tanggal ----------
+
+/** Date -> "YYYY-MM-DD" (zona WIB) */
+export function toDateKey(date) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: TIMEZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
+}
+
+/** Date -> "HH:mm" (zona WIB) */
+export function toTimeLabel(date) {
+  return new Intl.DateTimeFormat("id-ID", {
+    timeZone: TIMEZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  })
+    .format(date)
+    .replace(".", ":");
+}
+
+export function formatTanggalSingkat(tanggalStr) {
+  if (!tanggalStr) return "-";
+  const months = [
+    "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
+    "Jul", "Agu", "Sep", "Okt", "Nov", "Des",
+  ];
+  const parts = tanggalStr.split("-");
+  if (parts.length !== 3) return tanggalStr;
+  const year = parts[0];
+  const monthIdx = parseInt(parts[1], 10) - 1;
+  const day = parseInt(parts[2], 10);
+  return `${day} ${months[monthIdx] || parts[1]} ${year}`;
+}
+
+export function getTotalItemCount(detailBarang = []) {
+  return detailBarang.reduce((acc, item) => acc + Number(item.jumlah || 0), 0);
+}
+
+export function makeInvoiceNo(id) {
+  return `#TRX-${String(id || "").slice(-6).toUpperCase()}`;
+}
+
+function firstName(nama = "") {
+  return nama.trim().split(/\s+/)[0] || "Kasir";
+}
+
+// ---------- Normalisasi ----------
+
+/**
+ * Ubah transaksi dari backend menjadi bentuk yang dipakai komponen UI.
+ * Backend: { _id, kasir: {_id, nama, username}, detailBarang: [...], totalHarga, status,
+ *            createdAt, dibatalkanPada, dibatalkanOleh }
+ */
+export function normalizeTransaction(t = {}) {
+  const id = t._id || t.id;
+  const createdAt = t.createdAt ? new Date(t.createdAt) : new Date();
+  const kasirObj = t.kasir && typeof t.kasir === "object" ? t.kasir : null;
+  const kasirId = kasirObj?._id || (typeof t.kasir === "string" ? t.kasir : "");
+  const namaKasir = kasirObj?.nama || "Kasir";
+  const payment = readPayments()[id] || {};
+
+  const dibatalkanPada = t.dibatalkanPada
+    ? `${formatTanggalSingkat(toDateKey(new Date(t.dibatalkanPada)))}, ${toTimeLabel(
+        new Date(t.dibatalkanPada)
+      )} WIB`
+    : null;
+
+  return {
+    id,
+    noInvoice: makeInvoiceNo(id),
+    kasirId,
+    namaKasir,
+    panggilanKasir: firstName(namaKasir),
+    usernameKasir: kasirObj?.username || "",
+    tanggal: toDateKey(createdAt),
+    waktu: toTimeLabel(createdAt),
+    createdAt: createdAt.toISOString(),
+    metodePembayaran: payment.metodePembayaran || "Tunai",
+    status: t.status || "selesai",
+    totalHarga: Number(t.totalHarga || 0),
+    uangBayar: payment.uangBayar ?? null,
+    kembalian: payment.kembalian ?? null,
+    dibatalkanPada,
+    dibatalkanOleh: t.status === "batal" ? "Pemilik (Owner)" : null,
+    detailBarang: (t.detailBarang || []).map((d) => {
+      const produkObj = d.produk && typeof d.produk === "object" ? d.produk : null;
+      const jumlah = Number(d.jumlah || 0);
+      const hargaSatuan = Number(d.hargaSatuan ?? produkObj?.hargaJual ?? 0);
+      return {
+        produkId: produkObj?._id || d.produk,
+        namaProduk: d.namaProduk || produkObj?.nama || "Produk",
+        kodeProduk: d.kodeProduk || produkObj?.kodeProduk || "-",
+        jumlah,
+        hargaSatuan,
+        subtotal: Number(d.subtotal ?? jumlah * hargaSatuan),
+      };
+    }),
+  };
+}
+
+/**
+ * Bangun daftar kasir dari data transaksi (backend belum menyediakan endpoint daftar user).
+ */
+export function buildCashierList(transactions = []) {
+  const map = new Map();
+  transactions.forEach((t) => {
+    if (t.kasirId && !map.has(t.kasirId)) {
+      map.set(t.kasirId, {
+        id: t.kasirId,
+        nama: t.namaKasir,
+        panggilan: t.panggilanKasir,
+        username: t.usernameKasir,
+      });
+    }
+  });
+  return Array.from(map.values())
+    .sort((a, b) => a.nama.localeCompare(b.nama))
+    .map((k, idx) => ({ ...k, kode: `KSR-${String(idx + 1).padStart(2, "0")}` }));
+}
+
+// ---------- Data contoh (mock) untuk halaman Owner yang belum terhubung ke backend ----------
 
 export const CASHIERS = [
   {
@@ -30,12 +190,6 @@ export const CASHIERS = [
     shift: "Shift Reguler (09:00 - 17:00)",
     statusAktif: true,
   },
-];
-
-export const TRANSACTION_STATUSES = [
-  { value: "semua", label: "Semua Status" },
-  { value: "selesai", label: "Selesai (Lunas)" },
-  { value: "batal", label: "Dibatalkan (Void)" },
 ];
 
 export const INITIAL_TRANSACTIONS = [
@@ -292,32 +446,3 @@ export const INITIAL_TRANSACTIONS = [
 export function getCashierById(kasirId) {
   return CASHIERS.find((k) => k.id === kasirId) || null;
 }
-
-export function formatTanggalSingkat(tanggalStr) {
-  if (!tanggalStr) return "-";
-  const months = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "Mei",
-    "Jun",
-    "Jul",
-    "Agu",
-    "Sep",
-    "Okt",
-    "Nov",
-    "Des",
-  ];
-  const parts = tanggalStr.split("-");
-  if (parts.length !== 3) return tanggalStr;
-  const year = parts[0];
-  const monthIdx = parseInt(parts[1], 10) - 1;
-  const day = parseInt(parts[2], 10);
-  return `${day} ${months[monthIdx] || parts[1]} ${year}`;
-}
-
-export function getTotalItemCount(detailBarang = []) {
-  return detailBarang.reduce((acc, item) => acc + Number(item.jumlah || 0), 0);
-}
-
