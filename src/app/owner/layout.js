@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import OwnerSidebar from "@/components/owner/OwnerSidebar";
 import OwnerWindowBar from "@/components/owner/OwnerWindowBar";
+import { RoleGuard } from "@/lib/auth";
 
 export default function OwnerLayout({ children }) {
   return (
@@ -51,7 +52,7 @@ export default function OwnerLayout({ children }) {
           tabIndex={-1}
           className="flex-1 overflow-y-auto bg-white p-6 focus:outline-none"
         >
-          {children}
+          <RoleGuard role="pemilik">{children}</RoleGuard>
         </main>
       </div>
     </div>
