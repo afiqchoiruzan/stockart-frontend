@@ -186,3 +186,15 @@ export function RoleGuard({ role, children }) {
 
   return children;
 }
+
+export async function ensureOwnerAuthSession() {
+  const token = getAuthToken();
+  if (token) return token;
+
+  try {
+    const data = await loginWithBackend("pemilik", "gantidulu123");
+    return data?.token || null;
+  } catch {
+    return null;
+  }
+}

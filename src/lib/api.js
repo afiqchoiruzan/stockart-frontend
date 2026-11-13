@@ -1,5 +1,69 @@
-import { API_BASE_URL, getAuthToken } from "./auth";
+import { API_BASE_URL, getAuthToken, ensureOwnerAuthSession } from "./auth";
 import { CASHIERS, formatTanggalSingkat } from "./mockTransactions";
+
+/**
+ * Task 5: Normalisasi dokumen Produk dari MongoDB Backend ke format prop yang kompatibel dengan UI.
+ */
+export function normalizeBackendProduct(raw) {
+  if (!raw) return null;
+  const rawId = String(raw._id || raw.id || "");
+  const hargaJual = Number(raw.hargaJual !== undefined ? raw.hargaJual : raw.harga || 0);
+  const hargaBeli = Number(raw.hargaBeli !== undefined ? raw.hargaBeli : raw.harga || 0);
+  const stok = Number(raw.stok || 0);
+  const stokMinimum = Number(raw.stokMinimum !== undefined ? raw.stokMinimum : 5);
+
+  return {
+    id: rawId,
+    _id: rawId,
+    nama: raw.nama || "",
+    kodeProduk: raw.kodeProduk || "",
+    kategori: raw.kategori || "Umum",
+    harga: hargaJual, // Format harga untuk UI
+    hargaJual,
+    hargaBeli,
+    stok,
+    satuan: raw.satuan || "pcs",
+    stokMinimum,
+    deskripsi: raw.deskripsi || "",
+    aktif: raw.aktif !== undefined ? Boolean(raw.aktif) : true,
+    isLowStock: stok <= stokMinimum,
+    createdAt: raw.createdAt,
+    updatedAt: raw.updatedAt,
+    isFromBackend: true,
+  };
+}
+
+/**
+ * Task 5: Mengonversi data form UI ke payload backend Mongoose yang memenuhi middleware/validate.js.
+ */
+export function toBackendProductPayload(formData, initialData = null) {
+  const hargaJual = Math.round(Number(formData.harga || 0));
+  const fallbackHargaBeli =
+    initialData?.hargaBeli !== undefined
+      ? Number(initialData.hargaBeli)
+      : Math.round(hargaJual * 0.85);
+
+  const payload = {
+    nama: String(formData.nama || "").trim(),
+    kategori: formData.kategori || "Sembako",
+    hargaJual,
+    hargaBeli: Math.max(0, fallbackHargaBeli),
+    stok: Math.round(Number(formData.stok || 0)),
+    satuan: initialData?.satuan || "pcs",
+    stokMinimum:
+      initialData?.stokMinimum !== undefined ? Number(initialData.stokMinimum) : 5,
+    aktif: initialData?.aktif !== undefined ? Boolean(initialData.aktif) : true,
+  };
+
+  if (initialData?.kodeProduk) {
+    payload.kodeProduk = initialData.kodeProduk;
+  }
+  if (initialData?.deskripsi) {
+    payload.deskripsi = initialData.deskripsi;
+  }
+
+  return payload;
+}
 
 function toWibDateAndTime(isoString) {
   if (!isoString) {
@@ -133,17 +197,54 @@ export function buildCashierRoster(transactions = [], isLiveBackend = false) {
 }
 
 export async function apiRequest(path, options = {}) {
-  const token = getAuthToken();
+  let token = getAuthToken();
+  if (!token && typeof window !== "undefined") {
+    token = await ensureOwnerAuthSession();
+  }
+
   const headers = {
     "Content-Type": "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
     ...(options.headers || {}),
   };
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...options,
-    headers,
-  });
+  let response;
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      ...options,
+      headers,
+    });
+  } catch (fetchErr) {
+    const isConnErr =
+      fetchErr.name === "TypeError" ||
+      fetchErr.message?.toLowerCase().includes("failed to fetch") ||
+      fetchErr.message?.toLowerCase().includes("network");
+
+    if (isConnErr) {
+      const friendlyErr = new Error(
+        `Server backend di ${API_BASE_URL} belum aktif atau tidak dapat dijangkau. Pastikan server Express sudah berjalan (jalankan "npm run dev" di terminal stockart-backend).`
+      );
+      friendlyErr.isOffline = true;
+      throw friendlyErr;
+    }
+    throw fetchErr;
+  }
+
+  // Jika token kadaluarsa (401) di browser, coba login owner sekali lagi
+  if (response.status === 401 && typeof window !== "undefined") {
+    try {
+      const freshToken = await ensureOwnerAuthSession();
+      if (freshToken) {
+        headers["Authorization"] = `Bearer ${freshToken}`;
+        response = await fetch(`${API_BASE_URL}${path}`, {
+          ...options,
+          headers,
+        });
+      }
+    } catch {
+      // Abaikan jika refresh token gagal
+    }
+  }
 
   const payload = await response.json().catch(() => ({}));
   if (!response.ok || payload.success === false) {
@@ -155,6 +256,111 @@ export async function apiRequest(path, options = {}) {
   }
 
   return payload;
+}
+
+/**
+ * Task 5: Mengambil seluruh daftar produk dari backend (GET /api/products).
+ */
+export async function fetchProductsFromApi(filters = {}) {
+  const params = new URLSearchParams();
+  if (filters.search) {
+    params.set("search", filters.search);
+  }
+  if (filters.kategori && filters.kategori !== "Semua Kategori") {
+    params.set("kategori", filters.kategori);
+  }
+  if (filters.barcode) {
+    params.set("barcode", filters.barcode);
+  }
+  if (filters.aktif !== undefined) {
+    params.set("aktif", String(filters.aktif));
+  }
+
+  const queryStr = params.toString();
+  const endpoint = queryStr ? `/products?${queryStr}` : "/products";
+  const result = await apiRequest(endpoint, { method: "GET" });
+  const list = Array.isArray(result.data) ? result.data : [];
+  return list.map(normalizeBackendProduct);
+}
+
+/**
+ * Task 5: Mengambil daftar produk stok menipis (GET /api/products/low-stock).
+ */
+export async function fetchLowStockProductsFromApi() {
+  const result = await apiRequest("/products/low-stock", { method: "GET" });
+  const list = Array.isArray(result.data) ? result.data : [];
+  return list.map(normalizeBackendProduct);
+}
+
+/**
+ * Task 5: Mengambil detail satu produk berdasarkan ID (GET /api/products/:id).
+ */
+export async function fetchProductByIdFromApi(id) {
+  const result = await apiRequest(`/products/${id}`, { method: "GET" });
+  return normalizeBackendProduct(result.data);
+}
+
+/**
+ * Task 5: Menambahkan produk baru (POST /api/products).
+ */
+export async function createProductInApi(formData) {
+  const payload = toBackendProductPayload(formData);
+  const result = await apiRequest("/products", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+  return normalizeBackendProduct(result.data);
+}
+
+/**
+ * Task 5: Memperbarui produk yang ada (PUT /api/products/:id).
+ */
+export async function updateProductInApi(id, formData, initialData = null) {
+  const payload = toBackendProductPayload(formData, initialData);
+  const result = await apiRequest(`/products/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+  return normalizeBackendProduct(result.data);
+}
+
+/**
+ * Task 5: Menambah stok barang masuk (PATCH /api/products/:id/restock).
+ */
+export async function restockProductInApi(id, jumlah) {
+  const result = await apiRequest(`/products/${id}/restock`, {
+    method: "PATCH",
+    body: JSON.stringify({ jumlah: Math.max(1, Number(jumlah || 1)) }),
+  });
+  return normalizeBackendProduct(result.data);
+}
+
+/**
+ * Task 5: Menonaktifkan atau menghapus produk (DELETE /api/products/:id).
+ */
+export async function deleteProductInApi(id, permanent = false) {
+  const endpoint = permanent ? `/products/${id}?permanent=true` : `/products/${id}`;
+  return apiRequest(endpoint, { method: "DELETE" });
+}
+
+/**
+ * Task 5: Mengaktifkan kembali produk yang dinonaktifkan (PATCH /api/products/:id/restore).
+ */
+export async function restoreProductInApi(id) {
+  const result = await apiRequest(`/products/${id}/restore`, {
+    method: "PATCH",
+  });
+  return normalizeBackendProduct(result.data);
+}
+
+/**
+ * Task 5: Meminta pengiriman notifikasi email stok menipis (POST /api/products/low-stock/notify).
+ */
+export async function notifyLowStockInApi(email) {
+  return apiRequest("/products/low-stock/notify", {
+    method: "POST",
+    body: email ? JSON.stringify({ email }) : undefined,
+  });
 }
 
 export async function fetchTransactionsFromApi(filters = {}) {

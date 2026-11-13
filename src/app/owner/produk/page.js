@@ -1,14 +1,27 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { INITIAL_PRODUCTS, LOW_STOCK_THRESHOLD } from "@/lib/mockProducts";
+import { useState, useMemo, useEffect, useCallback } from "react";
+import { LOW_STOCK_THRESHOLD, INITIAL_PRODUCTS } from "@/lib/mockProducts";
+import {
+  fetchProductsFromApi,
+  fetchLowStockProductsFromApi,
+  createProductInApi,
+  updateProductInApi,
+} from "@/lib/api";
+import ApiSourceBar from "@/components/owner/ApiSourceBar";
 import LowStockDropdown from "@/components/owner/LowStockDropdown";
 import ProductToolbar from "@/components/owner/ProductToolbar";
 import ProductCard from "@/components/owner/ProductCard";
 import ProductFormDrawer from "@/components/owner/ProductFormDrawer";
 
 export default function OwnerProdukPage() {
-  const [products, setProducts] = useState(INITIAL_PRODUCTS);
+  const [dataSource, setDataSource] = useState("api"); // 'api' | 'mock'
+  const [apiProducts, setApiProducts] = useState([]);
+  const [mockProducts, setMockProducts] = useState(INITIAL_PRODUCTS);
+  const [isLoadingApi, setIsLoadingApi] = useState(true);
+  const [apiError, setApiError] = useState("");
+  const [lowStockProductsApi, setLowStockProductsApi] = useState([]);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Semua Kategori");
 
@@ -20,10 +33,75 @@ export default function OwnerProdukPage() {
   // Success flash message
   const [statusMessage, setStatusMessage] = useState("");
 
+  const showFlashMessage = useCallback((msg) => {
+    setStatusMessage(msg);
+    setTimeout(() => {
+      setStatusMessage("");
+    }, 4500);
+  }, []);
+
+  // Memuat data produk dan low stock dari backend API
+  const loadFromBackend = useCallback(async () => {
+    setIsLoadingApi(true);
+    setApiError("");
+    try {
+      const [allProducts, lowStockItems] = await Promise.all([
+        fetchProductsFromApi(),
+        fetchLowStockProductsFromApi().catch(() => []),
+      ]);
+      setApiProducts(allProducts);
+      setLowStockProductsApi(lowStockItems);
+      setDataSource("api");
+      showFlashMessage(`Berhasil menyinkronkan ${allProducts.length} produk dari backend.`);
+    } catch (err) {
+      const errMsg = err.message || "Server backend belum berjalan";
+      setApiError(errMsg);
+      // Jangan otomatis melempar ke mock agar page tidak bergeser sendiri saat klik Sinkron API
+      showFlashMessage(`! Gagal sinkron API: ${errMsg}`);
+    } finally {
+      setIsLoadingApi(false);
+    }
+  }, [showFlashMessage]);
+
+  useEffect(() => {
+    let ignore = false;
+    Promise.all([
+      fetchProductsFromApi(),
+      fetchLowStockProductsFromApi().catch(() => []),
+    ])
+      .then(([allProducts, lowStockItems]) => {
+        if (ignore) return;
+        setApiProducts(allProducts);
+        setLowStockProductsApi(lowStockItems);
+        setDataSource("api");
+      })
+      .catch((err) => {
+        if (ignore) return;
+        const errMsg = err.message || "Server backend belum berjalan";
+        setApiError(errMsg);
+        // Tetap biarkan dataSource "api" dan tampilkan status offline di bar
+      })
+      .finally(() => {
+        if (!ignore) setIsLoadingApi(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  // Sumber data aktif (API Backend atau Mock)
+  const products = dataSource === "api" ? apiProducts : mockProducts;
+
   // Filter low stock products for the header dropdown
   const lowStockProducts = useMemo(() => {
-    return products.filter((p) => Number(p.stok) <= LOW_STOCK_THRESHOLD);
-  }, [products]);
+    if (dataSource === "api" && lowStockProductsApi.length > 0) {
+      return lowStockProductsApi;
+    }
+    return products.filter(
+      (p) => Number(p.stok) <= Number(p.stokMinimum ?? LOW_STOCK_THRESHOLD)
+    );
+  }, [dataSource, lowStockProductsApi, products]);
 
   // Filter products based on search and category
   const filteredProducts = useMemo(() => {
@@ -34,7 +112,8 @@ export default function OwnerProdukPage() {
       const matchSearch =
         q === "" ||
         p.nama.toLowerCase().includes(q) ||
-        p.kategori.toLowerCase().includes(q);
+        p.kategori.toLowerCase().includes(q) ||
+        (p.kodeProduk && p.kodeProduk.toLowerCase().includes(q));
       return matchCategory && matchSearch;
     });
   }, [products, searchQuery, selectedCategory]);
@@ -56,22 +135,69 @@ export default function OwnerProdukPage() {
     setActiveProduct(null);
   };
 
-  const handleSaveProduct = (productData, mode) => {
-    if (mode === "edit") {
-      setProducts((prev) =>
-        prev.map((item) => (item.id === productData.id ? productData : item))
-      );
-      setStatusMessage(`Produk "${productData.nama}" berhasil diperbarui.`);
-    } else {
-      setProducts((prev) => [productData, ...prev]);
-      setStatusMessage(`Produk "${productData.nama}" berhasil ditambahkan.`);
-    }
-    handleCloseDrawer();
+  const handleSaveProduct = async (productData, mode, initialData = null) => {
+    try {
+      if (dataSource === "api") {
+        if (mode === "edit") {
+          const targetId = productData.id || productData._id;
+          const updated = await updateProductInApi(targetId, productData, initialData || activeProduct);
+          setApiProducts((prev) =>
+            prev.map((item) => (item.id === targetId ? updated : item))
+          );
+          showFlashMessage(`Produk "${updated.nama}" berhasil diperbarui di backend.`);
+        } else {
+          const created = await createProductInApi(productData);
+          setApiProducts((prev) => [created, ...prev]);
+          showFlashMessage(`Produk "${created.nama}" berhasil ditambahkan ke backend.`);
+        }
 
-    // Auto-clear message after 4s
-    setTimeout(() => {
-      setStatusMessage("");
-    }, 4000);
+        // Refresh low stock items dari backend
+        fetchLowStockProductsFromApi()
+          .then(setLowStockProductsApi)
+          .catch(() => {});
+      } else {
+        // Mode Mock / Simulasi Lokal
+        if (mode === "edit") {
+          const targetId = productData.id || productData._id;
+          setMockProducts((prev) =>
+            prev.map((item) =>
+              item.id === targetId
+                ? {
+                    ...item,
+                    nama: productData.nama,
+                    kategori: productData.kategori,
+                    harga: Number(productData.harga),
+                    hargaJual: Number(productData.harga),
+                    stok: Number(productData.stok),
+                    isLowStock: Number(productData.stok) <= Number(item.stokMinimum ?? LOW_STOCK_THRESHOLD),
+                  }
+                : item
+            )
+          );
+          showFlashMessage(`[Mock] Produk "${productData.nama}" berhasil diperbarui.`);
+        } else {
+          const newMock = {
+            id: `mock-prd-${Date.now()}`,
+            kodeProduk: `PRD-MOCK-${Math.floor(100 + Math.random() * 900)}`,
+            nama: productData.nama,
+            kategori: productData.kategori,
+            harga: Number(productData.harga),
+            hargaJual: Number(productData.harga),
+            hargaBeli: Math.round(Number(productData.harga) * 0.85),
+            stok: Number(productData.stok),
+            satuan: "pcs",
+            stokMinimum: LOW_STOCK_THRESHOLD,
+            isLowStock: Number(productData.stok) <= LOW_STOCK_THRESHOLD,
+          };
+          setMockProducts((prev) => [newMock, ...prev]);
+          showFlashMessage(`[Mock] Produk "${productData.nama}" berhasil ditambahkan.`);
+        }
+      }
+
+      handleCloseDrawer();
+    } catch (err) {
+      showFlashMessage(`! Gagal menyimpan produk: ${err.message}`);
+    }
   };
 
   return (
@@ -102,6 +228,17 @@ export default function OwnerProdukPage() {
         </div>
       </header>
 
+      {/* Developer Source Bar: Live API Backend vs Mode Mock */}
+      <ApiSourceBar
+        dataSource={dataSource}
+        isLoading={isLoadingApi}
+        apiError={apiError}
+        onRefreshApi={loadFromBackend}
+        onSwitchSource={setDataSource}
+        endpointPath="/products"
+        mockName="mockProducts.js"
+      />
+
       {/* Status Alert Banner when changes are saved */}
       {statusMessage && (
         <div
@@ -110,7 +247,9 @@ export default function OwnerProdukPage() {
           className="p-3 border-2 border-black rounded bg-neutral-100 flex items-center justify-between text-sm font-medium text-black"
         >
           <div className="flex items-center gap-2">
-            <span className="font-mono font-bold">[OK]</span>
+            <span className="font-mono font-bold">
+              {statusMessage.startsWith("!") ? "[!]" : "[OK]"}
+            </span>
             <span>{statusMessage}</span>
           </div>
           <button
@@ -136,24 +275,62 @@ export default function OwnerProdukPage() {
       {/* Full-Width Lo-Fi Product Grid */}
       <section aria-label="Daftar Produk Toko">
         {filteredProducts.length === 0 ? (
-          <div className="p-12 border-2 border-dashed border-black/50 rounded text-center flex flex-col items-center justify-center gap-3 bg-neutral-50">
-            <p className="font-bold text-base text-black">
-              Tidak ada produk yang cocok
-            </p>
-            <p className="text-xs text-neutral-600 max-w-sm">
-              Coba gunakan kata kunci pencarian lain atau pilih kategori &quot;Semua Kategori&quot;.
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                setSearchQuery("");
-                setSelectedCategory("Semua Kategori");
-              }}
-              className="mt-2 px-4 py-2 min-h-[40px] border border-black rounded text-xs font-bold bg-white hover:bg-neutral-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black"
-            >
-              Reset Filter Pencarian
-            </button>
-          </div>
+          dataSource === "api" && apiError && apiProducts.length === 0 ? (
+            <div className="p-10 border-2 border-dashed border-black/50 rounded text-center flex flex-col items-center justify-center gap-3 bg-neutral-100">
+              <span className="px-2.5 py-0.5 border border-black rounded font-mono font-bold text-xs bg-white text-black">
+                [SERVER BACKEND OFFLINE]
+              </span>
+              <p className="font-bold text-base text-black">
+                Server Backend Belum Dijalankan
+              </p>
+              <p className="text-xs text-neutral-700 max-w-md leading-relaxed">
+                Halaman diatur ke mode <strong>Live API</strong> (<code className="font-mono">http://localhost:5000/api/products</code>), namun server Express backend belum aktif di port 5000.
+              </p>
+              <div className="p-3 bg-white border border-black rounded text-left font-mono text-xs w-full max-w-md flex flex-col gap-1">
+                <p className="text-neutral-600 font-bold">Langkah menyalakan backend:</p>
+                <p className="text-black">1. Buka terminal baru (PowerShell / Command Prompt)</p>
+                <p className="text-black">2. Masuk ke folder backend: <span className="font-bold">cd stockart-backend</span></p>
+                <p className="text-black">3. Jalankan server: <span className="font-bold bg-neutral-200 px-1 py-0.5 rounded">npm run dev</span></p>
+                <p className="text-black">4. Klik tombol <strong>[ Sinkron Ulang API ]</strong> di bawah</p>
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
+                <button
+                  type="button"
+                  onClick={loadFromBackend}
+                  disabled={isLoadingApi}
+                  className="px-4 py-2 min-h-[40px] border-2 border-black rounded text-xs font-bold bg-black text-white hover:bg-neutral-800 transition-colors shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] disabled:opacity-50"
+                >
+                  {isLoadingApi ? "Memeriksa Koneksi..." : "[ Sinkron Ulang API ]"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDataSource("mock")}
+                  className="px-4 py-2 min-h-[40px] border border-black rounded text-xs font-bold bg-white hover:bg-neutral-200 transition-colors"
+                >
+                  [ Beralih ke Mode Mock Sementara ]
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="p-12 border-2 border-dashed border-black/50 rounded text-center flex flex-col items-center justify-center gap-3 bg-neutral-50">
+              <p className="font-bold text-base text-black">
+                Tidak ada produk yang cocok
+              </p>
+              <p className="text-xs text-neutral-600 max-w-sm">
+                Coba gunakan kata kunci pencarian lain atau pilih kategori &quot;Semua Kategori&quot;.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchQuery("");
+                  setSelectedCategory("Semua Kategori");
+                }}
+                className="mt-2 px-4 py-2 min-h-[40px] border border-black rounded text-xs font-bold bg-white hover:bg-neutral-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black"
+              >
+                Reset Filter Pencarian
+              </button>
+            </div>
+          )
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredProducts.map((product) => (
