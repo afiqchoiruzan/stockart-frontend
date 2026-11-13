@@ -1,4 +1,9 @@
-export default function KasirTransaksiPage() {
-  return <div className="p-4">Kasir Transaksi</div>;
-}
+import KasirTransaksiClient from "./KasirTransaksiClient";
 
+// Halaman ini berada di balik RoleGuard (cek sesi di client), sehingga
+// tidak bisa di-prerender untuk validasi instant navigation.
+export const instant = false;
+
+export default function KasirTransaksiPage() {
+  return <KasirTransaksiClient />;
+}
