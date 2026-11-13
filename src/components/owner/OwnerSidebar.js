@@ -99,7 +99,7 @@ export default function OwnerSidebar() {
                 key={item.href}
                 href={item.href}
                 aria-current={isActive ? "page" : undefined}
-                className={`flex items-center gap-3 px-3 py-2.5 min-h-[44px] rounded border text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black ${
+                className={`flex items-center gap-3 px-3 py-2.5 min-h-11 rounded border text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black ${
                   isActive
                     ? "bg-neutral-200 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] text-black"
                     : "border-black/40 hover:border-black hover:bg-neutral-100 text-neutral-800"
@@ -118,7 +118,7 @@ export default function OwnerSidebar() {
         <button
           type="button"
           onClick={logout}
-          className="w-full flex items-center justify-center min-h-[44px] px-4 py-2 border-2 border-black rounded text-sm font-bold bg-white hover:bg-neutral-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]"
+          className="w-full flex items-center justify-center min-h-11 px-4 py-2 border-2 border-black rounded text-sm font-bold bg-white hover:bg-neutral-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]"
         >
           Logout
         </button>
