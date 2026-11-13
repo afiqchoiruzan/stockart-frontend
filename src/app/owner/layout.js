@@ -3,6 +3,11 @@ import OwnerSidebar from "@/components/owner/OwnerSidebar";
 import OwnerWindowBar from "@/components/owner/OwnerWindowBar";
 import { RoleGuard } from "@/lib/auth";
 
+// Halaman di bawah layout ini baru dirender setelah RoleGuard membaca sesi dari
+// localStorage (client-only), jadi saat render server segmen page selalu "dropped".
+// Keluarkan area ini dari validasi instant navigation Cache Components.
+export const instant = false;
+
 export default function OwnerLayout({ children }) {
   return (
     <div className="min-h-screen flex flex-col bg-white text-black font-sans">

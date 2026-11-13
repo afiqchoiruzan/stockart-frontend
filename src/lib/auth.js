@@ -4,9 +4,13 @@ import { createContext, useContext, useState, useEffect, useCallback } from "rea
 import { useRouter } from "next/navigation";
 import { apiLogin, apiGetMe, TOKEN_KEY, USER_KEY } from "@/lib/api";
 
-export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ||
-  "https://stockart-backend-production-5896718b.up.railway.app/api";
+// NEXT_PUBLIC_API_URL berisi origin backend (mis. http://localhost:5000) dan
+// dipakai juga oleh apiFetch() yang menambahkan "/api/..." sendiri. Helper lama
+// (apiRequest, loginWithBackend) memanggil path tanpa "/api", jadi pastikan
+// base URL ini selalu berakhiran tepat satu "/api".
+export const API_BASE_URL = `${(process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000")
+  .replace(/\/+$/, "")
+  .replace(/\/api$/, "")}/api`;
 
 export function getAuthToken() {
   if (typeof window !== "undefined") {

@@ -3,6 +3,11 @@ import KasirSidebar from "@/components/kasir/KasirSidebar";
 import KasirWindowBar from "@/components/kasir/KasirWindowBar";
 import { RoleGuard } from "@/lib/auth";
 
+// Halaman di bawah layout ini baru dirender setelah RoleGuard membaca sesi dari
+// localStorage (client-only), jadi saat render server segmen page selalu "dropped".
+// Keluarkan area ini dari validasi instant navigation Cache Components.
+export const instant = false;
+
 export default function KasirLayout({ children }) {
   return (
     <div className="min-h-screen flex flex-col bg-white text-black font-sans">
