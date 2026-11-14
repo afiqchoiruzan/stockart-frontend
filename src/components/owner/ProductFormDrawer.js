@@ -22,12 +22,14 @@ function DrawerFormInner({
   availableCategories,
   isSubmitting,
   onSubmit,
-  onRestock,
   onDeactivate,
   onRestore,
   onPermanentDelete,
 }) {
   const isEdit = mode === "edit" && Boolean(initialData);
+  const currentStok = isEdit ? Math.max(0, Math.round(Number(initialData.stok ?? 0))) : 0;
+  const currentSatuan = isEdit ? initialData.satuan || "pcs" : "pcs";
+
   const initialHargaJual =
     isEdit && (initialData.hargaJual ?? initialData.harga) !== undefined
       ? String(initialData.hargaJual ?? initialData.harga)
@@ -45,7 +47,7 @@ function DrawerFormInner({
     kategori: isEdit
       ? initialData.kategori || availableCategories[0] || "Sembako"
       : availableCategories[0] || "Sembako",
-    satuan: isEdit ? initialData.satuan || "pcs" : "pcs",
+    satuan: currentSatuan,
     hargaBeli: initialHargaBeli,
     hargaJual: initialHargaJual,
     stok: isEdit && initialData.stok !== undefined ? String(initialData.stok) : "",
@@ -56,9 +58,13 @@ function DrawerFormInner({
     deskripsi: isEdit ? initialData.deskripsi || "" : "",
   });
 
+  // Unified stock editing state in Edit Mode:
+  // "restock" = tambah stok (disimpan lewat PATCH /restock saat klik Simpan Perubahan)
+  // "manual"  = ubah angka total stok langsung (disimpan lewat PUT saat klik Simpan Perubahan)
+  const [stockMode, setStockMode] = useState("restock");
+  const [restockQty, setRestockQty] = useState("0");
+
   const [errors, setErrors] = useState({});
-  const [restockQty, setRestockQty] = useState("10");
-  const [restockError, setRestockError] = useState("");
   const [confirmPermanentDelete, setConfirmPermanentDelete] = useState(false);
 
   const firstInputRef = useRef(null);
@@ -86,7 +92,7 @@ function DrawerFormInner({
       Number.isNaN(hargaBeliNum) ||
       hargaBeliNum < 0
     ) {
-      newErrors.hargaBeli = "Harga beli harus berupa angka >= 0";
+      newErrors.hargaBeli = "Harga beli harus angka >= 0";
     }
     const hargaJualNum = Number(formData.hargaJual);
     if (
@@ -94,19 +100,28 @@ function DrawerFormInner({
       Number.isNaN(hargaJualNum) ||
       hargaJualNum < 0
     ) {
-      newErrors.hargaJual = "Harga jual harus berupa angka >= 0";
+      newErrors.hargaJual = "Harga jual harus angka >= 0";
     }
-    const stokNum = Number(formData.stok);
-    if (formData.stok === "" || Number.isNaN(stokNum) || stokNum < 0) {
-      newErrors.stok = "Stok harus berupa angka >= 0";
+
+    if (!isEdit || stockMode === "manual") {
+      const stokNum = Number(formData.stok);
+      if (formData.stok === "" || Number.isNaN(stokNum) || stokNum < 0) {
+        newErrors.stok = "Stok harus angka >= 0";
+      }
+    } else {
+      const restockNum = Number(restockQty === "" ? 0 : restockQty);
+      if (Number.isNaN(restockNum) || restockNum < 0) {
+        newErrors.restockQty = "Jumlah tambah stok harus angka >= 0";
+      }
     }
+
     const stokMinNum = Number(formData.stokMinimum);
     if (
       formData.stokMinimum === "" ||
       Number.isNaN(stokMinNum) ||
       stokMinNum < 0
     ) {
-      newErrors.stokMinimum = "Batas stok minimum harus angka >= 0";
+      newErrors.stokMinimum = "Stok minimum harus angka >= 0";
     }
 
     setErrors(newErrors);
@@ -118,6 +133,9 @@ function DrawerFormInner({
     if (isSubmitting || !validate()) return;
 
     const hargaJualRounded = Math.round(Number(formData.hargaJual));
+    const parsedRestock = Math.max(0, Math.round(Number(restockQty || 0)));
+    const parsedStok = Math.max(0, Math.round(Number(formData.stok || 0)));
+
     const submittedProduct = {
       ...(initialData || {}),
       nama: formData.nama.trim(),
@@ -127,33 +145,40 @@ function DrawerFormInner({
       hargaBeli: Math.round(Number(formData.hargaBeli)),
       hargaJual: hargaJualRounded,
       harga: hargaJualRounded,
-      stok: Math.round(Number(formData.stok)),
+      stok: isEdit && stockMode === "restock" ? currentStok : parsedStok,
       stokMinimum: Math.round(Number(formData.stokMinimum)),
       deskripsi: formData.deskripsi.trim(),
       aktif: isEdit ? initialData.aktif !== false : true,
+      stockAction: isEdit
+        ? {
+            mode: stockMode,
+            restockJumlah: stockMode === "restock" ? parsedRestock : 0,
+            stokBaru: parsedStok,
+          }
+        : null,
     };
 
     onSubmit(submittedProduct, mode, initialData);
   };
 
-  const handleRestockClick = () => {
-    if (!isEdit || isSubmitting) return;
-    const jumlah = Math.round(Number(restockQty));
-    if (!restockQty || Number.isNaN(jumlah) || jumlah <= 0) {
-      setRestockError("Jumlah restock harus angka bulat >= 1");
-      return;
+  const handleAddRestockPreset = (delta) => {
+    const current = Math.max(0, Math.round(Number(restockQty || 0)));
+    setRestockQty(String(current + delta));
+    if (errors.restockQty) {
+      setErrors((prev) => ({ ...prev, restockQty: undefined }));
     }
-    setRestockError("");
-    onRestock?.(initialData.id, jumlah);
   };
 
+  const stagedRestockNum = Math.max(0, Math.round(Number(restockQty || 0)));
+  const previewStokAfterRestock = currentStok + stagedRestockNum;
   const isAktif = !isEdit || initialData.aktif !== false;
   const isCurrentLowStock =
     isEdit &&
     isAktif &&
-    Number(initialData.stok) <= Number(initialData.stokMinimum ?? 5);
+    currentStok <= Number(initialData.stokMinimum ?? 5);
+
   const submitText = isSubmitting
-    ? "Memproses..."
+    ? "Menyimpan..."
     : mode === "edit"
     ? "Simpan Perubahan"
     : "Tambah Produk";
@@ -171,11 +196,11 @@ function DrawerFormInner({
                     : "border-red-600 bg-red-50 text-red-700"
                 }`}
               >
-                {isAktif ? "STATUS: AKTIF" : "NONAKTIF"}
+                {isAktif ? "AKTIF" : "NONAKTIF"}
               </span>
               {isCurrentLowStock && (
                 <span className="px-2 py-0.5 text-[11px] font-mono font-bold border border-red-600 bg-red-50 text-red-700 rounded">
-                  LOW STOCK
+                  STOK MENIPIS
                 </span>
               )}
             </div>
@@ -222,9 +247,11 @@ function DrawerFormInner({
               className="text-sm font-bold text-black"
             >
               Kode Produk / SKU{" "}
-              <span className="font-normal text-xs text-neutral-600">
-                (opsional saat tambah)
-              </span>
+              {!isEdit && (
+                <span className="font-normal text-xs text-neutral-600">
+                  (opsional)
+                </span>
+              )}
             </label>
             <input
               id="field-kodeProduk"
@@ -236,7 +263,7 @@ function DrawerFormInner({
                   kodeProduk: e.target.value.toUpperCase(),
                 }))
               }
-              placeholder="Otomatis (PRD-...) jika dikosongkan"
+              placeholder="Otomatis (PRD-...) jika kosong"
               className="w-full min-h-[44px] px-3 py-2 border-2 border-black rounded text-sm font-mono bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black"
             />
           </div>
@@ -365,60 +392,243 @@ function DrawerFormInner({
             </div>
           </div>
 
-          {/* Field: Stok & Batas Stok Minimum */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="field-stok" className="text-sm font-bold text-black">
-                Stok Saat Ini
-              </label>
-              <input
-                id="field-stok"
-                type="number"
-                min="0"
-                step="1"
-                value={formData.stok}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, stok: e.target.value }))
-                }
-                placeholder="10"
-                className="w-full min-h-[44px] px-3 py-2 border-2 border-black rounded text-sm font-mono tabular-nums bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black"
-              />
-              {errors.stok && (
-                <p className="text-xs text-red-700 font-semibold mt-0.5">
-                  ! {errors.stok}
-                </p>
-              )}
-            </div>
+          {/* Unified Stok Block */}
+          {!isEdit ? (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1.5">
+                <label
+                  htmlFor="field-stok"
+                  className="text-sm font-bold text-black"
+                >
+                  Stok Awal
+                </label>
+                <input
+                  id="field-stok"
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={formData.stok}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, stok: e.target.value }))
+                  }
+                  placeholder="10"
+                  className="w-full min-h-[44px] px-3 py-2 border-2 border-black rounded text-sm font-mono tabular-nums bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black"
+                />
+                {errors.stok && (
+                  <p className="text-xs text-red-700 font-semibold mt-0.5">
+                    ! {errors.stok}
+                  </p>
+                )}
+              </div>
 
-            <div className="flex flex-col gap-1.5">
-              <label
-                htmlFor="field-stokMinimum"
-                className="text-sm font-bold text-black"
-              >
-                Stok Minimum
-              </label>
-              <input
-                id="field-stokMinimum"
-                type="number"
-                min="0"
-                step="1"
-                value={formData.stokMinimum}
-                onChange={(e) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    stokMinimum: e.target.value,
-                  }))
-                }
-                placeholder="5"
-                className="w-full min-h-[44px] px-3 py-2 border-2 border-black rounded text-sm font-mono tabular-nums bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black"
-              />
-              {errors.stokMinimum && (
-                <p className="text-xs text-red-700 font-semibold mt-0.5">
-                  ! {errors.stokMinimum}
-                </p>
-              )}
+              <div className="flex flex-col gap-1.5">
+                <label
+                  htmlFor="field-stokMinimum"
+                  className="text-sm font-bold text-black"
+                >
+                  Stok Minimum
+                </label>
+                <input
+                  id="field-stokMinimum"
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={formData.stokMinimum}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      stokMinimum: e.target.value,
+                    }))
+                  }
+                  placeholder="5"
+                  className="w-full min-h-[44px] px-3 py-2 border-2 border-black rounded text-sm font-mono tabular-nums bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black"
+                />
+                {errors.stokMinimum && (
+                  <p className="text-xs text-red-700 font-semibold mt-0.5">
+                    ! {errors.stokMinimum}
+                  </p>
+                )}
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="p-3.5 border-2 border-black rounded bg-neutral-50 flex flex-col gap-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <span className="text-sm font-bold text-black">Stok</span>
+                  <span className="ml-2 text-xs font-mono text-neutral-700">
+                    Saat ini: <strong>{currentStok}</strong>{" "}
+                    {formData.satuan || currentSatuan}
+                  </span>
+                </div>
+                <div
+                  role="tablist"
+                  aria-label="Pilih cara ubah stok"
+                  className="inline-flex border border-black rounded overflow-hidden bg-white"
+                >
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={stockMode === "restock"}
+                    onClick={() => setStockMode("restock")}
+                    className={`px-2.5 py-1 text-[11px] font-bold transition-colors cursor-pointer ${
+                      stockMode === "restock"
+                        ? "bg-black text-white"
+                        : "bg-white text-black hover:bg-neutral-100"
+                    }`}
+                  >
+                    + Tambah Stok
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={stockMode === "manual"}
+                    onClick={() => setStockMode("manual")}
+                    className={`px-2.5 py-1 text-[11px] font-bold border-l border-black transition-colors cursor-pointer ${
+                      stockMode === "manual"
+                        ? "bg-black text-white"
+                        : "bg-white text-black hover:bg-neutral-100"
+                    }`}
+                  >
+                    Ubah Total
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 items-start">
+                {stockMode === "restock" ? (
+                  <div className="flex flex-col gap-1.5">
+                    <label
+                      htmlFor="field-restock-qty"
+                      className="text-xs font-bold text-black"
+                    >
+                      Jumlah Masuk (+)
+                    </label>
+                    <input
+                      id="field-restock-qty"
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={restockQty}
+                      onChange={(e) => {
+                        setRestockQty(e.target.value);
+                        if (errors.restockQty) {
+                          setErrors((prev) => ({
+                            ...prev,
+                            restockQty: undefined,
+                          }));
+                        }
+                      }}
+                      placeholder="0"
+                      className="w-full min-h-[42px] px-3 py-1.5 border-2 border-black rounded text-sm font-mono tabular-nums bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black"
+                    />
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {[5, 10, 20].map((preset) => (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => handleAddRestockPreset(preset)}
+                          className="px-2 py-0.5 text-[11px] font-mono font-bold border border-black rounded bg-white hover:bg-neutral-200 transition-colors cursor-pointer"
+                        >
+                          +{preset}
+                        </button>
+                      ))}
+                      {stagedRestockNum > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setRestockQty("0")}
+                          className="px-1.5 py-0.5 text-[11px] text-neutral-600 underline hover:text-black cursor-pointer"
+                        >
+                          Reset
+                        </button>
+                      )}
+                    </div>
+                    {errors.restockQty && (
+                      <p className="text-xs text-red-700 font-semibold">
+                        ! {errors.restockQty}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-1.5">
+                    <label
+                      htmlFor="field-stok"
+                      className="text-xs font-bold text-black"
+                    >
+                      Total Stok Baru
+                    </label>
+                    <input
+                      id="field-stok"
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={formData.stok}
+                      onChange={(e) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          stok: e.target.value,
+                        }))
+                      }
+                      placeholder="0"
+                      className="w-full min-h-[42px] px-3 py-1.5 border-2 border-black rounded text-sm font-mono tabular-nums bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black"
+                    />
+                    {errors.stok && (
+                      <p className="text-xs text-red-700 font-semibold">
+                        ! {errors.stok}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex flex-col gap-1.5">
+                  <label
+                    htmlFor="field-stokMinimum"
+                    className="text-xs font-bold text-black"
+                  >
+                    Stok Minimum
+                  </label>
+                  <input
+                    id="field-stokMinimum"
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={formData.stokMinimum}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        stokMinimum: e.target.value,
+                      }))
+                    }
+                    placeholder="5"
+                    className="w-full min-h-[42px] px-3 py-1.5 border-2 border-black rounded text-sm font-mono tabular-nums bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black"
+                  />
+                  {errors.stokMinimum && (
+                    <p className="text-xs text-red-700 font-semibold">
+                      ! {errors.stokMinimum}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <p className="text-[11px] text-neutral-700 leading-snug">
+                {stockMode === "restock" ? (
+                  stagedRestockNum > 0 ? (
+                    <>
+                      Hasil setelah klik <strong>Simpan Perubahan</strong>:{" "}
+                      <strong className="font-mono text-black">
+                        {currentStok} + {stagedRestockNum} ={" "}
+                        {previewStokAfterRestock}{" "}
+                        {formData.satuan || currentSatuan}
+                      </strong>
+                    </>
+                  ) : (
+                    "Isi jumlah masuk untuk menambah stok saat klik Simpan Perubahan."
+                  )
+                ) : (
+                  "Mengganti total stok langsung saat klik Simpan Perubahan."
+                )}
+              </p>
+            </div>
+          )}
 
           {/* Field: Deskripsi */}
           <div className="flex flex-col gap-1.5">
@@ -438,127 +648,72 @@ function DrawerFormInner({
               onChange={(e) =>
                 setFormData((prev) => ({ ...prev, deskripsi: e.target.value }))
               }
-              placeholder="Catatan kemasan, varian, atau rak penyimpanan..."
+              placeholder="Catatan kemasan, varian, atau rak..."
               className="w-full px-3 py-2 border-2 border-black rounded text-sm bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black resize-y"
             />
           </div>
-
-          {/* Helper Note */}
-          <div className="p-3 border border-black/30 rounded bg-neutral-50 text-xs text-neutral-700 leading-relaxed">
-            Produk aktif dengan stok &le; batas stok minimum otomatis masuk
-            daftar Low Stock dan memicu notifikasi email Owner.
-          </div>
         </form>
 
-        {/* Edit-only Backend Operations: Quick Restock & Status Lifecycle */}
+        {/* Simple Nonaktifkan / Aktifkan & Hapus Produk in Edit Mode */}
         {isEdit && (
-          <div className="flex flex-col gap-4 pt-3 border-t-2 border-black">
-            {/* Restock Cepat (PATCH /api/products/:id/restock) */}
-            <div className="p-3.5 border-2 border-black rounded bg-neutral-50 flex flex-col gap-2.5">
-              <div className="flex items-center justify-between gap-2">
-                <label
-                  htmlFor="field-restock-qty"
-                  className="text-xs font-bold uppercase tracking-wider text-black"
-                >
-                  Restock Cepat
-                </label>
-                <span className="text-xs font-mono text-neutral-700">
-                  Saat ini: <strong>{initialData.stok}</strong>{" "}
-                  {initialData.satuan || "pcs"}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <input
-                  id="field-restock-qty"
-                  type="number"
-                  min="1"
-                  step="1"
-                  value={restockQty}
-                  onChange={(e) => {
-                    setRestockQty(e.target.value);
-                    if (restockError) setRestockError("");
-                  }}
-                  disabled={isSubmitting}
-                  className="w-24 min-h-[42px] px-3 py-1.5 border-2 border-black rounded text-sm font-mono tabular-nums bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black disabled:opacity-50"
-                />
-                <button
-                  type="button"
-                  onClick={handleRestockClick}
-                  disabled={isSubmitting}
-                  className="flex-1 min-h-[42px] px-3 py-2 border-2 border-black rounded bg-white text-black font-bold text-xs tracking-wide hover:bg-neutral-200 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
-                >
-                  + Restock Stok
-                </button>
-              </div>
-              {restockError && (
-                <p className="text-xs text-red-700 font-semibold">
-                  ! {restockError}
-                </p>
-              )}
-            </div>
+          <div className="pt-3 border-t border-black/20 flex flex-col gap-2.5">
+            {!confirmPermanentDelete ? (
+              <div className="grid grid-cols-2 gap-2.5">
+                {isAktif ? (
+                  <button
+                    type="button"
+                    onClick={() => onDeactivate?.(initialData.id)}
+                    disabled={isSubmitting}
+                    className="min-h-[40px] px-3 py-2 border-2 border-black rounded bg-neutral-100 text-black font-bold text-xs hover:bg-neutral-200 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black"
+                  >
+                    Nonaktifkan
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => onRestore?.(initialData.id)}
+                    disabled={isSubmitting}
+                    className="min-h-[40px] px-3 py-2 border-2 border-black rounded bg-black text-white font-bold text-xs hover:bg-neutral-800 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black"
+                  >
+                    Aktifkan
+                  </button>
+                )}
 
-            {/* Manajemen Status & Hapus Produk */}
-            <div className="p-3.5 border-2 border-black rounded bg-white flex flex-col gap-2.5">
-              <p className="text-xs font-bold uppercase tracking-wider text-black">
-                Manajemen Status &amp; Hapus
-              </p>
-
-              {isAktif ? (
-                <button
-                  type="button"
-                  onClick={() => onDeactivate?.(initialData.id)}
-                  disabled={isSubmitting}
-                  className="w-full min-h-[42px] px-3 py-2 border-2 border-black rounded bg-neutral-100 text-black font-bold text-xs hover:bg-neutral-200 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black"
-                >
-                  Nonaktifkan Produk (Soft Delete)
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => onRestore?.(initialData.id)}
-                  disabled={isSubmitting}
-                  className="w-full min-h-[42px] px-3 py-2 border-2 border-black rounded bg-black text-white font-bold text-xs hover:bg-neutral-800 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black"
-                >
-                  Aktifkan Kembali Produk
-                </button>
-              )}
-
-              {!confirmPermanentDelete ? (
                 <button
                   type="button"
                   onClick={() => setConfirmPermanentDelete(true)}
                   disabled={isSubmitting}
-                  className="w-full min-h-[42px] px-3 py-2 border-2 border-red-600 rounded bg-red-50 text-red-700 font-bold text-xs hover:bg-red-100 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600"
+                  className="min-h-[40px] px-3 py-2 border-2 border-red-600 rounded bg-red-50 text-red-700 font-bold text-xs hover:bg-red-100 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600"
                 >
-                  Hapus Permanen dari Database
+                  Hapus Produk
                 </button>
-              ) : (
-                <div className="p-3 border-2 border-red-600 rounded bg-red-50 flex flex-col gap-2">
-                  <p className="text-xs font-semibold text-red-800 leading-snug">
-                    Konfirmasi: Hapus permanen produk &ldquo;{initialData.nama}
-                    &rdquo;? Data akan hilang selamanya dari database.
-                  </p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setConfirmPermanentDelete(false)}
-                      disabled={isSubmitting}
-                      className="min-h-[38px] px-3 py-1.5 border border-black rounded bg-white text-black font-bold text-xs hover:bg-neutral-100 transition-colors cursor-pointer disabled:opacity-50"
-                    >
-                      Batal
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => onPermanentDelete?.(initialData.id)}
-                      disabled={isSubmitting}
-                      className="min-h-[38px] px-3 py-1.5 border border-red-700 rounded bg-red-600 text-white font-bold text-xs hover:bg-red-700 transition-colors cursor-pointer disabled:opacity-50"
-                    >
-                      Ya, Hapus Permanen
-                    </button>
-                  </div>
+              </div>
+            ) : (
+              <div className="p-3 border-2 border-red-600 rounded bg-red-50 flex flex-col gap-2">
+                <p className="text-xs font-semibold text-red-800 leading-snug">
+                  Hapus permanen &ldquo;{initialData.nama}&rdquo;? Data tidak
+                  bisa dikembalikan.
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setConfirmPermanentDelete(false)}
+                    disabled={isSubmitting}
+                    className="min-h-[36px] px-3 py-1.5 border border-black rounded bg-white text-black font-bold text-xs hover:bg-neutral-100 transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onPermanentDelete?.(initialData.id)}
+                    disabled={isSubmitting}
+                    className="min-h-[36px] px-3 py-1.5 border border-red-700 rounded bg-red-600 text-white font-bold text-xs hover:bg-red-700 transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    Ya, Hapus
+                  </button>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -586,7 +741,6 @@ export default function ProductFormDrawer({
   isSubmitting = false,
   onClose,
   onSubmit,
-  onRestock,
   onDeactivate,
   onRestore,
   onPermanentDelete,
@@ -619,9 +773,9 @@ export default function ProductFormDrawer({
   }
   const availableCategories = Array.from(categorySet);
 
-  const title = mode === "edit" ? "Form Edit Produk" : "Form Tambah Produk";
+  const title = mode === "edit" ? "Edit Produk" : "Tambah Produk";
 
-  // Key to force fresh initialization when editing different items or after restock/restore/fresh detail sync
+  // Key to force fresh initialization when editing different items or after fresh detail sync
   const formKey =
     mode === "edit" && initialData?.id
       ? `edit_${initialData.id}_${initialData.stok ?? ""}_${initialData.aktif ?? ""}_${initialData.updatedAt || ""}`
@@ -672,7 +826,6 @@ export default function ProductFormDrawer({
           availableCategories={availableCategories}
           isSubmitting={isSubmitting}
           onSubmit={onSubmit}
-          onRestock={onRestock}
           onDeactivate={onDeactivate}
           onRestore={onRestore}
           onPermanentDelete={onPermanentDelete}

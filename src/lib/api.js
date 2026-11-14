@@ -72,7 +72,6 @@ export function toBackendProductPayload(formData, initialData = null) {
     kategori: String(formData.kategori || "Sembako").trim(),
     hargaJual,
     hargaBeli,
-    stok: Math.max(0, Math.round(Number(stokRaw || 0))),
     satuan,
     stokMinimum: Math.max(0, Math.round(Number(stokMinRaw || 0))),
     aktif:
@@ -82,6 +81,10 @@ export function toBackendProductPayload(formData, initialData = null) {
         ? Boolean(initialData.aktif)
         : true,
   };
+
+  if (!formData.omitStok) {
+    payload.stok = Math.max(0, Math.round(Number(stokRaw || 0)));
+  }
 
   const kodeProduk = String(
     formData.kodeProduk ?? initialData?.kodeProduk ?? ""

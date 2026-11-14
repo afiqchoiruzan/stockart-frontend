@@ -25,6 +25,21 @@ function matchesStatusFilter(product, filter) {
   return product?.aktif !== false;
 }
 
+function hasProductDetailChanged(nextData, prevData) {
+  if (!prevData) return true;
+  return (
+    String(nextData.nama || "").trim() !== String(prevData.nama || "").trim() ||
+    String(nextData.kodeProduk || "").trim().toUpperCase() !==
+      String(prevData.kodeProduk || "").trim().toUpperCase() ||
+    String(nextData.kategori || "").trim() !== String(prevData.kategori || "").trim() ||
+    String(nextData.satuan || "pcs").trim() !== String(prevData.satuan || "pcs").trim() ||
+    Number(nextData.hargaBeli) !== Number(prevData.hargaBeli) ||
+    Number(nextData.hargaJual) !== Number(prevData.hargaJual) ||
+    Number(nextData.stokMinimum) !== Number(prevData.stokMinimum) ||
+    String(nextData.deskripsi || "").trim() !== String(prevData.deskripsi || "").trim()
+  );
+}
+
 export default function OwnerProdukPage() {
   const [products, setProducts] = useState([]);
   const [isLoadingApi, setIsLoadingApi] = useState(true);
@@ -198,50 +213,61 @@ export default function OwnerProdukPage() {
     try {
       if (mode === "edit") {
         const targetId = productData.id || productData._id;
-        const updated = await updateProductInApi(
-          targetId,
-          productData,
-          initialData || activeProduct
-        );
+        const baseInitial = initialData || activeProduct;
+        const { stockAction } = productData;
+
+        let updated;
+        if (stockAction?.mode === "restock") {
+          const restockQty = Math.max(
+            0,
+            Math.round(Number(stockAction.restockJumlah || 0))
+          );
+          const detailChanged = hasProductDetailChanged(productData, baseInitial);
+
+          if (detailChanged || restockQty === 0) {
+            updated = await updateProductInApi(
+              targetId,
+              { ...productData, omitStok: true },
+              baseInitial
+            );
+            setProducts((prev) =>
+              prev
+                .map((item) => (item.id === targetId ? updated : item))
+                .filter((item) => matchesStatusFilter(item, statusFilter))
+            );
+          }
+
+          if (restockQty > 0) {
+            updated = await restockProductInApi(targetId, restockQty);
+          }
+        } else {
+          updated = await updateProductInApi(targetId, productData, baseInitial);
+        }
+
         setProducts((prev) =>
           prev
             .map((item) => (item.id === targetId ? updated : item))
             .filter((item) => matchesStatusFilter(item, statusFilter))
         );
-        showFlashMessage(`Produk "${updated.nama}" berhasil diperbarui di backend.`);
+        const restockSuffix =
+          stockAction?.mode === "restock" && Number(stockAction.restockJumlah) > 0
+            ? ` (+${Math.round(Number(stockAction.restockJumlah))} ${updated.satuan || "pcs"})`
+            : "";
+        showFlashMessage(
+          `Produk "${updated.nama}" berhasil diperbarui${restockSuffix}.`
+        );
       } else {
         const created = await createProductInApi(productData);
         if (matchesStatusFilter(created, statusFilter)) {
           setProducts((prev) => [created, ...prev]);
         }
-        showFlashMessage(`Produk "${created.nama}" berhasil ditambahkan ke backend.`);
+        showFlashMessage(`Produk "${created.nama}" berhasil ditambahkan.`);
       }
 
       refreshLowStock();
       handleCloseDrawer();
     } catch (err) {
       showFlashMessage(`! Gagal menyimpan produk: ${err.message}`);
-    } finally {
-      setIsSubmittingAction(false);
-    }
-  };
-
-  const handleRestockProduct = async (productId, jumlah) => {
-    setIsSubmittingAction(true);
-    try {
-      const updated = await restockProductInApi(productId, jumlah);
-      setProducts((prev) =>
-        prev.map((item) => (item.id === productId ? updated : item))
-      );
-      setActiveProduct((prev) =>
-        prev && prev.id === productId ? updated : prev
-      );
-      refreshLowStock();
-      showFlashMessage(
-        `Restock "${updated.nama}" +${jumlah} ${updated.satuan || "pcs"} berhasil. Stok kini ${updated.stok}.`
-      );
-    } catch (err) {
-      showFlashMessage(`! Gagal restock produk: ${err.message}`);
     } finally {
       setIsSubmittingAction(false);
     }
@@ -261,7 +287,7 @@ export default function OwnerProdukPage() {
       refreshLowStock();
       handleCloseDrawer();
       showFlashMessage(
-        "Produk dinonaktifkan (soft delete). Ubah filter Status ke 'Nonaktif' atau 'Semua' untuk mengaktifkannya kembali."
+        "Produk dinonaktifkan. Pilih filter 'Nonaktif' jika ingin mengaktifkannya kembali."
       );
     } catch (err) {
       showFlashMessage(`! Gagal menonaktifkan produk: ${err.message}`);
@@ -283,7 +309,7 @@ export default function OwnerProdukPage() {
       handleCloseDrawer();
       showFlashMessage(`Produk "${restored.nama}" berhasil diaktifkan kembali.`);
     } catch (err) {
-      showFlashMessage(`! Gagal mengaktifkan kembali produk: ${err.message}`);
+      showFlashMessage(`! Gagal mengaktifkan produk: ${err.message}`);
     } finally {
       setIsSubmittingAction(false);
     }
@@ -296,9 +322,9 @@ export default function OwnerProdukPage() {
       setProducts((prev) => prev.filter((item) => item.id !== productId));
       refreshLowStock();
       handleCloseDrawer();
-      showFlashMessage("Produk berhasil dihapus permanen dari database.");
+      showFlashMessage("Produk berhasil dihapus permanen.");
     } catch (err) {
-      showFlashMessage(`! Gagal menghapus permanen produk: ${err.message}`);
+      showFlashMessage(`! Gagal menghapus produk: ${err.message}`);
     } finally {
       setIsSubmittingAction(false);
     }
@@ -453,7 +479,6 @@ export default function OwnerProdukPage() {
         isSubmitting={isSubmittingAction}
         onClose={handleCloseDrawer}
         onSubmit={handleSaveProduct}
-        onRestock={handleRestockProduct}
         onDeactivate={handleDeactivateProduct}
         onRestore={handleRestoreProduct}
         onPermanentDelete={handlePermanentDeleteProduct}
