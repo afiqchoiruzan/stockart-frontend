@@ -283,7 +283,11 @@ export async function apiRequest(path, options = {}) {
   const payload = await response.json().catch(() => ({}));
   if (!response.ok || payload.success === false) {
     const detailErrors = Array.isArray(payload.errors)
-      ? payload.errors.map((item) => item?.message || item?.msg).filter(Boolean)
+      ? payload.errors
+          .map((item) =>
+            typeof item === "string" ? item : item?.message || item?.msg
+          )
+          .filter(Boolean)
       : [];
     const baseMessage = payload.message || `Permintaan API gagal (${response.status})`;
     const fullMessage =
