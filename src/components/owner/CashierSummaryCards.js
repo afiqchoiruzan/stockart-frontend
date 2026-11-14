@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CASHIERS, formatRupiah } from "@/lib/mockTransactions";
+import { CASHIERS, formatRupiah, getTotalItemCount } from "@/lib/mockTransactions";
 
 export default function CashierSummaryCards({
   cashiers = CASHIERS,
@@ -29,10 +29,12 @@ export default function CashierSummaryCards({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {cashiers.map((kasir) => {
           const kasirTrx = transactions.filter((t) => t.kasirId === kasir.id);
-          const selesaiTrx = kasirTrx.filter((t) => t.status === "selesai");
-          const batalTrx = kasirTrx.filter((t) => t.status === "batal");
-          const totalOmzet = selesaiTrx.reduce(
+          const totalOmzet = kasirTrx.reduce(
             (sum, t) => sum + Number(t.totalHarga || 0),
+            0
+          );
+          const totalPcs = kasirTrx.reduce(
+            (sum, t) => sum + getTotalItemCount(t.detailBarang),
             0
           );
           const isSelected = selectedKasirId === kasir.id;
@@ -73,15 +75,13 @@ export default function CashierSummaryCards({
               {/* Statistik Kasir */}
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div className="p-2 border border-black/40 rounded bg-neutral-50">
-                  <span className="text-neutral-600 block">Transaksi</span>
+                  <span className="text-neutral-600 block">Total Transaksi</span>
                   <span className="font-mono font-bold text-sm text-black">
-                    {selesaiTrx.length} Selesai
+                    {kasirTrx.length} Struk
                   </span>
-                  {batalTrx.length > 0 && (
-                    <span className="block text-[11px] font-mono text-neutral-600">
-                      ({batalTrx.length} Batal)
-                    </span>
-                  )}
+                  <span className="block text-[11px] font-mono text-neutral-600">
+                    {totalPcs} pcs terjual
+                  </span>
                 </div>
                 <div className="p-2 border border-black/40 rounded bg-neutral-50">
                   <span className="text-neutral-600 block">Omzet Kasir</span>

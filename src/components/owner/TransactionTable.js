@@ -21,7 +21,7 @@ export default function TransactionTable({
           Tidak ada riwayat transaksi yang cocok
         </p>
         <p className="text-xs text-neutral-600 max-w-sm">
-          Coba ubah filter tanggal, status transaksi, kasir, atau kata kunci pencarian.
+          Coba ubah filter tanggal, kasir, atau kata kunci pencarian.
         </p>
         {onResetFilter && (
           <button
@@ -43,7 +43,7 @@ export default function TransactionTable({
           <thead>
             <tr className="bg-neutral-100 border-b-2 border-black font-bold text-black">
               <th className="py-3 px-3.5 border-r border-black/40 font-mono">
-                ID Struk
+                Invoice
               </th>
               <th className="py-3 px-3.5 border-r border-black/40">Waktu</th>
               {showKasirColumn && (
@@ -52,17 +52,16 @@ export default function TransactionTable({
               <th className="py-3 px-3.5 border-r border-black/40">
                 Ringkasan Barang
               </th>
-              <th className="py-3 px-3.5 border-r border-black/40">Total</th>
               <th className="py-3 px-3.5 border-r border-black/40 text-center">
-                Status
+                Metode
               </th>
+              <th className="py-3 px-3.5 border-r border-black/40">Total</th>
               <th className="py-3 px-3.5 text-center">Aksi</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-black/30">
             {transactions.map((trx) => {
               const isSelected = trx.id === selectedTransactionId;
-              const isVoid = trx.status === "batal";
               const totalPcs = getTotalItemCount(trx.detailBarang);
               const firstItem = trx.detailBarang?.[0]?.namaProduk || "-";
               const extraCount = (trx.detailBarang?.length || 0) - 1;
@@ -79,9 +78,7 @@ export default function TransactionTable({
                 >
                   {/* ID Struk */}
                   <td className="py-3 px-3.5 border-r border-black/30 font-mono font-bold whitespace-nowrap">
-                    <span className={isVoid ? "line-through text-neutral-500" : ""}>
-                      {trx.noInvoice}
-                    </span>
+                    <span>{trx.noInvoice}</span>
                     {isSelected && (
                       <span
                         className="ml-1.5 inline-block text-[10px] px-1 border border-black bg-white rounded"
@@ -133,29 +130,20 @@ export default function TransactionTable({
                       )}
                     </div>
                     <div className="text-[11px] text-neutral-600 font-mono">
-                      {trx.detailBarang?.length || 0} jenis &bull; {totalPcs} pcs &bull;{" "}
-                      {trx.metodePembayaran}
+                      {trx.detailBarang?.length || 0} jenis &bull; {totalPcs} pcs
                     </div>
                   </td>
 
-                  {/* Total Harga */}
-                  <td className="py-3 px-3.5 border-r border-black/30 font-mono font-bold whitespace-nowrap">
-                    <span className={isVoid ? "line-through text-neutral-500" : "text-black"}>
-                      {formatRupiah(trx.totalHarga)}
+                  {/* Metode */}
+                  <td className="py-3 px-3.5 border-r border-black/30 text-center whitespace-nowrap">
+                    <span className="inline-block px-2 py-0.5 border border-black rounded text-[11px] font-mono font-bold bg-neutral-50 text-black">
+                      {trx.metodePembayaran}
                     </span>
                   </td>
 
-                  {/* Status */}
-                  <td className="py-3 px-3.5 border-r border-black/30 text-center whitespace-nowrap">
-                    {isVoid ? (
-                      <span className="inline-block px-2 py-0.5 border border-black rounded text-[11px] font-mono font-bold bg-neutral-200 text-neutral-700">
-                        [BATAL]
-                      </span>
-                    ) : (
-                      <span className="inline-block px-2 py-0.5 border border-black rounded text-[11px] font-mono font-bold bg-white text-black">
-                        [LUNAS]
-                      </span>
-                    )}
+                  {/* Total Harga */}
+                  <td className="py-3 px-3.5 border-r border-black/30 font-mono font-bold whitespace-nowrap text-black">
+                    {formatRupiah(trx.totalHarga)}
                   </td>
 
                   {/* Tombol Aksi */}
@@ -184,4 +172,3 @@ export default function TransactionTable({
     </div>
   );
 }
-

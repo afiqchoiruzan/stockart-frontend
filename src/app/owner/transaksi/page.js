@@ -5,11 +5,11 @@ import {
   INITIAL_TRANSACTIONS,
   CASHIERS,
   formatRupiah,
+  getTotalItemCount,
 } from "@/lib/mockTransactions";
 import {
   fetchTransactionsFromApi,
   fetchTransactionDetailFromApi,
-  voidTransactionInApi,
   buildCashierRoster,
 } from "@/lib/api";
 import ApiSourceBar from "@/components/owner/ApiSourceBar";
@@ -21,14 +21,12 @@ import TransactionDetailPanel from "@/components/owner/TransactionDetailPanel";
 export default function OwnerTransaksiPage() {
   const [dataSource, setDataSource] = useState("api"); // 'api' | 'mock'
   const [apiTransactions, setApiTransactions] = useState([]);
-  const [mockTransactions, setMockTransactions] = useState(INITIAL_TRANSACTIONS);
   const [isLoadingApi, setIsLoadingApi] = useState(true);
   const [apiError, setApiError] = useState("");
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedKasirId, setSelectedKasirId] = useState("semua");
   const [selectedDate, setSelectedDate] = useState("");
-  const [selectedStatus, setSelectedStatus] = useState("semua");
   const [selectedTrxId, setSelectedTrxId] = useState(null);
   const [statusMessage, setStatusMessage] = useState("");
 
@@ -87,7 +85,8 @@ export default function OwnerTransaksiPage() {
   }, []);
 
   // Sumber data aktif (API Backend atau Mock)
-  const transactions = dataSource === "api" ? apiTransactions : mockTransactions;
+  const transactions =
+    dataSource === "api" ? apiTransactions : INITIAL_TRANSACTIONS;
 
   // Daftar kasir dinamis dari transaksi API atau Mock
   const activeCashiers = useMemo(() => {
@@ -99,29 +98,28 @@ export default function OwnerTransaksiPage() {
 
   // Ringkasan KPI seluruh transaksi
   const summaryStats = useMemo(() => {
-    const selesaiList = transactions.filter((t) => t.status === "selesai");
-    const batalList = transactions.filter((t) => t.status === "batal");
-    const totalOmzet = selesaiList.reduce(
+    const totalOmzet = transactions.reduce(
       (sum, t) => sum + Number(t.totalHarga || 0),
+      0
+    );
+    const totalBarangTerjual = transactions.reduce(
+      (sum, t) => sum + getTotalItemCount(t.detailBarang),
       0
     );
     return {
       totalStruk: transactions.length,
-      totalSelesai: selesaiList.length,
-      totalBatal: batalList.length,
       totalOmzet,
+      totalBarangTerjual,
     };
   }, [transactions]);
 
-  // Filter daftar transaksi berdasarkan pencarian, kasir, tanggal, dan status
+  // Filter daftar transaksi berdasarkan pencarian, kasir, dan tanggal
   const filteredTransactions = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return transactions.filter((trx) => {
       const matchKasir =
         selectedKasirId === "semua" || trx.kasirId === selectedKasirId;
       const matchDate = !selectedDate || trx.tanggal === selectedDate;
-      const matchStatus =
-        selectedStatus === "semua" || trx.status === selectedStatus;
       const matchQuery =
         q === "" ||
         trx.noInvoice.toLowerCase().includes(q) ||
@@ -132,15 +130,9 @@ export default function OwnerTransaksiPage() {
             item.namaProduk.toLowerCase().includes(q) ||
             item.kodeProduk.toLowerCase().includes(q)
         );
-      return matchKasir && matchDate && matchStatus && matchQuery;
+      return matchKasir && matchDate && matchQuery;
     });
-  }, [
-    transactions,
-    searchQuery,
-    selectedKasirId,
-    selectedDate,
-    selectedStatus,
-  ]);
+  }, [transactions, searchQuery, selectedKasirId, selectedDate]);
 
   // Transaksi aktif yang ditampilkan di panel kanan
   const activeTransaction = useMemo(() => {
@@ -156,58 +148,14 @@ export default function OwnerTransaksiPage() {
         const freshDetail = await fetchTransactionDetailFromApi(trx.id);
         if (freshDetail) {
           setApiTransactions((prev) =>
-            prev.map((item) => (item.id === freshDetail.id ? freshDetail : item))
+            prev.map((item) =>
+              item.id === freshDetail.id ? freshDetail : item
+            )
           );
         }
       } catch {
         // Gunakan data yang sudah ada di tabel jika gagal fetch detail
       }
-    }
-  };
-
-  const handleVoidTransaction = async (trxId, reason) => {
-    const target = transactions.find((t) => t.id === trxId);
-
-    if (dataSource === "api") {
-      try {
-        const updated = await voidTransactionInApi(trxId);
-        setApiTransactions((prev) =>
-          prev.map((item) =>
-            item.id === trxId
-              ? {
-                  ...updated,
-                  alasanBatal: reason || updated.alasanBatal,
-                }
-              : item
-          )
-        );
-        showTempMessage(
-          `[API MongoDB] Transaksi ${target?.noInvoice || trxId} berhasil dibatalkan (Void) di database & stok produk telah dikembalikan.`
-        );
-      } catch (err) {
-        showTempMessage(`! Gagal membatalkan transaksi di API: ${err.message}`);
-      }
-      return;
-    }
-
-    // Mode Mock
-    setMockTransactions((prev) =>
-      prev.map((item) =>
-        item.id === trxId
-          ? {
-              ...item,
-              status: "batal",
-              dibatalkanPada: "12 Nov 2026, Baru Saja",
-              dibatalkanOleh: "Owner (Pemilik)",
-              alasanBatal: reason,
-            }
-          : item
-      )
-    );
-    if (target) {
-      showTempMessage(
-        `[Mode Mock] Transaksi ${target.noInvoice} (${target.namaKasir}) berhasil dibatalkan (Void).`
-      );
     }
   };
 
@@ -233,7 +181,6 @@ export default function OwnerTransaksiPage() {
     setSearchQuery("");
     setSelectedKasirId("semua");
     setSelectedDate("");
-    setSelectedStatus("semua");
   };
 
   return (
@@ -245,7 +192,7 @@ export default function OwnerTransaksiPage() {
             Menu Transaksi
           </h1>
           <p className="text-xs sm:text-sm text-neutral-600 mt-0.5">
-            Riwayat &amp; Rincian Struk Transaksi Masing-Masing Kasir — Toko Kelontong &quot;Berkah&quot;
+            Riwayat Penjualan Semua Kasir — Toko Kelontong &quot;Berkah&quot;
           </p>
         </div>
 
@@ -253,7 +200,7 @@ export default function OwnerTransaksiPage() {
         <div className="flex flex-wrap items-center gap-2.5 text-xs font-mono">
           <div className="px-3 py-2 border-2 border-black rounded bg-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
             <span className="text-neutral-600 block text-[10px] uppercase">
-              Total Omzet Bersih
+              Total Omzet
             </span>
             <span className="font-bold text-sm text-black">
               {formatRupiah(summaryStats.totalOmzet)}
@@ -261,18 +208,18 @@ export default function OwnerTransaksiPage() {
           </div>
           <div className="px-3 py-2 border-2 border-black rounded bg-neutral-100">
             <span className="text-neutral-600 block text-[10px] uppercase">
-              Struk Selesai
+              Total Transaksi
             </span>
             <span className="font-bold text-sm text-black">
-              {summaryStats.totalSelesai} Struk
+              {summaryStats.totalStruk} Struk
             </span>
           </div>
           <div className="px-3 py-2 border-2 border-black rounded bg-white">
             <span className="text-neutral-600 block text-[10px] uppercase">
-              Struk Batal (Void)
+              Barang Terjual
             </span>
             <span className="font-bold text-sm text-black">
-              {summaryStats.totalBatal} Struk
+              {summaryStats.totalBarangTerjual} Pcs
             </span>
           </div>
         </div>
@@ -318,7 +265,10 @@ export default function OwnerTransaksiPage() {
       />
 
       {/* Toolbar Pencarian & Filter */}
-      <section aria-label="Filter dan Pencarian Transaksi" className="flex flex-col gap-3">
+      <section
+        aria-label="Filter dan Pencarian Transaksi"
+        className="flex flex-col gap-3"
+      >
         <h2 className="text-sm font-bold uppercase tracking-wider text-neutral-700">
           Daftar Riwayat &amp; Detail Struk Transaksi
         </h2>
@@ -331,8 +281,6 @@ export default function OwnerTransaksiPage() {
           showKasirFilter={true}
           selectedDate={selectedDate}
           onDateChange={setSelectedDate}
-          selectedStatus={selectedStatus}
-          onStatusChange={setSelectedStatus}
           totalResults={filteredTransactions.length}
         />
       </section>
@@ -356,7 +304,6 @@ export default function OwnerTransaksiPage() {
           <TransactionDetailPanel
             key={activeTransaction?.id || "empty"}
             transaction={activeTransaction}
-            onVoidTransaction={handleVoidTransaction}
             onPrintReceipt={handlePrintReceipt}
             showKasirLink={true}
           />

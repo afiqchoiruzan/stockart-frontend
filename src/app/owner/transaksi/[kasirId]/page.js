@@ -12,7 +12,6 @@ import {
 import {
   fetchTransactionsFromApi,
   fetchTransactionDetailFromApi,
-  voidTransactionInApi,
   buildCashierRoster,
 } from "@/lib/api";
 import ApiSourceBar from "@/components/owner/ApiSourceBar";
@@ -24,13 +23,11 @@ function KasirDetailView({ kasirId }) {
   const isMockKasirId = kasirId.startsWith("kasir-");
   const [dataSource, setDataSource] = useState(isMockKasirId ? "mock" : "api");
   const [apiTransactions, setApiTransactions] = useState([]);
-  const [mockTransactions, setMockTransactions] = useState(INITIAL_TRANSACTIONS);
   const [isLoadingApi, setIsLoadingApi] = useState(!isMockKasirId);
   const [apiError, setApiError] = useState("");
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
-  const [selectedStatus, setSelectedStatus] = useState("semua");
   const [selectedTrxId, setSelectedTrxId] = useState(null);
   const [statusMessage, setStatusMessage] = useState("");
 
@@ -86,7 +83,8 @@ function KasirDetailView({ kasirId }) {
     };
   }, [isMockKasirId]);
 
-  const transactions = dataSource === "api" ? apiTransactions : mockTransactions;
+  const transactions =
+    dataSource === "api" ? apiTransactions : INITIAL_TRANSACTIONS;
 
   const activeCashiers = useMemo(() => {
     if (dataSource === "api") {
@@ -110,36 +108,32 @@ function KasirDetailView({ kasirId }) {
 
   // Statistik performa kasir
   const kasirStats = useMemo(() => {
-    const selesai = kasirTransactions.filter((t) => t.status === "selesai");
-    const batal = kasirTransactions.filter((t) => t.status === "batal");
-    const totalOmzet = selesai.reduce(
+    const totalOmzet = kasirTransactions.reduce(
       (sum, t) => sum + Number(t.totalHarga || 0),
       0
     );
-    const totalItemTerjual = selesai.reduce(
+    const totalItemTerjual = kasirTransactions.reduce(
       (sum, t) => sum + getTotalItemCount(t.detailBarang),
       0
     );
     const rataRataStruk =
-      selesai.length > 0 ? Math.round(totalOmzet / selesai.length) : 0;
+      kasirTransactions.length > 0
+        ? Math.round(totalOmzet / kasirTransactions.length)
+        : 0;
 
     return {
       totalStruk: kasirTransactions.length,
-      totalSelesai: selesai.length,
-      totalBatal: batal.length,
       totalOmzet,
       totalItemTerjual,
       rataRataStruk,
     };
   }, [kasirTransactions]);
 
-  // Filter berdasarkan kata kunci, tanggal, dan status
+  // Filter berdasarkan kata kunci dan tanggal
   const filteredTransactions = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return kasirTransactions.filter((trx) => {
       const matchDate = !selectedDate || trx.tanggal === selectedDate;
-      const matchStatus =
-        selectedStatus === "semua" || trx.status === selectedStatus;
       const matchQuery =
         q === "" ||
         trx.noInvoice.toLowerCase().includes(q) ||
@@ -148,9 +142,9 @@ function KasirDetailView({ kasirId }) {
             item.namaProduk.toLowerCase().includes(q) ||
             item.kodeProduk.toLowerCase().includes(q)
         );
-      return matchDate && matchStatus && matchQuery;
+      return matchDate && matchQuery;
     });
-  }, [kasirTransactions, searchQuery, selectedDate, selectedStatus]);
+  }, [kasirTransactions, searchQuery, selectedDate]);
 
   // Transaksi yang ditampilkan di panel detail
   const activeTransaction = useMemo(() => {
@@ -166,57 +160,14 @@ function KasirDetailView({ kasirId }) {
         const freshDetail = await fetchTransactionDetailFromApi(trx.id);
         if (freshDetail) {
           setApiTransactions((prev) =>
-            prev.map((item) => (item.id === freshDetail.id ? freshDetail : item))
+            prev.map((item) =>
+              item.id === freshDetail.id ? freshDetail : item
+            )
           );
         }
       } catch {
         // Fallback ke data yang ada
       }
-    }
-  };
-
-  const handleVoidTransaction = async (trxId, reason) => {
-    const target = transactions.find((t) => t.id === trxId);
-
-    if (dataSource === "api") {
-      try {
-        const updated = await voidTransactionInApi(trxId);
-        setApiTransactions((prev) =>
-          prev.map((item) =>
-            item.id === trxId
-              ? {
-                  ...updated,
-                  alasanBatal: reason || updated.alasanBatal,
-                }
-              : item
-          )
-        );
-        showTempMessage(
-          `[API MongoDB] Struk ${target?.noInvoice || trxId} berhasil dibatalkan (Void) & stok produk telah dikembalikan.`
-        );
-      } catch (err) {
-        showTempMessage(`! Gagal membatalkan transaksi di API: ${err.message}`);
-      }
-      return;
-    }
-
-    setMockTransactions((prev) =>
-      prev.map((item) =>
-        item.id === trxId
-          ? {
-              ...item,
-              status: "batal",
-              dibatalkanPada: "12 Nov 2026, Baru Saja",
-              dibatalkanOleh: "Owner (Pemilik)",
-              alasanBatal: reason,
-            }
-          : item
-      )
-    );
-    if (target) {
-      showTempMessage(
-        `[Mode Mock] Struk ${target.noInvoice} milik ${target.namaKasir} berhasil dibatalkan (Void).`
-      );
     }
   };
 
@@ -232,7 +183,6 @@ function KasirDetailView({ kasirId }) {
   const handleResetFilters = () => {
     setSearchQuery("");
     setSelectedDate("");
-    setSelectedStatus("semua");
   };
 
   if (isLoadingApi) {
@@ -280,7 +230,10 @@ function KasirDetailView({ kasirId }) {
         </Link>
 
         {/* Tab Pindah Cepat Antar Kasir */}
-        <div className="flex flex-wrap items-center gap-2" aria-label="Pindah Kasir">
+        <div
+          className="flex flex-wrap items-center gap-2"
+          aria-label="Pindah Kasir"
+        >
           <span className="text-xs font-bold text-neutral-600 mr-1">
             Pilih Kasir:
           </span>
@@ -354,16 +307,11 @@ function KasirDetailView({ kasirId }) {
           </div>
           <div className="p-3 border-2 border-black rounded bg-neutral-50">
             <span className="text-neutral-600 block text-[10px] uppercase">
-              Struk Selesai
+              Total Transaksi
             </span>
             <span className="font-bold text-sm text-black">
-              {kasirStats.totalSelesai} Struk
+              {kasirStats.totalStruk} Struk
             </span>
-            {kasirStats.totalBatal > 0 && (
-              <span className="block text-[10px] text-neutral-600">
-                ({kasirStats.totalBatal} Batal)
-              </span>
-            )}
           </div>
           <div className="p-3 border-2 border-black rounded bg-neutral-50">
             <span className="text-neutral-600 block text-[10px] uppercase">
@@ -413,8 +361,6 @@ function KasirDetailView({ kasirId }) {
         showKasirFilter={false}
         selectedDate={selectedDate}
         onDateChange={setSelectedDate}
-        selectedStatus={selectedStatus}
-        onStatusChange={setSelectedStatus}
         totalResults={filteredTransactions.length}
       />
 
@@ -437,7 +383,6 @@ function KasirDetailView({ kasirId }) {
           <TransactionDetailPanel
             key={activeTransaction?.id || "empty"}
             transaction={activeTransaction}
-            onVoidTransaction={handleVoidTransaction}
             onPrintReceipt={handlePrintReceipt}
             showKasirLink={false}
           />

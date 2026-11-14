@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import {
   formatRupiah,
@@ -10,13 +9,9 @@ import {
 
 export default function TransactionDetailPanel({
   transaction,
-  onVoidTransaction,
   onPrintReceipt,
   showKasirLink = true,
 }) {
-  const [isConfirmingVoid, setIsConfirmingVoid] = useState(false);
-  const [voidReason, setVoidReason] = useState("");
-
   if (!transaction) {
     return (
       <aside
@@ -36,18 +31,7 @@ export default function TransactionDetailPanel({
     );
   }
 
-  const isVoid = transaction.status === "batal";
   const totalPcs = getTotalItemCount(transaction.detailBarang);
-
-  const handleConfirmVoid = (e) => {
-    e.preventDefault();
-    if (!onVoidTransaction) return;
-    const reasonText =
-      voidReason.trim() || "Koreksi transaksi oleh Owner (Pemilik)";
-    onVoidTransaction(transaction.id, reasonText);
-    setIsConfirmingVoid(false);
-    setVoidReason("");
-  };
 
   return (
     <aside
@@ -58,20 +42,14 @@ export default function TransactionDetailPanel({
       <div className="pb-3 border-b-2 border-black flex items-center justify-between gap-2">
         <div>
           <span className="text-[11px] font-mono uppercase text-neutral-600 block">
-            Panel Rincian Struk POS
+            Toko Kelontong Berkah
           </span>
           <h3 className="font-bold text-base text-black font-mono">
-            Detail Transaksi {transaction.noInvoice}
+            Struk {transaction.noInvoice}
           </h3>
         </div>
-        <span
-          className={`px-2.5 py-1 border-2 border-black rounded text-xs font-mono font-bold ${
-            isVoid
-              ? "bg-neutral-200 text-neutral-700"
-              : "bg-white text-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]"
-          }`}
-        >
-          {isVoid ? "[BATAL / VOID]" : "[LUNAS]"}
+        <span className="px-2.5 py-1 border-2 border-black rounded text-xs font-mono font-bold bg-white text-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
+          [&bull; LUNAS]
         </span>
       </div>
 
@@ -140,7 +118,7 @@ export default function TransactionDetailPanel({
             >
               <div>
                 <div className="font-bold text-black">
-                  {item.jumlah}x {item.namaProduk}
+                  {item.jumlah} &times; {item.namaProduk}
                 </div>
                 <div className="text-[11px] font-mono text-neutral-600">
                   {item.kodeProduk} &bull; @ {formatRupiah(item.hargaSatuan)}
@@ -157,13 +135,13 @@ export default function TransactionDetailPanel({
       {/* Ringkasan Pembayaran (Total, Tunai/Bayar, Kembalian) */}
       <div className="border-t-2 border-black pt-3 flex flex-col gap-1.5 text-xs bg-white p-3 border rounded">
         <div className="flex items-center justify-between font-bold text-sm text-black pb-1.5 border-b border-black/20">
-          <span>Total Belanja:</span>
-          <span className={`font-mono ${isVoid ? "line-through text-neutral-500" : ""}`}>
+          <span>Total:</span>
+          <span className="font-mono">
             {formatRupiah(transaction.totalHarga)}
           </span>
         </div>
         <div className="flex items-center justify-between text-neutral-700">
-          <span>Uang Diterima ({transaction.metodePembayaran}):</span>
+          <span>{transaction.metodePembayaran}:</span>
           <span className="font-mono font-semibold text-black">
             {formatRupiah(transaction.uangBayar)}
           </span>
@@ -176,88 +154,16 @@ export default function TransactionDetailPanel({
         </div>
       </div>
 
-      {/* Informasi Pembatalan jika status === 'batal' */}
-      {isVoid && (
-        <div className="p-3 border-2 border-black rounded bg-neutral-200 text-xs flex flex-col gap-1">
-          <div className="font-mono font-bold text-black">
-            ! TRANSAKSI DIBATALKAN (VOID)
-          </div>
-          <div className="text-neutral-800">
-            <strong>Waktu Batal:</strong> {transaction.dibatalkanPada || "-"}
-          </div>
-          <div className="text-neutral-800">
-            <strong>Oleh:</strong> {transaction.dibatalkanOleh || "Owner (Pemilik)"}
-          </div>
-          <div className="text-neutral-800">
-            <strong>Alasan:</strong> {transaction.alasanBatal || "-"}
-          </div>
-        </div>
-      )}
-
-      {/* Aksi Owner: Cetak Struk & Batalkan Transaksi (Void) */}
-      <div className="pt-1 flex flex-col gap-2">
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => onPrintReceipt && onPrintReceipt(transaction)}
-            className="flex-1 min-h-[40px] px-3 py-2 border-2 border-black rounded text-xs font-mono font-bold bg-white hover:bg-neutral-200 text-black transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
-          >
-            [Cetak / Unduh Struk]
-          </button>
-
-          {!isVoid && onVoidTransaction && !isConfirmingVoid && (
-            <button
-              type="button"
-              onClick={() => setIsConfirmingVoid(true)}
-              className="flex-1 min-h-[40px] px-3 py-2 border-2 border-black rounded text-xs font-mono font-bold bg-neutral-100 hover:bg-black hover:text-white text-black transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black"
-            >
-              [Batalkan (Void)]
-            </button>
-          )}
-        </div>
-
-        {/* Form Konfirmasi Pembatalan Transaksi */}
-        {!isVoid && isConfirmingVoid && (
-          <form
-            onSubmit={handleConfirmVoid}
-            className="p-3 border-2 border-black rounded bg-white flex flex-col gap-2.5 mt-1"
-          >
-            <label
-              htmlFor="void-reason-input"
-              className="text-xs font-bold text-black"
-            >
-              Konfirmasi Pembatalan Struk {transaction.noInvoice}:
-            </label>
-            <input
-              id="void-reason-input"
-              type="text"
-              value={voidReason}
-              onChange={(e) => setVoidReason(e.target.value)}
-              placeholder="Alasan batal (misal: Salah input jumlah barang)..."
-              className="w-full min-h-[38px] px-2.5 py-1.5 border border-black rounded text-xs bg-neutral-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black"
-            />
-            <div className="flex items-center gap-2">
-              <button
-                type="submit"
-                className="flex-1 min-h-[36px] px-3 py-1.5 border border-black rounded text-xs font-mono font-bold bg-black text-white hover:bg-neutral-800 transition-colors"
-              >
-                [Ya, Batalkan Struk]
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsConfirmingVoid(false);
-                  setVoidReason("");
-                }}
-                className="min-h-[36px] px-3 py-1.5 border border-black rounded text-xs font-mono font-bold bg-white hover:bg-neutral-200 text-black transition-colors"
-              >
-                [Batal]
-              </button>
-            </div>
-          </form>
-        )}
+      {/* Aksi Owner: Cetak Struk */}
+      <div className="pt-1">
+        <button
+          type="button"
+          onClick={() => onPrintReceipt && onPrintReceipt(transaction)}
+          className="w-full min-h-[42px] px-3 py-2 border-2 border-black rounded text-xs font-mono font-bold bg-white hover:bg-neutral-200 text-black transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+        >
+          [Cetak Struk]
+        </button>
       </div>
     </aside>
   );
 }
-
