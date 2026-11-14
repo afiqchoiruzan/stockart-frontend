@@ -4,9 +4,13 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { CATEGORIES, LOW_STOCK_THRESHOLD } from "@/lib/mockProducts";
 import {
   fetchProductsFromApi,
+  fetchProductByIdFromApi,
   fetchLowStockProductsFromApi,
   createProductInApi,
   updateProductInApi,
+  restockProductInApi,
+  deleteProductInApi,
+  restoreProductInApi,
   notifyLowStockInApi,
 } from "@/lib/api";
 import ApiSourceBar from "@/components/owner/ApiSourceBar";
@@ -14,6 +18,12 @@ import LowStockDropdown from "@/components/owner/LowStockDropdown";
 import ProductToolbar from "@/components/owner/ProductToolbar";
 import ProductCard from "@/components/owner/ProductCard";
 import ProductFormDrawer from "@/components/owner/ProductFormDrawer";
+
+function matchesStatusFilter(product, filter) {
+  if (filter === "all") return true;
+  if (filter === "false") return product?.aktif === false;
+  return product?.aktif !== false;
+}
 
 export default function OwnerProdukPage() {
   const [products, setProducts] = useState([]);
@@ -25,6 +35,7 @@ export default function OwnerProdukPage() {
   const [selectedCategory, setSelectedCategory] = useState("Semua Kategori");
   const [statusFilter, setStatusFilter] = useState("true"); // 'true' | 'false' | 'all'
   const [isNotifyingEmail, setIsNotifyingEmail] = useState(false);
+  const [isSubmittingAction, setIsSubmittingAction] = useState(false);
 
   // Drawer state
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -145,10 +156,30 @@ export default function OwnerProdukPage() {
     });
   }, [products, searchQuery, selectedCategory]);
 
+  const refreshLowStock = useCallback(() => {
+    fetchLowStockProductsFromApi()
+      .then(setLowStockProductsApi)
+      .catch(() => {});
+  }, []);
+
   const handleOpenEdit = (product) => {
     setDrawerMode("edit");
     setActiveProduct(product);
     setIsDrawerOpen(true);
+
+    // Sinkronkan detail terbaru produk dari GET /api/products/:id
+    if (product?.id) {
+      fetchProductByIdFromApi(product.id)
+        .then((fresh) => {
+          setActiveProduct((prev) =>
+            prev && prev.id === fresh.id ? fresh : prev
+          );
+          setProducts((prev) =>
+            prev.map((item) => (item.id === fresh.id ? fresh : item))
+          );
+        })
+        .catch(() => {});
+    }
   };
 
   const handleOpenAdd = () => {
@@ -163,28 +194,113 @@ export default function OwnerProdukPage() {
   };
 
   const handleSaveProduct = async (productData, mode, initialData = null) => {
+    setIsSubmittingAction(true);
     try {
       if (mode === "edit") {
         const targetId = productData.id || productData._id;
-        const updated = await updateProductInApi(targetId, productData, initialData || activeProduct);
+        const updated = await updateProductInApi(
+          targetId,
+          productData,
+          initialData || activeProduct
+        );
         setProducts((prev) =>
-          prev.map((item) => (item.id === targetId ? updated : item))
+          prev
+            .map((item) => (item.id === targetId ? updated : item))
+            .filter((item) => matchesStatusFilter(item, statusFilter))
         );
         showFlashMessage(`Produk "${updated.nama}" berhasil diperbarui di backend.`);
       } else {
         const created = await createProductInApi(productData);
-        setProducts((prev) => [created, ...prev]);
+        if (matchesStatusFilter(created, statusFilter)) {
+          setProducts((prev) => [created, ...prev]);
+        }
         showFlashMessage(`Produk "${created.nama}" berhasil ditambahkan ke backend.`);
       }
 
-      // Refresh low stock items dari backend
-      fetchLowStockProductsFromApi()
-        .then(setLowStockProductsApi)
-        .catch(() => {});
-
+      refreshLowStock();
       handleCloseDrawer();
     } catch (err) {
       showFlashMessage(`! Gagal menyimpan produk: ${err.message}`);
+    } finally {
+      setIsSubmittingAction(false);
+    }
+  };
+
+  const handleRestockProduct = async (productId, jumlah) => {
+    setIsSubmittingAction(true);
+    try {
+      const updated = await restockProductInApi(productId, jumlah);
+      setProducts((prev) =>
+        prev.map((item) => (item.id === productId ? updated : item))
+      );
+      setActiveProduct((prev) =>
+        prev && prev.id === productId ? updated : prev
+      );
+      refreshLowStock();
+      showFlashMessage(
+        `Restock "${updated.nama}" +${jumlah} ${updated.satuan || "pcs"} berhasil. Stok kini ${updated.stok}.`
+      );
+    } catch (err) {
+      showFlashMessage(`! Gagal restock produk: ${err.message}`);
+    } finally {
+      setIsSubmittingAction(false);
+    }
+  };
+
+  const handleDeactivateProduct = async (productId) => {
+    setIsSubmittingAction(true);
+    try {
+      await deleteProductInApi(productId, false);
+      setProducts((prev) =>
+        prev
+          .map((item) =>
+            item.id === productId ? { ...item, aktif: false } : item
+          )
+          .filter((item) => matchesStatusFilter(item, statusFilter))
+      );
+      refreshLowStock();
+      handleCloseDrawer();
+      showFlashMessage(
+        "Produk dinonaktifkan (soft delete). Ubah filter Status ke 'Nonaktif' atau 'Semua' untuk mengaktifkannya kembali."
+      );
+    } catch (err) {
+      showFlashMessage(`! Gagal menonaktifkan produk: ${err.message}`);
+    } finally {
+      setIsSubmittingAction(false);
+    }
+  };
+
+  const handleRestoreProduct = async (productId) => {
+    setIsSubmittingAction(true);
+    try {
+      const restored = await restoreProductInApi(productId);
+      setProducts((prev) =>
+        prev
+          .map((item) => (item.id === productId ? restored : item))
+          .filter((item) => matchesStatusFilter(item, statusFilter))
+      );
+      refreshLowStock();
+      handleCloseDrawer();
+      showFlashMessage(`Produk "${restored.nama}" berhasil diaktifkan kembali.`);
+    } catch (err) {
+      showFlashMessage(`! Gagal mengaktifkan kembali produk: ${err.message}`);
+    } finally {
+      setIsSubmittingAction(false);
+    }
+  };
+
+  const handlePermanentDeleteProduct = async (productId) => {
+    setIsSubmittingAction(true);
+    try {
+      await deleteProductInApi(productId, true);
+      setProducts((prev) => prev.filter((item) => item.id !== productId));
+      refreshLowStock();
+      handleCloseDrawer();
+      showFlashMessage("Produk berhasil dihapus permanen dari database.");
+    } catch (err) {
+      showFlashMessage(`! Gagal menghapus permanen produk: ${err.message}`);
+    } finally {
+      setIsSubmittingAction(false);
     }
   };
 
@@ -333,8 +449,14 @@ export default function OwnerProdukPage() {
         isOpen={isDrawerOpen}
         mode={drawerMode}
         initialData={activeProduct}
+        categories={availableCategories.filter((c) => c !== "Semua Kategori")}
+        isSubmitting={isSubmittingAction}
         onClose={handleCloseDrawer}
         onSubmit={handleSaveProduct}
+        onRestock={handleRestockProduct}
+        onDeactivate={handleDeactivateProduct}
+        onRestore={handleRestoreProduct}
+        onPermanentDelete={handlePermanentDeleteProduct}
       />
     </div>
   );
