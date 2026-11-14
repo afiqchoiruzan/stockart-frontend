@@ -2,7 +2,12 @@
 
 import { useState, useRef, useEffect } from "react";
 
-export default function LowStockDropdown({ items = [], onSelectProduct }) {
+export default function LowStockDropdown({
+  items = [],
+  onSelectProduct,
+  onNotifyEmail,
+  isNotifying = false,
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef(null);
 
@@ -42,14 +47,18 @@ export default function LowStockDropdown({ items = [], onSelectProduct }) {
         aria-haspopup="true"
         aria-expanded={isOpen}
         aria-label={`Peringatan stok menipis: ${count} produk`}
-        className={`flex items-center gap-2 px-3 py-2 min-h-[44px] border-2 border-black rounded text-sm font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black ${
+        className={`flex items-center gap-2 px-3 py-2 min-h-[44px] border-2 border-black rounded text-sm font-bold transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black ${
           count > 0
             ? "bg-neutral-100 hover:bg-neutral-200 text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
             : "bg-white hover:bg-neutral-50 text-neutral-600"
         }`}
       >
         <span
-          className="w-5 h-5 rounded-full border border-black flex items-center justify-center text-xs font-black bg-white"
+          className={`w-5 h-5 rounded-full border flex items-center justify-center text-xs font-black ${
+            count > 0
+              ? "border-red-600 bg-red-50 text-red-700"
+              : "border-black bg-white text-black"
+          }`}
           aria-hidden="true"
         >
           !
@@ -80,9 +89,15 @@ export default function LowStockDropdown({ items = [], onSelectProduct }) {
         >
           <div className="p-3 border-b-2 border-black bg-neutral-100 flex items-center justify-between">
             <span className="font-bold text-xs uppercase tracking-wider">
-              Alert Low Stock (Stok &le; 5)
+              Alert Low Stock (&le; Min. Stok)
             </span>
-            <span className="text-xs font-mono font-bold px-1.5 py-0.5 border border-black rounded bg-white">
+            <span
+              className={`text-xs font-mono font-bold px-1.5 py-0.5 border rounded ${
+                count > 0
+                  ? "border-red-600 bg-red-50 text-red-700"
+                  : "border-black bg-white text-black"
+              }`}
+            >
               {count} Item
             </span>
           </div>
@@ -104,8 +119,11 @@ export default function LowStockDropdown({ items = [], onSelectProduct }) {
                     </p>
                     <p className="text-xs text-neutral-600">
                       {prod.kategori} &bull;{" "}
-                      <span className="font-mono font-bold text-black">
-                        Stok: {prod.stok} !
+                      <span className="font-mono font-bold text-red-700">
+                        Stok: {prod.stok} {prod.satuan || "pcs"}
+                      </span>{" "}
+                      <span className="text-neutral-500">
+                        (Min: {prod.stokMinimum ?? 0})
                       </span>
                     </p>
                   </div>
@@ -115,7 +133,7 @@ export default function LowStockDropdown({ items = [], onSelectProduct }) {
                       if (onSelectProduct) onSelectProduct(prod);
                       setIsOpen(false);
                     }}
-                    className="shrink-0 px-2.5 py-1.5 min-h-[36px] border border-black text-xs font-bold rounded bg-white hover:bg-neutral-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black"
+                    className="shrink-0 px-2.5 py-1.5 min-h-[36px] border border-black text-xs font-bold rounded bg-white hover:bg-neutral-200 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black"
                   >
                     [Edit Stok]
                   </button>
@@ -123,6 +141,24 @@ export default function LowStockDropdown({ items = [], onSelectProduct }) {
               ))
             )}
           </div>
+
+          {typeof onNotifyEmail === "function" && (
+            <div className="p-3 border-t-2 border-black bg-neutral-50 flex items-center justify-between gap-2">
+              <span className="text-[11px] text-neutral-600 leading-tight">
+                Kirim ringkasan stok menipis ke email owner
+              </span>
+              <button
+                type="button"
+                disabled={isNotifying}
+                onClick={async () => {
+                  await onNotifyEmail();
+                }}
+                className="shrink-0 px-3 py-1.5 min-h-[36px] border border-black rounded text-xs font-mono font-bold bg-black text-white hover:bg-neutral-800 disabled:opacity-50 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black"
+              >
+                {isNotifying ? "[Mengirim...]" : "[Kirim Email Alert]"}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>

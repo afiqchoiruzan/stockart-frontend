@@ -1,12 +1,13 @@
 "use client";
 
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { LOW_STOCK_THRESHOLD } from "@/lib/mockProducts";
+import { CATEGORIES, LOW_STOCK_THRESHOLD } from "@/lib/mockProducts";
 import {
   fetchProductsFromApi,
   fetchLowStockProductsFromApi,
   createProductInApi,
   updateProductInApi,
+  notifyLowStockInApi,
 } from "@/lib/api";
 import ApiSourceBar from "@/components/owner/ApiSourceBar";
 import LowStockDropdown from "@/components/owner/LowStockDropdown";
@@ -22,6 +23,8 @@ export default function OwnerProdukPage() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("Semua Kategori");
+  const [statusFilter, setStatusFilter] = useState("true"); // 'true' | 'false' | 'all'
+  const [isNotifyingEmail, setIsNotifyingEmail] = useState(false);
 
   // Drawer state
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -39,25 +42,49 @@ export default function OwnerProdukPage() {
   }, []);
 
   // Memuat data produk dan low stock dari backend API
-  const loadFromBackend = useCallback(async () => {
-    setIsLoadingApi(true);
-    setApiError("");
+  const loadFromBackend = useCallback(
+    async (aktifOverride = statusFilter, silent = false) => {
+      setIsLoadingApi(true);
+      setApiError("");
+      try {
+        const [allProducts, lowStockItems] = await Promise.all([
+          fetchProductsFromApi({ aktif: aktifOverride }),
+          fetchLowStockProductsFromApi().catch(() => []),
+        ]);
+        setProducts(allProducts);
+        setLowStockProductsApi(lowStockItems);
+        if (!silent) {
+          showFlashMessage(`Berhasil menyinkronkan ${allProducts.length} produk dari backend.`);
+        }
+      } catch (err) {
+        const errMsg = err.message || "Server backend belum berjalan";
+        setApiError(errMsg);
+        showFlashMessage(`! Gagal sinkron API: ${errMsg}`);
+      } finally {
+        setIsLoadingApi(false);
+      }
+    },
+    [showFlashMessage, statusFilter]
+  );
+
+  const handleStatusFilterChange = (nextStatus) => {
+    setStatusFilter(nextStatus);
+    loadFromBackend(nextStatus, true);
+  };
+
+  const handleNotifyLowStockEmail = async () => {
+    setIsNotifyingEmail(true);
     try {
-      const [allProducts, lowStockItems] = await Promise.all([
-        fetchProductsFromApi(),
-        fetchLowStockProductsFromApi().catch(() => []),
-      ]);
-      setProducts(allProducts);
-      setLowStockProductsApi(lowStockItems);
-      showFlashMessage(`Berhasil menyinkronkan ${allProducts.length} produk dari backend.`);
+      const result = await notifyLowStockInApi();
+      showFlashMessage(
+        result.message || "Notifikasi email low stock berhasil diproses."
+      );
     } catch (err) {
-      const errMsg = err.message || "Server backend belum berjalan";
-      setApiError(errMsg);
-      showFlashMessage(`! Gagal sinkron API: ${errMsg}`);
+      showFlashMessage(`! Gagal mengirim email low stock: ${err.message}`);
     } finally {
-      setIsLoadingApi(false);
+      setIsNotifyingEmail(false);
     }
-  }, [showFlashMessage]);
+  };
 
   useEffect(() => {
     let ignore = false;
@@ -93,6 +120,15 @@ export default function OwnerProdukPage() {
       (p) => p.aktif !== false && Number(p.stok) <= Number(p.stokMinimum ?? LOW_STOCK_THRESHOLD)
     );
   }, [lowStockProductsApi, products]);
+
+  // Kategori dinamis (gabungan preset + kategori unik dari database)
+  const availableCategories = useMemo(() => {
+    const set = new Set(CATEGORIES);
+    products.forEach((p) => {
+      if (p.kategori) set.add(p.kategori);
+    });
+    return Array.from(set);
+  }, [products]);
 
   // Filter products based on search and category
   const filteredProducts = useMemo(() => {
@@ -167,6 +203,8 @@ export default function OwnerProdukPage() {
           <LowStockDropdown
             items={lowStockProducts}
             onSelectProduct={handleOpenEdit}
+            onNotifyEmail={handleNotifyLowStockEmail}
+            isNotifying={isNotifyingEmail}
           />
 
           <button
@@ -185,7 +223,7 @@ export default function OwnerProdukPage() {
         dataSource="api"
         isLoading={isLoadingApi}
         apiError={apiError}
-        onRefreshApi={loadFromBackend}
+        onRefreshApi={() => loadFromBackend(statusFilter)}
         endpointPath="/products"
       />
 
@@ -219,6 +257,9 @@ export default function OwnerProdukPage() {
         onSearchChange={setSearchQuery}
         selectedCategory={selectedCategory}
         onCategoryChange={setSelectedCategory}
+        statusFilter={statusFilter}
+        onStatusFilterChange={handleStatusFilterChange}
+        categories={availableCategories}
         totalResults={filteredProducts.length}
       />
 
