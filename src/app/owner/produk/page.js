@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { LOW_STOCK_THRESHOLD, INITIAL_PRODUCTS } from "@/lib/mockProducts";
+import { LOW_STOCK_THRESHOLD } from "@/lib/mockProducts";
 import {
   fetchProductsFromApi,
   fetchLowStockProductsFromApi,
@@ -15,9 +15,7 @@ import ProductCard from "@/components/owner/ProductCard";
 import ProductFormDrawer from "@/components/owner/ProductFormDrawer";
 
 export default function OwnerProdukPage() {
-  const [dataSource, setDataSource] = useState("api"); // 'api' | 'mock'
-  const [apiProducts, setApiProducts] = useState([]);
-  const [mockProducts, setMockProducts] = useState(INITIAL_PRODUCTS);
+  const [products, setProducts] = useState([]);
   const [isLoadingApi, setIsLoadingApi] = useState(true);
   const [apiError, setApiError] = useState("");
   const [lowStockProductsApi, setLowStockProductsApi] = useState([]);
@@ -49,14 +47,12 @@ export default function OwnerProdukPage() {
         fetchProductsFromApi(),
         fetchLowStockProductsFromApi().catch(() => []),
       ]);
-      setApiProducts(allProducts);
+      setProducts(allProducts);
       setLowStockProductsApi(lowStockItems);
-      setDataSource("api");
       showFlashMessage(`Berhasil menyinkronkan ${allProducts.length} produk dari backend.`);
     } catch (err) {
       const errMsg = err.message || "Server backend belum berjalan";
       setApiError(errMsg);
-      // Jangan otomatis melempar ke mock agar page tidak bergeser sendiri saat klik Sinkron API
       showFlashMessage(`! Gagal sinkron API: ${errMsg}`);
     } finally {
       setIsLoadingApi(false);
@@ -71,15 +67,13 @@ export default function OwnerProdukPage() {
     ])
       .then(([allProducts, lowStockItems]) => {
         if (ignore) return;
-        setApiProducts(allProducts);
+        setProducts(allProducts);
         setLowStockProductsApi(lowStockItems);
-        setDataSource("api");
       })
       .catch((err) => {
         if (ignore) return;
         const errMsg = err.message || "Server backend belum berjalan";
         setApiError(errMsg);
-        // Tetap biarkan dataSource "api" dan tampilkan status offline di bar
       })
       .finally(() => {
         if (!ignore) setIsLoadingApi(false);
@@ -90,18 +84,15 @@ export default function OwnerProdukPage() {
     };
   }, []);
 
-  // Sumber data aktif (API Backend atau Mock)
-  const products = dataSource === "api" ? apiProducts : mockProducts;
-
   // Filter low stock products for the header dropdown
   const lowStockProducts = useMemo(() => {
-    if (dataSource === "api" && lowStockProductsApi.length > 0) {
+    if (lowStockProductsApi.length > 0) {
       return lowStockProductsApi;
     }
     return products.filter(
-      (p) => Number(p.stok) <= Number(p.stokMinimum ?? LOW_STOCK_THRESHOLD)
+      (p) => p.aktif !== false && Number(p.stok) <= Number(p.stokMinimum ?? LOW_STOCK_THRESHOLD)
     );
-  }, [dataSource, lowStockProductsApi, products]);
+  }, [lowStockProductsApi, products]);
 
   // Filter products based on search and category
   const filteredProducts = useMemo(() => {
@@ -137,62 +128,23 @@ export default function OwnerProdukPage() {
 
   const handleSaveProduct = async (productData, mode, initialData = null) => {
     try {
-      if (dataSource === "api") {
-        if (mode === "edit") {
-          const targetId = productData.id || productData._id;
-          const updated = await updateProductInApi(targetId, productData, initialData || activeProduct);
-          setApiProducts((prev) =>
-            prev.map((item) => (item.id === targetId ? updated : item))
-          );
-          showFlashMessage(`Produk "${updated.nama}" berhasil diperbarui di backend.`);
-        } else {
-          const created = await createProductInApi(productData);
-          setApiProducts((prev) => [created, ...prev]);
-          showFlashMessage(`Produk "${created.nama}" berhasil ditambahkan ke backend.`);
-        }
-
-        // Refresh low stock items dari backend
-        fetchLowStockProductsFromApi()
-          .then(setLowStockProductsApi)
-          .catch(() => {});
+      if (mode === "edit") {
+        const targetId = productData.id || productData._id;
+        const updated = await updateProductInApi(targetId, productData, initialData || activeProduct);
+        setProducts((prev) =>
+          prev.map((item) => (item.id === targetId ? updated : item))
+        );
+        showFlashMessage(`Produk "${updated.nama}" berhasil diperbarui di backend.`);
       } else {
-        // Mode Mock / Simulasi Lokal
-        if (mode === "edit") {
-          const targetId = productData.id || productData._id;
-          setMockProducts((prev) =>
-            prev.map((item) =>
-              item.id === targetId
-                ? {
-                    ...item,
-                    nama: productData.nama,
-                    kategori: productData.kategori,
-                    harga: Number(productData.harga),
-                    hargaJual: Number(productData.harga),
-                    stok: Number(productData.stok),
-                    isLowStock: Number(productData.stok) <= Number(item.stokMinimum ?? LOW_STOCK_THRESHOLD),
-                  }
-                : item
-            )
-          );
-          showFlashMessage(`[Mock] Produk "${productData.nama}" berhasil diperbarui.`);
-        } else {
-          const newMock = {
-            id: `mock-prd-${Date.now()}`,
-            kodeProduk: `PRD-MOCK-${Math.floor(100 + Math.random() * 900)}`,
-            nama: productData.nama,
-            kategori: productData.kategori,
-            harga: Number(productData.harga),
-            hargaJual: Number(productData.harga),
-            hargaBeli: Math.round(Number(productData.harga) * 0.85),
-            stok: Number(productData.stok),
-            satuan: "pcs",
-            stokMinimum: LOW_STOCK_THRESHOLD,
-            isLowStock: Number(productData.stok) <= LOW_STOCK_THRESHOLD,
-          };
-          setMockProducts((prev) => [newMock, ...prev]);
-          showFlashMessage(`[Mock] Produk "${productData.nama}" berhasil ditambahkan.`);
-        }
+        const created = await createProductInApi(productData);
+        setProducts((prev) => [created, ...prev]);
+        showFlashMessage(`Produk "${created.nama}" berhasil ditambahkan ke backend.`);
       }
+
+      // Refresh low stock items dari backend
+      fetchLowStockProductsFromApi()
+        .then(setLowStockProductsApi)
+        .catch(() => {});
 
       handleCloseDrawer();
     } catch (err) {
@@ -228,15 +180,13 @@ export default function OwnerProdukPage() {
         </div>
       </header>
 
-      {/* Developer Source Bar: Live API Backend vs Mode Mock */}
+      {/* Live API Backend Source Bar */}
       <ApiSourceBar
-        dataSource={dataSource}
+        dataSource="api"
         isLoading={isLoadingApi}
         apiError={apiError}
         onRefreshApi={loadFromBackend}
-        onSwitchSource={setDataSource}
         endpointPath="/products"
-        mockName="mockProducts.js"
       />
 
       {/* Status Alert Banner when changes are saved */}
@@ -275,16 +225,16 @@ export default function OwnerProdukPage() {
       {/* Full-Width Lo-Fi Product Grid */}
       <section aria-label="Daftar Produk Toko">
         {filteredProducts.length === 0 ? (
-          dataSource === "api" && apiError && apiProducts.length === 0 ? (
+          apiError && products.length === 0 ? (
             <div className="p-10 border-2 border-dashed border-black/50 rounded text-center flex flex-col items-center justify-center gap-3 bg-neutral-100">
               <span className="px-2.5 py-0.5 border border-black rounded font-mono font-bold text-xs bg-white text-black">
-                [SERVER BACKEND OFFLINE]
+                [SERVER BACKEND BELUM TERHUBUNG]
               </span>
               <p className="font-bold text-base text-black">
-                Server Backend Belum Dijalankan
+                Gagal Terhubung ke Backend API
               </p>
               <p className="text-xs text-neutral-700 max-w-md leading-relaxed">
-                Halaman diatur ke mode <strong>Live API</strong> (<code className="font-mono">http://localhost:5000/api/products</code>), namun server Express backend belum aktif di port 5000.
+                {apiError}
               </p>
               <div className="p-3 bg-white border border-black rounded text-left font-mono text-xs w-full max-w-md flex flex-col gap-1">
                 <p className="text-neutral-600 font-bold">Langkah menyalakan backend:</p>
@@ -301,13 +251,6 @@ export default function OwnerProdukPage() {
                   className="px-4 py-2 min-h-[40px] border-2 border-black rounded text-xs font-bold bg-black text-white hover:bg-neutral-800 transition-colors shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] disabled:opacity-50"
                 >
                   {isLoadingApi ? "Memeriksa Koneksi..." : "[ Sinkron Ulang API ]"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDataSource("mock")}
-                  className="px-4 py-2 min-h-[40px] border border-black rounded text-xs font-bold bg-white hover:bg-neutral-200 transition-colors"
-                >
-                  [ Beralih ke Mode Mock Sementara ]
                 </button>
               </div>
             </div>

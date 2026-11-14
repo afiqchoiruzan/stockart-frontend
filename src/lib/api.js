@@ -230,10 +230,10 @@ export async function apiRequest(path, options = {}) {
     throw fetchErr;
   }
 
-  // Jika token kadaluarsa (401) di browser, coba login owner sekali lagi
+  // Jika token kadaluarsa atau milik DB berbeda (401) di browser, hapus sesi lama dan login owner sekali lagi
   if (response.status === 401 && typeof window !== "undefined") {
     try {
-      const freshToken = await ensureOwnerAuthSession();
+      const freshToken = await ensureOwnerAuthSession(true);
       if (freshToken) {
         headers["Authorization"] = `Bearer ${freshToken}`;
         response = await fetch(`${API_BASE_URL}${path}`, {
