@@ -34,32 +34,69 @@ export function normalizeBackendProduct(raw) {
 }
 
 /**
- * Task 5: Mengonversi data form UI ke payload backend Mongoose yang memenuhi middleware/validate.js.
+ * Mengonversi data form UI ke payload backend Mongoose yang memenuhi middleware/validate.js.
  */
 export function toBackendProductPayload(formData, initialData = null) {
-  const hargaJual = Math.round(Number(formData.harga || 0));
-  const fallbackHargaBeli =
-    initialData?.hargaBeli !== undefined
-      ? Number(initialData.hargaBeli)
+  const hargaJualRaw =
+    formData.hargaJual !== undefined && formData.hargaJual !== ""
+      ? formData.hargaJual
+      : formData.harga;
+  const hargaJual = Math.max(0, Math.round(Number(hargaJualRaw || 0)));
+
+  const hargaBeliRaw =
+    formData.hargaBeli !== undefined && formData.hargaBeli !== ""
+      ? formData.hargaBeli
+      : initialData?.hargaBeli !== undefined
+      ? initialData.hargaBeli
       : Math.round(hargaJual * 0.85);
+  const hargaBeli = Math.max(0, Math.round(Number(hargaBeliRaw || 0)));
+
+  const stokRaw =
+    formData.stok !== undefined && formData.stok !== ""
+      ? formData.stok
+      : initialData?.stok ?? 0;
+
+  const stokMinRaw =
+    formData.stokMinimum !== undefined && formData.stokMinimum !== ""
+      ? formData.stokMinimum
+      : initialData?.stokMinimum !== undefined
+      ? initialData.stokMinimum
+      : 5;
+
+  const satuan = String(
+    formData.satuan ?? initialData?.satuan ?? "pcs"
+  ).trim() || "pcs";
 
   const payload = {
     nama: String(formData.nama || "").trim(),
-    kategori: formData.kategori || "Sembako",
+    kategori: String(formData.kategori || "Sembako").trim(),
     hargaJual,
-    hargaBeli: Math.max(0, fallbackHargaBeli),
-    stok: Math.round(Number(formData.stok || 0)),
-    satuan: initialData?.satuan || "pcs",
-    stokMinimum:
-      initialData?.stokMinimum !== undefined ? Number(initialData.stokMinimum) : 5,
-    aktif: initialData?.aktif !== undefined ? Boolean(initialData.aktif) : true,
+    hargaBeli,
+    satuan,
+    stokMinimum: Math.max(0, Math.round(Number(stokMinRaw || 0))),
+    aktif:
+      formData.aktif !== undefined
+        ? Boolean(formData.aktif)
+        : initialData?.aktif !== undefined
+        ? Boolean(initialData.aktif)
+        : true,
   };
 
-  if (initialData?.kodeProduk) {
-    payload.kodeProduk = initialData.kodeProduk;
+  if (!formData.omitStok) {
+    payload.stok = Math.max(0, Math.round(Number(stokRaw || 0)));
   }
-  if (initialData?.deskripsi) {
-    payload.deskripsi = initialData.deskripsi;
+
+  const kodeProduk = String(
+    formData.kodeProduk ?? initialData?.kodeProduk ?? ""
+  ).trim();
+  if (kodeProduk) {
+    payload.kodeProduk = kodeProduk.toUpperCase();
+  }
+
+  const rawDeskripsi =
+    formData.deskripsi !== undefined ? formData.deskripsi : initialData?.deskripsi;
+  if (rawDeskripsi !== undefined) {
+    payload.deskripsi = String(rawDeskripsi).trim();
   }
 
   return payload;
@@ -230,10 +267,10 @@ export async function apiRequest(path, options = {}) {
     throw fetchErr;
   }
 
-  // Jika token kadaluarsa (401) di browser, coba login owner sekali lagi
+  // Jika token kadaluarsa atau milik DB berbeda (401) di browser, hapus sesi lama dan login owner sekali lagi
   if (response.status === 401 && typeof window !== "undefined") {
     try {
-      const freshToken = await ensureOwnerAuthSession();
+      const freshToken = await ensureOwnerAuthSession(true);
       if (freshToken) {
         headers["Authorization"] = `Bearer ${freshToken}`;
         response = await fetch(`${API_BASE_URL}${path}`, {
@@ -248,9 +285,17 @@ export async function apiRequest(path, options = {}) {
 
   const payload = await response.json().catch(() => ({}));
   if (!response.ok || payload.success === false) {
-    const err = new Error(
-      payload.message || `Permintaan API gagal (${response.status})`
-    );
+    const detailErrors = Array.isArray(payload.errors)
+      ? payload.errors
+          .map((item) =>
+            typeof item === "string" ? item : item?.message || item?.msg
+          )
+          .filter(Boolean)
+      : [];
+    const baseMessage = payload.message || `Permintaan API gagal (${response.status})`;
+    const fullMessage =
+      detailErrors.length > 0 ? `${baseMessage}: ${detailErrors.join(", ")}` : baseMessage;
+    const err = new Error(fullMessage);
     err.status = response.status;
     throw err;
   }

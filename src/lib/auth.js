@@ -194,9 +194,13 @@ export function RoleGuard({ role, children }) {
   return children;
 }
 
-export async function ensureOwnerAuthSession() {
-  const token = getAuthToken();
-  if (token) return token;
+export async function ensureOwnerAuthSession(forceRefresh = false) {
+  if (forceRefresh) {
+    clearAuthSession();
+  } else {
+    const token = getAuthToken();
+    if (token) return token;
+  }
 
   try {
     const data = await loginWithBackend("pemilik", "gantidulu123");

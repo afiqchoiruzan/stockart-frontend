@@ -59,9 +59,9 @@ export default function ApiSourceBar({
             {dataSource === "api" ? (
               apiError ? (
                 <>
-                  <span className="text-black font-semibold">Offline:</span> Belum terhubung ke{" "}
-                  <code className="font-mono font-bold">{API_BASE_URL}{endpointPath}</code>{" "}
-                  (Jalankan <code className="font-mono bg-neutral-200 px-1 rounded">npm run dev</code> di terminal stockart-backend)
+                  <span className="text-black font-semibold">Kendala API:</span>{" "}
+                  <span className="text-black">{apiError}</span> — endpoint{" "}
+                  <code className="font-mono font-bold">{API_BASE_URL}{endpointPath}</code>
                 </>
               ) : (
                 <>
@@ -88,17 +88,19 @@ export default function ApiSourceBar({
             {isLoading ? "[Memuat...]" : "[ Sinkron API ]"}
           </button>
 
-          <button
-            type="button"
-            onClick={() =>
-              onSwitchSource(dataSource === "api" ? "mock" : "api")
-            }
-            className="min-h-[32px] px-2.5 py-1 border border-black rounded font-mono font-bold bg-white hover:bg-neutral-200 text-black transition-colors"
-          >
-            {dataSource === "api"
-              ? "[Ke Mode Mock]"
-              : "[Hubungkan Live API]"}
-          </button>
+          {typeof onSwitchSource === "function" && (
+            <button
+              type="button"
+              onClick={() =>
+                onSwitchSource(dataSource === "api" ? "mock" : "api")
+              }
+              className="min-h-[32px] px-2.5 py-1 border border-black rounded font-mono font-bold bg-white hover:bg-neutral-200 text-black transition-colors"
+            >
+              {dataSource === "api"
+                ? "[Ke Mode Mock]"
+                : "[Hubungkan Live API]"}
+            </button>
+          )}
 
           <button
             type="button"
