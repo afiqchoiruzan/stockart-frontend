@@ -214,17 +214,14 @@ export default function OwnerProdukPage() {
       if (mode === "edit") {
         const targetId = productData.id || productData._id;
         const baseInitial = initialData || activeProduct;
-        const { stockAction } = productData;
+        const prevStok = Math.max(0, Math.round(Number(baseInitial?.stok ?? 0)));
+        const nextStok = Math.max(0, Math.round(Number(productData.stok ?? prevStok)));
+        const restockDelta = nextStok - prevStok;
+        const detailChanged = hasProductDetailChanged(productData, baseInitial);
 
         let updated;
-        if (stockAction?.mode === "restock") {
-          const restockQty = Math.max(
-            0,
-            Math.round(Number(stockAction.restockJumlah || 0))
-          );
-          const detailChanged = hasProductDetailChanged(productData, baseInitial);
-
-          if (detailChanged || restockQty === 0) {
+        if (restockDelta > 0) {
+          if (detailChanged) {
             updated = await updateProductInApi(
               targetId,
               { ...productData, omitStok: true },
@@ -236,10 +233,7 @@ export default function OwnerProdukPage() {
                 .filter((item) => matchesStatusFilter(item, statusFilter))
             );
           }
-
-          if (restockQty > 0) {
-            updated = await restockProductInApi(targetId, restockQty);
-          }
+          updated = await restockProductInApi(targetId, restockDelta);
         } else {
           updated = await updateProductInApi(targetId, productData, baseInitial);
         }
@@ -250,8 +244,8 @@ export default function OwnerProdukPage() {
             .filter((item) => matchesStatusFilter(item, statusFilter))
         );
         const restockSuffix =
-          stockAction?.mode === "restock" && Number(stockAction.restockJumlah) > 0
-            ? ` (+${Math.round(Number(stockAction.restockJumlah))} ${updated.satuan || "pcs"})`
+          restockDelta > 0
+            ? ` (+${restockDelta} ${updated.satuan || "pcs"})`
             : "";
         showFlashMessage(
           `Produk "${updated.nama}" berhasil diperbarui${restockSuffix}.`
