@@ -50,13 +50,18 @@ function KasirDetailView({ kasirId }) {
       if (!isMockKasirId) {
         setDataSource("api");
       }
+      showTempMessage(
+        `Berhasil menyinkronkan ${data.length} transaksi dari server backend.`
+      );
     } catch (err) {
-      setApiError(err.message || "Server backend belum berjalan");
+      const errMsg = err.message || "Server backend belum berjalan";
+      setApiError(errMsg);
       setDataSource("mock");
+      showTempMessage(`! Gagal sinkron API: ${errMsg}`);
     } finally {
       setIsLoadingApi(false);
     }
-  }, [isMockKasirId]);
+  }, [isMockKasirId, showTempMessage]);
 
   useEffect(() => {
     let ignore = false;
@@ -217,8 +222,11 @@ function KasirDetailView({ kasirId }) {
 
   const handlePrintReceipt = (trx) => {
     showTempMessage(
-      `Menyiapkan cetak / unduh PDF struk ${trx.noInvoice} (${trx.namaKasir}).`
+      `Membuka dialog cetak / simpan PDF struk ${trx.noInvoice} (${trx.namaKasir}).`
     );
+    if (typeof window !== "undefined") {
+      window.print();
+    }
   };
 
   const handleResetFilters = () => {

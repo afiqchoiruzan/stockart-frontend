@@ -397,8 +397,11 @@ export async function voidTransactionInApi(id) {
 
 // Untuk sementara komunikasi memakai backend lokal (lihat .env.local).
 export const API_BASE = (
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"
-).replace(/\/+$/, "");
+  process.env.NEXT_PUBLIC_API_URL ||
+  "https://stockart-backend-production-5896718b.up.railway.app"
+)
+  .replace(/\/+$/, "")
+  .replace(/\/api$/, "");
 
 export const TOKEN_KEY = "stockart_token";
 export const USER_KEY = "stockart_user";

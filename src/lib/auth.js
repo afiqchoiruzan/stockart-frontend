@@ -8,7 +8,10 @@ import { apiLogin, apiGetMe, TOKEN_KEY, USER_KEY } from "@/lib/api";
 // dipakai juga oleh apiFetch() yang menambahkan "/api/..." sendiri. Helper lama
 // (apiRequest, loginWithBackend) memanggil path tanpa "/api", jadi pastikan
 // base URL ini selalu berakhiran tepat satu "/api".
-export const API_BASE_URL = `${(process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000")
+export const API_BASE_URL = `${(
+  process.env.NEXT_PUBLIC_API_URL ||
+  "https://stockart-backend-production-5896718b.up.railway.app"
+)
   .replace(/\/+$/, "")
   .replace(/\/api$/, "")}/api`;
 

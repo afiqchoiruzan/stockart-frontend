@@ -49,13 +49,18 @@ export default function OwnerTransaksiPage() {
       if (data.length > 0) {
         setSelectedTrxId((prev) => prev || data[0].id);
       }
+      showTempMessage(
+        `Berhasil menyinkronkan ${data.length} transaksi dari server backend.`
+      );
     } catch (err) {
-      setApiError(err.message || "Server backend belum berjalan");
+      const errMsg = err.message || "Server backend belum berjalan";
+      setApiError(errMsg);
       setDataSource("mock");
+      showTempMessage(`! Gagal sinkron API: ${errMsg}`);
     } finally {
       setIsLoadingApi(false);
     }
-  }, []);
+  }, [showTempMessage]);
 
   useEffect(() => {
     let ignore = false;
@@ -208,8 +213,11 @@ export default function OwnerTransaksiPage() {
 
   const handlePrintReceipt = (trx) => {
     showTempMessage(
-      `Menyiapkan cetak / unduh PDF struk ${trx.noInvoice} (${trx.namaKasir}).`
+      `Membuka dialog cetak / simpan PDF struk ${trx.noInvoice} (${trx.namaKasir}).`
     );
+    if (typeof window !== "undefined") {
+      window.print();
+    }
   };
 
   const handleSwitchSource = (nextSource) => {
