@@ -21,7 +21,7 @@ const ROLE_OPTIONS = {
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, user, token, loading } = useAuth();
+  const { login, logout, user, token, loading } = useAuth();
 
   // Jika sudah login, langsung arahkan ke halaman sesuai role
   useEffect(() => {
@@ -40,9 +40,6 @@ export default function LoginPage() {
   const handlePickRole = (roleKey) => {
     setSelectedRole(roleKey);
     setError("");
-    if (roleKey === "owner" && !username) {
-      setUsername("pemilik");
-    }
   };
 
   const handleBackToRole = () => {
@@ -66,6 +63,19 @@ export default function LoginPage() {
 
     try {
       const loggedInUser = await login(cleanUsername, cleanPassword);
+      const expectedBackendRole =
+        selectedRole === "owner" ? "pemilik" : "kasir";
+
+      if (selectedRole && loggedInUser.role !== expectedBackendRole) {
+        logout();
+        setError(
+          selectedRole === "owner"
+            ? "Akun ini bukan akun Owner. Silakan klik 'Ganti peran' lalu masuk sebagai Kasir."
+            : "Akun ini bukan akun Kasir. Silakan klik 'Ganti peran' lalu masuk sebagai Owner."
+        );
+        return;
+      }
+
       router.replace(getHomePathForRole(loggedInUser.role));
     } catch (err) {
       console.error("Login error:", err);
@@ -319,12 +329,6 @@ export default function LoginPage() {
             )}
             <span>{isLoading ? "Memproses..." : "Masuk"}</span>
           </button>
-
-          <p className="text-xs text-[#6B7773]">
-            {selectedRole === "owner"
-              ? "Akses Owner: pemilik / gantidulu123"
-              : "Gunakan akun kasir yang terdaftar di sistem"}
-          </p>
 
           <button
             type="button"
