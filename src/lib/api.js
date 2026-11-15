@@ -148,13 +148,34 @@ export function normalizeBackendTransaction(raw) {
     ? toWibDateAndTime(raw.dibatalkanPada).fullWib
     : null;
 
+  let savedPayment = {};
+  if (typeof window !== "undefined" && rawId) {
+    try {
+      const allPayments =
+        JSON.parse(localStorage.getItem("stockart_payments") || "{}") || {};
+      savedPayment = allPayments[rawId] || {};
+    } catch {
+      savedPayment = {};
+    }
+  }
+
   const totalHarga = Number(raw.totalHarga || 0);
   const uangBayar =
-    raw.uangBayar !== undefined ? Number(raw.uangBayar) : totalHarga;
+    raw.uangBayar !== undefined
+      ? Number(raw.uangBayar)
+      : savedPayment.uangBayar !== undefined
+      ? Number(savedPayment.uangBayar)
+      : totalHarga;
   const kembalian =
     raw.kembalian !== undefined
       ? Number(raw.kembalian)
+      : savedPayment.kembalian !== undefined
+      ? Number(savedPayment.kembalian)
       : Math.max(0, uangBayar - totalHarga);
+  const rawMetode =
+    raw.metodePembayaran || savedPayment.metodePembayaran || "Tunai";
+  const metodePembayaran =
+    rawMetode === "Tunai / POS" ? "Tunai" : rawMetode;
 
   const detailBarang = Array.isArray(raw.detailBarang)
     ? raw.detailBarang.map((item, idx) => {
@@ -189,7 +210,7 @@ export function normalizeBackendTransaction(raw) {
     usernameKasir,
     tanggal: raw.tanggal || tanggal,
     waktu: raw.waktu || waktu,
-    metodePembayaran: raw.metodePembayaran || "Tunai / POS",
+    metodePembayaran,
     status: raw.status || "selesai",
     stokDipotong: Boolean(raw.stokDipotong),
     totalHarga,

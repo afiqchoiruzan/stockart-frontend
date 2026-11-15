@@ -81,6 +81,7 @@ function DrawerFormInner({
   initialData,
   availableCategories,
   isSubmitting,
+  onClose,
   onSubmit,
   onDeactivate,
   onRestore,
@@ -120,13 +121,13 @@ function DrawerFormInner({
   const validate = () => {
     const newErrors = {};
     if (!formData.nama.trim()) {
-      newErrors.nama = "Nama produk wajib diisi";
+      newErrors.nama = "Nama produk wajib diisi.";
     }
     if (!formData.kategori.trim()) {
-      newErrors.kategori = "Kategori wajib dipilih";
+      newErrors.kategori = "Kategori wajib dipilih.";
     }
     if (!formData.satuan.trim()) {
-      newErrors.satuan = "Satuan wajib diisi";
+      newErrors.satuan = "Satuan wajib diisi.";
     }
     const hargaBeliNum = Number(formData.hargaBeli);
     if (
@@ -134,19 +135,19 @@ function DrawerFormInner({
       Number.isNaN(hargaBeliNum) ||
       hargaBeliNum < 0
     ) {
-      newErrors.hargaBeli = "Harga beli harus angka >= 0";
+      newErrors.hargaBeli = "Harga beli harus angka >= 0.";
     }
     const hargaJualNum = Number(formData.hargaJual);
     if (
       formData.hargaJual === "" ||
       Number.isNaN(hargaJualNum) ||
-      hargaJualNum < 0
+      hargaJualNum <= 0
     ) {
-      newErrors.hargaJual = "Harga jual harus angka >= 0";
+      newErrors.hargaJual = "Harga jual harus lebih dari 0.";
     }
     const stokNum = Number(formData.stok);
     if (formData.stok === "" || Number.isNaN(stokNum) || stokNum < 0) {
-      newErrors.stok = "Stok harus angka >= 0";
+      newErrors.stok = "Isi jumlah stok, boleh 0.";
     }
     const stokMinNum = Number(formData.stokMinimum);
     if (
@@ -154,7 +155,7 @@ function DrawerFormInner({
       Number.isNaN(stokMinNum) ||
       stokMinNum < 0
     ) {
-      newErrors.stokMinimum = "Stok minimum harus angka >= 0";
+      newErrors.stokMinimum = "Isi batas stok menipis.";
     }
 
     setErrors(newErrors);
@@ -206,32 +207,32 @@ function DrawerFormInner({
   const submitText = isSubmitting
     ? "Menyimpan..."
     : mode === "edit"
-    ? "Simpan Perubahan"
-    : "Tambah Produk";
+    ? "Simpan"
+    : "Simpan";
 
   return (
     <>
-      <div className="p-5 flex-1 flex flex-col gap-5 overflow-y-auto">
+      <div className="p-5 flex-1 flex flex-col gap-4 overflow-y-auto">
         {isEdit && (
-          <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-black/20">
+          <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-[#E1E4E0]">
             <div className="flex items-center gap-2">
               <span
-                className={`px-2 py-0.5 text-[11px] font-mono font-bold border rounded ${
+                className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${
                   isAktif
-                    ? "border-black bg-neutral-100 text-black"
-                    : "border-red-600 bg-red-50 text-red-700"
+                    ? "bg-[#E6F2EC] text-[#3E8E6A]"
+                    : "bg-[#F8E8E6] text-[#C4574F]"
                 }`}
               >
-                {isAktif ? "AKTIF" : "NONAKTIF"}
+                {isAktif ? "Aktif" : "Nonaktif"}
               </span>
               {isCurrentLowStock && (
-                <span className="px-2 py-0.5 text-[11px] font-mono font-bold border border-red-600 bg-red-50 text-red-700 rounded">
-                  STOK MENIPIS
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#FBF1DC] text-[#D9A441]">
+                  Stok menipis
                 </span>
               )}
             </div>
             {initialData.kodeProduk && (
-              <span className="text-[11px] font-mono text-neutral-600">
+              <span className="text-xs font-mono text-[#6B7773]">
                 SKU: {initialData.kodeProduk}
               </span>
             )}
@@ -243,10 +244,10 @@ function DrawerFormInner({
           onSubmit={handleSubmit}
           className="flex flex-col gap-4"
         >
-          {/* Field: Nama */}
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="field-nama" className="text-sm font-bold text-black">
-              Nama Produk
+          {/* Nama Produk */}
+          <div className="flex flex-col gap-1">
+            <label htmlFor="field-nama" className="text-sm font-medium text-[#1F2A27]">
+              Nama produk
             </label>
             <input
               ref={firstInputRef}
@@ -256,25 +257,23 @@ function DrawerFormInner({
               onChange={(e) =>
                 setFormData((prev) => ({ ...prev, nama: e.target.value }))
               }
-              placeholder="Contoh: Minyak Bimoli 2L"
-              className="w-full min-h-[44px] px-3 py-2 border-2 border-black rounded text-sm bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black"
+              placeholder="Contoh: Minyak Goreng 1 L"
+              className="w-full min-h-[44px] px-4 border border-[#E1E4E0] rounded-md text-sm bg-white focus:outline-2 focus:outline-[#2F6F5E] focus:border-[#2F6F5E]"
             />
             {errors.nama && (
-              <p className="text-xs text-red-700 font-semibold mt-0.5">
-                ! {errors.nama}
-              </p>
+              <span className="text-xs text-[#C4574F]">{errors.nama}</span>
             )}
           </div>
 
-          {/* Field: Kode Produk / SKU */}
-          <div className="flex flex-col gap-1.5">
+          {/* Kode Produk / SKU */}
+          <div className="flex flex-col gap-1">
             <label
               htmlFor="field-kodeProduk"
-              className="text-sm font-bold text-black"
+              className="text-sm font-medium text-[#1F2A27]"
             >
-              Kode Produk / SKU{" "}
+              Kode produk / barcode{" "}
               {!isEdit && (
-                <span className="font-normal text-xs text-neutral-600">
+                <span className="font-normal text-xs text-[#6B7773]">
                   (opsional)
                 </span>
               )}
@@ -290,52 +289,42 @@ function DrawerFormInner({
                 }))
               }
               placeholder="Otomatis (PRD-...) jika kosong"
-              className="w-full min-h-[44px] px-3 py-2 border-2 border-black rounded text-sm font-mono bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black"
+              className="w-full min-h-[44px] px-4 border border-[#E1E4E0] rounded-md text-sm font-mono bg-white focus:outline-2 focus:outline-[#2F6F5E] focus:border-[#2F6F5E]"
             />
           </div>
 
-          {/* Field: Kategori & Satuan */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1.5">
+          {/* Kategori & Satuan */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1">
               <label
                 htmlFor="field-kategori"
-                className="text-sm font-bold text-black"
+                className="text-sm font-medium text-[#1F2A27]"
               >
                 Kategori
               </label>
-              <div className="relative">
-                <select
-                  id="field-kategori"
-                  value={formData.kategori}
-                  onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, kategori: e.target.value }))
-                  }
-                  className="w-full min-h-[44px] px-3 py-2 pr-9 border-2 border-black rounded text-sm font-medium bg-white text-black appearance-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black cursor-pointer"
-                >
-                  {availableCategories.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-                <div
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-black font-mono text-xs"
-                  aria-hidden="true"
-                >
-                  [v]
-                </div>
-              </div>
+              <select
+                id="field-kategori"
+                value={formData.kategori}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, kategori: e.target.value }))
+                }
+                className="w-full min-h-[44px] px-4 border border-[#E1E4E0] rounded-md text-sm bg-white text-[#1F2A27] focus:outline-2 focus:outline-[#2F6F5E] focus:border-[#2F6F5E] cursor-pointer"
+              >
+                {availableCategories.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
               {errors.kategori && (
-                <p className="text-xs text-red-700 font-semibold mt-0.5">
-                  ! {errors.kategori}
-                </p>
+                <span className="text-xs text-[#C4574F]">{errors.kategori}</span>
               )}
             </div>
 
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1">
               <label
                 htmlFor="field-satuan"
-                className="text-sm font-bold text-black"
+                className="text-sm font-medium text-[#1F2A27]"
               >
                 Satuan
               </label>
@@ -348,7 +337,7 @@ function DrawerFormInner({
                   setFormData((prev) => ({ ...prev, satuan: e.target.value }))
                 }
                 placeholder="pcs"
-                className="w-full min-h-[44px] px-3 py-2 border-2 border-black rounded text-sm bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black"
+                className="w-full min-h-[44px] px-4 border border-[#E1E4E0] rounded-md text-sm bg-white focus:outline-2 focus:outline-[#2F6F5E] focus:border-[#2F6F5E]"
               />
               <datalist id="satuan-presets">
                 {SATUAN_PRESETS.map((unit) => (
@@ -356,21 +345,19 @@ function DrawerFormInner({
                 ))}
               </datalist>
               {errors.satuan && (
-                <p className="text-xs text-red-700 font-semibold mt-0.5">
-                  ! {errors.satuan}
-                </p>
+                <span className="text-xs text-[#C4574F]">{errors.satuan}</span>
               )}
             </div>
           </div>
 
-          {/* Field: Harga Beli & Harga Jual */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1.5">
+          {/* Harga Beli & Harga Jual */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1">
               <label
                 htmlFor="field-hargaBeli"
-                className="text-sm font-bold text-black"
+                className="text-sm font-medium text-[#1F2A27]"
               >
-                Harga Beli (Rp)
+                Harga beli (Rp)
               </label>
               <input
                 id="field-hargaBeli"
@@ -381,22 +368,20 @@ function DrawerFormInner({
                 onChange={(e) =>
                   setFormData((prev) => ({ ...prev, hargaBeli: e.target.value }))
                 }
-                placeholder="25000"
-                className="w-full min-h-[44px] px-3 py-2 border-2 border-black rounded text-sm font-mono tabular-nums bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black"
+                placeholder="15000"
+                className="w-full min-h-[44px] px-4 border border-[#E1E4E0] rounded-md text-sm text-right font-semibold tabular-nums bg-white focus:outline-2 focus:outline-[#2F6F5E] focus:border-[#2F6F5E]"
               />
               {errors.hargaBeli && (
-                <p className="text-xs text-red-700 font-semibold mt-0.5">
-                  ! {errors.hargaBeli}
-                </p>
+                <span className="text-xs text-[#C4574F]">{errors.hargaBeli}</span>
               )}
             </div>
 
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1">
               <label
                 htmlFor="field-hargaJual"
-                className="text-sm font-bold text-black"
+                className="text-sm font-medium text-[#1F2A27]"
               >
-                Harga Jual (Rp)
+                Harga jual (Rp)
               </label>
               <input
                 id="field-hargaJual"
@@ -407,22 +392,20 @@ function DrawerFormInner({
                 onChange={(e) =>
                   setFormData((prev) => ({ ...prev, hargaJual: e.target.value }))
                 }
-                placeholder="34000"
-                className="w-full min-h-[44px] px-3 py-2 border-2 border-black rounded text-sm font-mono tabular-nums bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black"
+                placeholder="18000"
+                className="w-full min-h-[44px] px-4 border border-[#E1E4E0] rounded-md text-sm text-right font-semibold tabular-nums bg-white focus:outline-2 focus:outline-[#2F6F5E] focus:border-[#2F6F5E]"
               />
               {errors.hargaJual && (
-                <p className="text-xs text-red-700 font-semibold mt-0.5">
-                  ! {errors.hargaJual}
-                </p>
+                <span className="text-xs text-[#C4574F]">{errors.hargaJual}</span>
               )}
             </div>
           </div>
 
-          {/* Field: Stok (Ubah Total + Preset Chips +5/+10/+20) & Stok Minimum */}
-          <div className="grid grid-cols-2 gap-3 items-start">
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="field-stok" className="text-sm font-bold text-black">
-                {isEdit ? "Total Stok" : "Stok Awal"}
+          {/* Stok + Chips & Batas Stok Menipis */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
+            <div className="flex flex-col gap-1">
+              <label htmlFor="field-stok" className="text-sm font-medium text-[#1F2A27]">
+                Stok
               </label>
               <input
                 id="field-stok"
@@ -434,15 +417,15 @@ function DrawerFormInner({
                   setFormData((prev) => ({ ...prev, stok: e.target.value }))
                 }
                 placeholder="10"
-                className="w-full min-h-[44px] px-3 py-2 border-2 border-black rounded text-sm font-mono tabular-nums bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black"
+                className="w-full min-h-[44px] px-4 border border-[#E1E4E0] rounded-md text-sm text-right font-semibold tabular-nums bg-white focus:outline-2 focus:outline-[#2F6F5E] focus:border-[#2F6F5E]"
               />
-              <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+              <div className="flex items-center gap-1.5 flex-wrap pt-1">
                 {[5, 10, 20].map((preset) => (
                   <button
                     key={preset}
                     type="button"
                     onClick={() => handleAddStockChip(preset)}
-                    className="px-2 py-0.5 text-[11px] font-mono font-bold border border-black rounded bg-white hover:bg-neutral-200 transition-colors cursor-pointer"
+                    className="px-2.5 py-1 text-xs font-semibold border border-[#E1E4E0] rounded-md bg-[#F5F6F4] text-[#2F6F5E] hover:bg-[#E6F0ED] hover:border-[#2F6F5E] transition-colors cursor-pointer"
                   >
                     +{preset}
                   </button>
@@ -456,32 +439,30 @@ function DrawerFormInner({
                         stok: String(currentStok),
                       }))
                     }
-                    className="px-1.5 py-0.5 text-[11px] text-neutral-600 underline hover:text-black cursor-pointer"
+                    className="px-1.5 py-0.5 text-xs text-[#6B7773] underline hover:text-[#1F2A27] cursor-pointer"
                   >
                     Reset
                   </button>
                 )}
               </div>
               {isEdit && stokDelta !== 0 && parsedFormStok !== null && (
-                <p className="text-[11px] font-mono text-neutral-700">
+                <p className="text-xs text-[#2F6F5E] font-medium">
                   {currentStok} {stokDelta > 0 ? `+ ${stokDelta}` : `- ${Math.abs(stokDelta)}`}{" "}
                   &rarr; <strong>{parsedFormStok}</strong>{" "}
                   {formData.satuan || "pcs"}
                 </p>
               )}
               {errors.stok && (
-                <p className="text-xs text-red-700 font-semibold mt-0.5">
-                  ! {errors.stok}
-                </p>
+                <span className="text-xs text-[#C4574F]">{errors.stok}</span>
               )}
             </div>
 
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1">
               <label
                 htmlFor="field-stokMinimum"
-                className="text-sm font-bold text-black"
+                className="text-sm font-medium text-[#1F2A27]"
               >
-                Stok Minimum
+                Batas stok menipis
               </label>
               <input
                 id="field-stokMinimum"
@@ -496,24 +477,25 @@ function DrawerFormInner({
                   }))
                 }
                 placeholder="5"
-                className="w-full min-h-[44px] px-3 py-2 border-2 border-black rounded text-sm font-mono tabular-nums bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black"
+                className="w-full min-h-[44px] px-4 border border-[#E1E4E0] rounded-md text-sm text-right font-semibold tabular-nums bg-white focus:outline-2 focus:outline-[#2F6F5E] focus:border-[#2F6F5E]"
               />
+              <span className="text-xs text-[#6B7773]">
+                Pengingat dikirim ke email saat stok sama atau di bawah angka ini.
+              </span>
               {errors.stokMinimum && (
-                <p className="text-xs text-red-700 font-semibold mt-0.5">
-                  ! {errors.stokMinimum}
-                </p>
+                <span className="text-xs text-[#C4574F]">{errors.stokMinimum}</span>
               )}
             </div>
           </div>
 
-          {/* Field: Deskripsi */}
-          <div className="flex flex-col gap-1.5">
+          {/* Deskripsi */}
+          <div className="flex flex-col gap-1">
             <label
               htmlFor="field-deskripsi"
-              className="text-sm font-bold text-black"
+              className="text-sm font-medium text-[#1F2A27]"
             >
               Deskripsi{" "}
-              <span className="font-normal text-xs text-neutral-600">
+              <span className="font-normal text-xs text-[#6B7773]">
                 (opsional)
               </span>
             </label>
@@ -525,14 +507,14 @@ function DrawerFormInner({
                 setFormData((prev) => ({ ...prev, deskripsi: e.target.value }))
               }
               placeholder="Catatan kemasan, varian, atau rak..."
-              className="w-full px-3 py-2 border-2 border-black rounded text-sm bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black resize-y"
+              className="w-full px-4 py-2 border border-[#E1E4E0] rounded-md text-sm bg-white focus:outline-2 focus:outline-[#2F6F5E] focus:border-[#2F6F5E] resize-y"
             />
           </div>
         </form>
 
-        {/* Simple Nonaktifkan / Aktifkan & Hapus Produk in Edit Mode */}
+        {/* Nonaktifkan / Aktifkan & Hapus Produk in Edit Mode */}
         {isEdit && (
-          <div className="pt-3 border-t border-black/20 flex flex-col gap-2.5">
+          <div className="pt-3 border-t border-[#E1E4E0] flex flex-col gap-2.5">
             {!confirmPermanentDelete ? (
               <div className="grid grid-cols-2 gap-2.5">
                 {isAktif ? (
@@ -540,7 +522,7 @@ function DrawerFormInner({
                     type="button"
                     onClick={() => onDeactivate?.(initialData.id)}
                     disabled={isSubmitting}
-                    className="min-h-[40px] px-3 py-2 border-2 border-black rounded bg-neutral-100 text-black font-bold text-xs hover:bg-neutral-200 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black"
+                    className="min-h-[40px] px-3 py-2 border border-[#E1E4E0] rounded-md bg-white text-[#1F2A27] font-semibold text-xs hover:bg-[#F5F6F4] transition-colors cursor-pointer disabled:opacity-50"
                   >
                     Nonaktifkan
                   </button>
@@ -549,9 +531,9 @@ function DrawerFormInner({
                     type="button"
                     onClick={() => onRestore?.(initialData.id)}
                     disabled={isSubmitting}
-                    className="min-h-[40px] px-3 py-2 border-2 border-black rounded bg-black text-white font-bold text-xs hover:bg-neutral-800 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black"
+                    className="min-h-[40px] px-3 py-2 border border-[#2F6F5E] rounded-md bg-[#E6F0ED] text-[#2F6F5E] font-semibold text-xs hover:bg-[#d5e6e1] transition-colors cursor-pointer disabled:opacity-50"
                   >
-                    Aktifkan
+                    Aktifkan kembali
                   </button>
                 )}
 
@@ -559,15 +541,15 @@ function DrawerFormInner({
                   type="button"
                   onClick={() => setConfirmPermanentDelete(true)}
                   disabled={isSubmitting}
-                  className="min-h-[40px] px-3 py-2 border-2 border-red-600 rounded bg-red-50 text-red-700 font-bold text-xs hover:bg-red-100 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600"
+                  className="min-h-[40px] px-3 py-2 border border-[#C4574F] rounded-md bg-white text-[#C4574F] font-semibold text-xs hover:bg-[#F8E8E6] transition-colors cursor-pointer disabled:opacity-50"
                 >
-                  Hapus Produk
+                  Hapus produk
                 </button>
               </div>
             ) : (
-              <div className="p-3 border-2 border-red-600 rounded bg-red-50 flex flex-col gap-2">
-                <p className="text-xs font-semibold text-red-800 leading-snug">
-                  Hapus permanen &ldquo;{initialData.nama}&rdquo;? Data tidak
+              <div className="p-3.5 border border-[#C4574F] rounded-md bg-[#F8E8E6] flex flex-col gap-2.5">
+                <p className="text-xs font-medium text-[#1F2A27] leading-snug">
+                  Hapus permanen <strong>&ldquo;{initialData.nama}&rdquo;</strong>? Data tidak
                   bisa dikembalikan.
                 </p>
                 <div className="grid grid-cols-2 gap-2">
@@ -575,7 +557,7 @@ function DrawerFormInner({
                     type="button"
                     onClick={() => setConfirmPermanentDelete(false)}
                     disabled={isSubmitting}
-                    className="min-h-[36px] px-3 py-1.5 border border-black rounded bg-white text-black font-bold text-xs hover:bg-neutral-100 transition-colors cursor-pointer disabled:opacity-50"
+                    className="min-h-[36px] px-3 py-1.5 border border-[#E1E4E0] rounded-md bg-white text-[#1F2A27] font-semibold text-xs hover:bg-[#F5F6F4] transition-colors cursor-pointer"
                   >
                     Batal
                   </button>
@@ -583,9 +565,9 @@ function DrawerFormInner({
                     type="button"
                     onClick={() => onPermanentDelete?.(initialData.id)}
                     disabled={isSubmitting}
-                    className="min-h-[36px] px-3 py-1.5 border border-red-700 rounded bg-red-600 text-white font-bold text-xs hover:bg-red-700 transition-colors cursor-pointer disabled:opacity-50"
+                    className="min-h-[36px] px-3 py-1.5 border border-[#C4574F] rounded-md bg-[#C4574F] text-white font-semibold text-xs hover:bg-[#a9453e] transition-colors cursor-pointer"
                   >
-                    Ya, Hapus
+                    Ya, hapus produk
                   </button>
                 </div>
               </div>
@@ -594,19 +576,34 @@ function DrawerFormInner({
         )}
       </div>
 
-      {/* Drawer Footer with Submit Button */}
-      <div className="p-4 border-t-2 border-black bg-white shrink-0">
+      {/* Footer Modal/Drawer */}
+      <div className="p-4 border-t border-[#E1E4E0] bg-white flex items-center justify-end gap-2 shrink-0">
+        <button
+          type="button"
+          onClick={onClose}
+          disabled={isSubmitting}
+          className="min-h-[44px] px-4 border border-[#E1E4E0] rounded-md bg-white hover:bg-[#F5F6F4] text-sm font-semibold text-[#1F2A27] transition-colors cursor-pointer"
+        >
+          Batal
+        </button>
         <button
           type="submit"
           form="product-drawer-form"
           disabled={isSaveDisabled}
-          className={`w-full min-h-[48px] px-4 py-2.5 rounded font-bold text-sm tracking-wide transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black ${
-            isSaveDisabled
-              ? "bg-neutral-200 text-neutral-500 border-2 border-neutral-300 cursor-not-allowed shadow-none"
-              : "bg-black text-white border-2 border-black hover:bg-neutral-800 cursor-pointer shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
-          }`}
+          className="min-h-[44px] px-5 rounded-md bg-[#2F6F5E] hover:bg-[#255a4c] text-white text-sm font-semibold flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         >
-          {submitText}
+          <svg
+            aria-hidden="true"
+            className="w-4 h-4 stroke-current"
+            fill="none"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            viewBox="0 0 24 24"
+          >
+            <path d="M20 6 9 17l-5-5" />
+          </svg>
+          <span>{submitText}</span>
         </button>
       </div>
     </>
@@ -615,7 +612,7 @@ function DrawerFormInner({
 
 export default function ProductFormDrawer({
   isOpen,
-  mode = "add", // 'add' | 'edit'
+  mode = "add",
   initialData = null,
   categories = [],
   isSubmitting = false,
@@ -625,7 +622,6 @@ export default function ProductFormDrawer({
   onRestore,
   onPermanentDelete,
 }) {
-  // Handle Escape key
   useEffect(() => {
     function handleKeyDown(e) {
       if (e.key === "Escape" && isOpen && !isSubmitting) {
@@ -653,9 +649,8 @@ export default function ProductFormDrawer({
   }
   const availableCategories = Array.from(categorySet);
 
-  const title = mode === "edit" ? "Edit Produk" : "Tambah Produk";
+  const title = mode === "edit" ? "Edit produk" : "Tambah produk";
 
-  // Key to force fresh initialization when editing different items or after fresh detail sync
   const formKey =
     mode === "edit" && initialData?.id
       ? `edit_${initialData.id}_${initialData.stok ?? ""}_${initialData.aktif ?? ""}_${initialData.updatedAt || ""}`
@@ -666,25 +661,21 @@ export default function ProductFormDrawer({
       role="dialog"
       aria-modal="true"
       aria-labelledby="drawer-title"
-      className="fixed inset-0 z-50 flex justify-end"
+      className="fixed inset-0 z-50 grid place-items-center p-4"
     >
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/40 transition-opacity"
+        className="fixed inset-0 bg-[#1F2A27]/45 transition-opacity"
         onClick={() => {
           if (!isSubmitting) onClose();
         }}
         aria-hidden="true"
       />
 
-      {/* Drawer Panel */}
-      <div className="relative w-full max-w-md bg-white border-l-2 border-black h-full flex flex-col justify-between shadow-[-6px_0px_0px_0px_rgba(0,0,0,1)] z-10">
-        {/* Drawer Header */}
-        <div className="p-4 border-b-2 border-black flex items-center justify-between bg-neutral-100 shrink-0">
-          <h2
-            id="drawer-title"
-            className="font-bold text-base tracking-tight text-black"
-          >
+      {/* Modal / Drawer Panel (Sesuai Hi-Fi stockart-pos.html) */}
+      <div className="relative w-full max-w-[480px] max-h-[calc(100vh-32px)] bg-white border border-[#E1E4E0] rounded-lg flex flex-col justify-between shadow-xl z-10 overflow-hidden">
+        <div className="p-4 border-b border-[#E1E4E0] flex items-center justify-between bg-white shrink-0">
+          <h2 id="drawer-title" className="font-semibold text-sm text-[#1F2A27]">
             {title}
           </h2>
           <button
@@ -692,19 +683,30 @@ export default function ProductFormDrawer({
             onClick={onClose}
             disabled={isSubmitting}
             aria-label="Tutup formulir"
-            className="min-h-[36px] min-w-[36px] border border-black rounded flex items-center justify-center font-bold text-sm bg-white hover:bg-neutral-200 transition-colors cursor-pointer disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black"
+            className="w-8 h-8 rounded-md flex items-center justify-center text-[#6B7773] hover:bg-[#F5F6F4] hover:text-[#1F2A27] transition-colors cursor-pointer"
           >
-            [X]
+            <svg
+              aria-hidden="true"
+              className="w-4 h-4 stroke-current"
+              fill="none"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              viewBox="0 0 24 24"
+            >
+              <path d="M18 6 6 18" />
+              <path d="m6 6 12 12" />
+            </svg>
           </button>
         </div>
 
-        {/* Dynamic Keyed Inner Form */}
         <DrawerFormInner
           key={formKey}
           mode={mode}
           initialData={initialData}
           availableCategories={availableCategories}
           isSubmitting={isSubmitting}
+          onClose={onClose}
           onSubmit={onSubmit}
           onDeactivate={onDeactivate}
           onRestore={onRestore}

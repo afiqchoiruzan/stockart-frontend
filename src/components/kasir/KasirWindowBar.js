@@ -2,36 +2,69 @@
 
 import { usePathname } from "next/navigation";
 
-const PAGE_LABELS = {
-  "/kasir/produk": "3A. KASIR — PRODUK",
-  "/kasir/transaksi": "3B. KASIR — TRANSAKSI POS",
-  "/kasir/riwayat": "3C. KASIR — RIWAYAT & INVOICE",
-};
-
 export default function KasirWindowBar() {
-  const pathname = usePathname();
+  const pathname = usePathname() || "/kasir/transaksi";
 
-  const label = PAGE_LABELS[pathname] || "KASIR PANEL";
-  const displayUrl = `https://stockart.pages.dev${pathname || "/kasir"}`;
+  let title = "Transaksi";
+  let subtitle = "Pilih barang, terima pembayaran, cetak struk.";
+  const isPos = pathname === "/kasir/transaksi";
+
+  if (pathname.startsWith("/kasir/produk")) {
+    title = "Produk";
+    subtitle = "Cek harga dan sisa stok.";
+  } else if (
+    pathname.startsWith("/kasir/riwayat") ||
+    pathname.startsWith("/kasir/transaksi/invoice")
+  ) {
+    title = "Riwayat Transaksi";
+    subtitle = "Penjualan yang kamu catat.";
+  }
+
+  const todayStr = new Intl.DateTimeFormat("id-ID", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(new Date());
 
   return (
     <header
-      aria-label="Mock Window Bar"
-      className="w-full border-b-2 border-black bg-white px-4 py-2 flex items-center justify-between text-xs font-mono select-none"
+      aria-label="Header Halaman Kasir"
+      className="w-full border-b border-[#E1E4E0] bg-white px-6 py-4 flex items-center justify-between gap-4"
     >
-      <div className="flex items-center gap-2">
-        <div className="flex items-center gap-1">
-          <span className="w-2.5 h-2.5 rounded-full border border-black bg-neutral-300" />
-          <span className="w-2.5 h-2.5 rounded-full border border-black bg-neutral-300" />
-          <span className="w-2.5 h-2.5 rounded-full border border-black bg-neutral-300" />
-        </div>
-        <div className="border border-black px-3 py-1 rounded bg-neutral-50 text-neutral-700 min-w-[280px]">
-          {displayUrl}
-        </div>
+      <div>
+        <h1 className="text-sm font-bold text-[#1F2A27] leading-tight">
+          {title}
+        </h1>
+        <p className="text-xs text-[#6B7773] mt-0.5">{subtitle}</p>
       </div>
-      <div className="border border-black px-2.5 py-1 font-bold tracking-wider bg-white">
-        {label}
-      </div>
+
+      {isPos ? (
+        <div className="hidden md:flex items-center gap-4 text-xs text-[#6B7773]">
+          <span className="inline-flex items-center gap-1.5">
+            <kbd className="px-1.5 py-0.5 text-[11px] font-medium bg-white border border-[#E1E4E0] border-b-2 rounded">
+              F2
+            </kbd>
+            Cari barang
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <kbd className="px-1.5 py-0.5 text-[11px] font-medium bg-white border border-[#E1E4E0] border-b-2 rounded">
+              F4
+            </kbd>
+            Uang pas
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <kbd className="px-1.5 py-0.5 text-[11px] font-medium bg-white border border-[#E1E4E0] border-b-2 rounded">
+              F9
+            </kbd>
+            Bayar
+          </span>
+        </div>
+      ) : (
+        <span className="hidden sm:inline-block text-xs text-[#6B7773]">
+          {todayStr}
+        </span>
+      )}
     </header>
   );
 }

@@ -185,7 +185,7 @@ export function RoleGuard({ role, children }) {
 
   if (!allowed) {
     return (
-      <div className="p-6 border-2 border-black rounded bg-neutral-50 font-mono text-sm">
+      <div className="p-6 border border-[#E1E4E0] rounded-lg bg-white text-[#6B7773] text-sm">
         Memeriksa sesi login...
       </div>
     );

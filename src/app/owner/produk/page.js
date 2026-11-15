@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useCallback } from "react";
-import { CATEGORIES, LOW_STOCK_THRESHOLD } from "@/lib/mockProducts";
+import { CATEGORIES, LOW_STOCK_THRESHOLD, formatRupiah } from "@/lib/mockProducts";
 import {
   fetchProductsFromApi,
   fetchProductByIdFromApi,
@@ -13,10 +13,8 @@ import {
   restoreProductInApi,
   notifyLowStockInApi,
 } from "@/lib/api";
-import ApiSourceBar from "@/components/owner/ApiSourceBar";
 import LowStockDropdown from "@/components/owner/LowStockDropdown";
 import ProductToolbar from "@/components/owner/ProductToolbar";
-import ProductCard from "@/components/owner/ProductCard";
 import ProductFormDrawer from "@/components/owner/ProductFormDrawer";
 
 function matchesStatusFilter(product, filter) {
@@ -52,12 +50,10 @@ export default function OwnerProdukPage() {
   const [isNotifyingEmail, setIsNotifyingEmail] = useState(false);
   const [isSubmittingAction, setIsSubmittingAction] = useState(false);
 
-  // Drawer state
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [drawerMode, setDrawerMode] = useState("add"); // 'add' | 'edit'
   const [activeProduct, setActiveProduct] = useState(null);
 
-  // Success flash message
   const [statusMessage, setStatusMessage] = useState("");
 
   const showFlashMessage = useCallback((msg) => {
@@ -67,7 +63,6 @@ export default function OwnerProdukPage() {
     }, 4500);
   }, []);
 
-  // Memuat data produk dan low stock dari backend API
   const loadFromBackend = useCallback(
     async (aktifOverride = statusFilter, silent = false) => {
       setIsLoadingApi(true);
@@ -80,7 +75,9 @@ export default function OwnerProdukPage() {
         setProducts(allProducts);
         setLowStockProductsApi(lowStockItems);
         if (!silent) {
-          showFlashMessage(`Berhasil menyinkronkan ${allProducts.length} produk dari backend.`);
+          showFlashMessage(
+            `Berhasil menyinkronkan ${allProducts.length} produk dari backend.`
+          );
         }
       } catch (err) {
         const errMsg = err.message || "Server backend belum berjalan";
@@ -137,17 +134,29 @@ export default function OwnerProdukPage() {
     };
   }, []);
 
-  // Filter low stock products for the header dropdown
+  // Shortcut F2 untuk fokus ke kotak pencarian
+  useEffect(() => {
+    function handleKeyDown(e) {
+      if (e.key === "F2" && !isDrawerOpen) {
+        e.preventDefault();
+        document.getElementById("product-search")?.focus();
+      }
+    }
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isDrawerOpen]);
+
   const lowStockProducts = useMemo(() => {
     if (lowStockProductsApi.length > 0) {
       return lowStockProductsApi;
     }
     return products.filter(
-      (p) => p.aktif !== false && Number(p.stok) <= Number(p.stokMinimum ?? LOW_STOCK_THRESHOLD)
+      (p) =>
+        p.aktif !== false &&
+        Number(p.stok) <= Number(p.stokMinimum ?? LOW_STOCK_THRESHOLD)
     );
   }, [lowStockProductsApi, products]);
 
-  // Kategori dinamis (gabungan preset + kategori unik dari database)
   const availableCategories = useMemo(() => {
     const set = new Set(CATEGORIES);
     products.forEach((p) => {
@@ -156,7 +165,6 @@ export default function OwnerProdukPage() {
     return Array.from(set);
   }, [products]);
 
-  // Filter products based on search and category
   const filteredProducts = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return products.filter((p) => {
@@ -182,7 +190,6 @@ export default function OwnerProdukPage() {
     setActiveProduct(product);
     setIsDrawerOpen(true);
 
-    // Sinkronkan detail terbaru produk dari GET /api/products/:id
     if (product?.id) {
       fetchProductByIdFromApi(product.id)
         .then((fresh) => {
@@ -215,7 +222,10 @@ export default function OwnerProdukPage() {
         const targetId = productData.id || productData._id;
         const baseInitial = initialData || activeProduct;
         const prevStok = Math.max(0, Math.round(Number(baseInitial?.stok ?? 0)));
-        const nextStok = Math.max(0, Math.round(Number(productData.stok ?? prevStok)));
+        const nextStok = Math.max(
+          0,
+          Math.round(Number(productData.stok ?? prevStok))
+        );
         const restockDelta = nextStok - prevStok;
         const detailChanged = hasProductDetailChanged(productData, baseInitial);
 
@@ -235,7 +245,11 @@ export default function OwnerProdukPage() {
           }
           updated = await restockProductInApi(targetId, restockDelta);
         } else {
-          updated = await updateProductInApi(targetId, productData, baseInitial);
+          updated = await updateProductInApi(
+            targetId,
+            productData,
+            baseInitial
+          );
         }
 
         setProducts((prev) =>
@@ -281,7 +295,7 @@ export default function OwnerProdukPage() {
       refreshLowStock();
       handleCloseDrawer();
       showFlashMessage(
-        "Produk dinonaktifkan. Pilih filter 'Nonaktif' jika ingin mengaktifkannya kembali."
+        "Produk dinonaktifkan. Pilih filter 'Produk Nonaktif' jika ingin mengaktifkannya kembali."
       );
     } catch (err) {
       showFlashMessage(`! Gagal menonaktifkan produk: ${err.message}`);
@@ -324,70 +338,76 @@ export default function OwnerProdukPage() {
     }
   };
 
+  const outOfStockItems = lowStockProducts.filter((p) => Number(p.stok) <= 0);
+  const runningLowItems = lowStockProducts.filter((p) => Number(p.stok) > 0);
+
   return (
-    <div className="flex flex-col gap-6 max-w-7xl mx-auto">
-      {/* Top Header Section */}
-      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b-2 border-black">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-black">
-            Menu Produk
-          </h1>
+    <div className="flex flex-col gap-4 max-w-7xl mx-auto">
+      {/* Alert Banner Perlu Restock (Sesuai Hi-Fi stockart-pos.html) */}
+      {lowStockProducts.length > 0 && (
+        <div
+          role="status"
+          className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border border-[#D9A441] rounded-md bg-[#FBF1DC] text-sm text-[#1F2A27]"
+        >
+          <div className="flex items-start gap-2.5 flex-1 min-w-[260px]">
+            <svg
+              aria-hidden="true"
+              className="w-4 h-4 stroke-current text-[#7a5612] shrink-0 mt-0.5"
+              fill="none"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              viewBox="0 0 24 24"
+            >
+              <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" />
+              <path d="M12 9v4" />
+              <path d="M12 17h.01" />
+            </svg>
+            <div>
+              <strong>Perlu restock:</strong>{" "}
+              {[
+                ...outOfStockItems.map((p) => `${p.nama} (habis)`),
+                ...runningLowItems.map((p) => `${p.nama} (${p.stok})`),
+              ].join(", ")}
+              . Pengingat dikirim ke email owner.
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <LowStockDropdown
+              items={lowStockProducts}
+              onSelectProduct={handleOpenEdit}
+              onNotifyEmail={handleNotifyLowStockEmail}
+              isNotifying={isNotifyingEmail}
+            />
+          </div>
         </div>
-
-        {/* Action Group: Low Stock Dropdown + Tambah Produk */}
-        <div className="flex items-center gap-3">
-          <LowStockDropdown
-            items={lowStockProducts}
-            onSelectProduct={handleOpenEdit}
-            onNotifyEmail={handleNotifyLowStockEmail}
-            isNotifying={isNotifyingEmail}
-          />
-
-          <button
-            type="button"
-            onClick={handleOpenAdd}
-            className="flex items-center gap-1.5 px-4 py-2 min-h-[44px] border-2 border-black rounded text-sm font-bold bg-white hover:bg-neutral-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
-          >
-            <span>+</span>
-            <span>Tambah Produk</span>
-          </button>
-        </div>
-      </header>
-
-      {/* Live API Backend Source Bar */}
-      <ApiSourceBar
-        dataSource="api"
-        isLoading={isLoadingApi}
-        apiError={apiError}
-        onRefreshApi={() => loadFromBackend(statusFilter)}
-        endpointPath="/products"
-      />
+      )}
 
       {/* Status Alert Banner when changes are saved */}
       {statusMessage && (
         <div
           role="status"
           aria-live="polite"
-          className="p-3 border-2 border-black rounded bg-neutral-100 flex items-center justify-between text-sm font-medium text-black"
+          className={`px-4 py-2.5 border rounded-md flex items-center justify-between gap-3 text-sm ${
+            statusMessage.startsWith("!")
+              ? "border-[#C4574F] bg-[#F8E8E6] text-[#8c322b]"
+              : "border-[#3E8E6A] bg-[#E6F2EC] text-[#245942]"
+          }`}
         >
-          <div className="flex items-center gap-2">
-            <span className="font-mono font-bold">
-              {statusMessage.startsWith("!") ? "[!]" : "[OK]"}
-            </span>
-            <span>{statusMessage}</span>
-          </div>
+          <span>{statusMessage}</span>
           <button
             type="button"
             onClick={() => setStatusMessage("")}
-            className="text-xs font-mono font-bold hover:underline"
+            className="text-xs font-semibold hover:underline cursor-pointer"
             aria-label="Tutup pesan status"
           >
-            [Tutup]
+            Tutup
           </button>
         </div>
       )}
 
-      {/* Product Search & Filter Toolbar */}
+      {/* Product Search, Filter, & Add Button Toolbar (Sesuai Hi-Fi stockart-pos.html) */}
       <ProductToolbar
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
@@ -397,74 +417,142 @@ export default function OwnerProdukPage() {
         onStatusFilterChange={handleStatusFilterChange}
         categories={availableCategories}
         totalResults={filteredProducts.length}
+        onAddProduct={handleOpenAdd}
       />
 
-      {/* Full-Width Lo-Fi Product Grid */}
-      <section aria-label="Daftar Produk Toko">
-        {filteredProducts.length === 0 ? (
-          apiError && products.length === 0 ? (
-            <div className="p-10 border-2 border-dashed border-black/50 rounded text-center flex flex-col items-center justify-center gap-3 bg-neutral-100">
-              <span className="px-2.5 py-0.5 border border-black rounded font-mono font-bold text-xs bg-white text-black">
-                [SERVER BACKEND BELUM TERHUBUNG]
-              </span>
-              <p className="font-bold text-base text-black">
-                Gagal Terhubung ke Backend API
-              </p>
-              <p className="text-xs text-neutral-700 max-w-md leading-relaxed">
-                {apiError}
-              </p>
-              <div className="p-3 bg-white border border-black rounded text-left font-mono text-xs w-full max-w-md flex flex-col gap-1">
-                <p className="text-neutral-600 font-bold">Langkah menyalakan backend:</p>
-                <p className="text-black">1. Buka terminal baru (PowerShell / Command Prompt)</p>
-                <p className="text-black">2. Masuk ke folder backend: <span className="font-bold">cd stockart-backend</span></p>
-                <p className="text-black">3. Jalankan server: <span className="font-bold bg-neutral-200 px-1 py-0.5 rounded">npm run dev</span></p>
-                <p className="text-black">4. Klik tombol <strong>[ Sinkron Ulang API ]</strong> di bawah</p>
-              </div>
-              <div className="flex flex-wrap items-center justify-center gap-2 mt-2">
-                <button
-                  type="button"
-                  onClick={loadFromBackend}
-                  disabled={isLoadingApi}
-                  className="px-4 py-2 min-h-[40px] border-2 border-black rounded text-xs font-bold bg-black text-white hover:bg-neutral-800 transition-colors shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] disabled:opacity-50"
-                >
-                  {isLoadingApi ? "Memeriksa Koneksi..." : "[ Sinkron Ulang API ]"}
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="p-12 border-2 border-dashed border-black/50 rounded text-center flex flex-col items-center justify-center gap-3 bg-neutral-50">
-              <p className="font-bold text-base text-black">
-                Tidak ada produk yang cocok
-              </p>
-              <p className="text-xs text-neutral-600 max-w-sm">
-                Coba gunakan kata kunci pencarian lain atau pilih kategori &quot;Semua Kategori&quot;.
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  setSearchQuery("");
-                  setSelectedCategory("Semua Kategori");
-                }}
-                className="mt-2 px-4 py-2 min-h-[40px] border border-black rounded text-xs font-bold bg-white hover:bg-neutral-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black"
-              >
-                Reset Filter Pencarian
-              </button>
-            </div>
-          )
+      {/* Tabel Produk Hi-Fi (Sesuai screenshot 4 & stockart-pos.html) */}
+      <section
+        aria-label="Daftar Produk Toko"
+        className="bg-white border border-[#E1E4E0] rounded-lg overflow-hidden"
+      >
+        {isLoadingApi && products.length === 0 ? (
+          <div className="p-10 text-center text-sm text-[#6B7773]">
+            Memuat katalog produk…
+          </div>
+        ) : filteredProducts.length === 0 ? (
+          <div className="p-10 text-center flex flex-col items-center justify-center gap-2 text-[#6B7773]">
+            <strong className="text-sm font-semibold text-[#1F2A27]">
+              {apiError && products.length === 0
+                ? "Gagal terhubung ke server backend"
+                : "Barang tidak ditemukan"}
+            </strong>
+            <p className="text-xs max-w-sm">
+              {apiError && products.length === 0
+                ? apiError
+                : "Tidak ada produk yang cocok dengan filter pencarian atau kategori ini."}
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setSearchQuery("");
+                setSelectedCategory("Semua Kategori");
+              }}
+              className="mt-2 min-h-[40px] px-4 border border-[#E1E4E0] rounded-md text-xs font-semibold bg-white hover:bg-[#F5F6F4] text-[#1F2A27] transition-colors cursor-pointer"
+            >
+              Hapus pencarian
+            </button>
+          </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filteredProducts.map((product) => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                onEdit={handleOpenEdit}
-              />
-            ))}
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-left text-sm">
+              <thead>
+                <tr className="bg-[#F5F6F4] border-b border-[#E1E4E0] text-xs font-medium text-[#6B7773]">
+                  <th className="py-2.5 px-4">Produk</th>
+                  <th className="py-2.5 px-4 hidden sm:table-cell">Kategori</th>
+                  <th className="py-2.5 px-4 text-right">Harga</th>
+                  <th className="py-2.5 px-4 text-right">Stok</th>
+                  <th className="py-2.5 px-4 text-right">
+                    <span className="sr-only">Aksi</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#E1E4E0]">
+                {filteredProducts.map((product) => {
+                  const isInactive = product.aktif === false;
+                  const stokNum = Number(product.stok || 0);
+                  const isOut = !isInactive && stokNum <= 0;
+                  const isLow =
+                    !isInactive &&
+                    !isOut &&
+                    (product.isLowStock !== undefined
+                      ? Boolean(product.isLowStock)
+                      : stokNum <=
+                        Number(product.stokMinimum ?? LOW_STOCK_THRESHOLD));
+
+                  return (
+                    <tr
+                      key={product.id}
+                      className={
+                        isInactive
+                          ? "opacity-60 bg-[#fafbfa]"
+                          : "hover:bg-[#F5F6F4]/60"
+                      }
+                    >
+                      <td className="py-2.5 px-4">
+                        <div className="font-semibold text-[#1F2A27]">
+                          {product.nama}
+                        </div>
+                        <div className="text-xs text-[#6B7773] font-mono">
+                          {product.kodeProduk || "-"}
+                        </div>
+                      </td>
+                      <td className="py-2.5 px-4 hidden sm:table-cell text-[#1F2A27]">
+                        {product.kategori}
+                      </td>
+                      <td className="py-2.5 px-4 text-right tabular-nums text-[#1F2A27]">
+                        {formatRupiah(product.harga)}
+                      </td>
+                      <td className="py-2.5 px-4 text-right tabular-nums whitespace-nowrap">
+                        <div className="inline-flex items-center justify-end gap-2">
+                          {isInactive ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#F5F6F4] text-[#6B7773]">
+                              Nonaktif
+                            </span>
+                          ) : isOut ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#F8E8E6] text-[#C4574F]">
+                              Habis
+                            </span>
+                          ) : isLow ? (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#FBF1DC] text-[#D9A441]">
+                              Menipis
+                            </span>
+                          ) : null}
+                          <strong className="font-semibold text-[#1F2A27]">
+                            {stokNum}
+                          </strong>
+                        </div>
+                      </td>
+                      <td className="py-2.5 px-4 text-right whitespace-nowrap">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEdit(product)}
+                          className="min-h-[38px] px-3.5 border border-[#E1E4E0] rounded-md bg-white hover:bg-[#F5F6F4] text-sm font-semibold text-[#1F2A27] inline-flex items-center gap-2 transition-colors cursor-pointer"
+                        >
+                          <svg
+                            aria-hidden="true"
+                            className="w-4 h-4 stroke-current"
+                            fill="none"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            viewBox="0 0 24 24"
+                          >
+                            <path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" />
+                            <path d="m15 5 4 4" />
+                          </svg>
+                          <span>Edit</span>
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </section>
 
-      {/* Slide-Over Drawer for Add & Edit Product */}
+      {/* Modal Form Add & Edit Product */}
       <ProductFormDrawer
         isOpen={isDrawerOpen}
         mode={drawerMode}

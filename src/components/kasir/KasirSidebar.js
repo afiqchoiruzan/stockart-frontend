@@ -5,64 +5,65 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 
 export default function KasirSidebar() {
-  const pathname = usePathname();
+  const pathname = usePathname() || "";
   const { user, logout } = useAuth();
 
   const navItems = [
     {
-      name: "Menu Produk",
-      href: "/kasir/produk",
-      icon: (
-        <svg
-          aria-hidden="true"
-          className="w-5 h-5 stroke-current"
-          fill="none"
-          strokeWidth="1.75"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="m21 7.5-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"
-          />
-        </svg>
-      ),
-    },
-    {
-      name: "Menu Transaksi",
+      name: "Transaksi",
       href: "/kasir/transaksi",
       icon: (
         <svg
           aria-hidden="true"
-          className="w-5 h-5 stroke-current"
+          className="w-4 h-4 stroke-current shrink-0"
           fill="none"
-          strokeWidth="1.75"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
           viewBox="0 0 24 24"
         >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 0 0-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 0 0-16.536-1.84M7.5 14.25 5.106 5.272M6 20.25a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Zm12.75 0a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0Z"
-          />
+          <circle cx="8" cy="21" r="1" />
+          <circle cx="19" cy="21" r="1" />
+          <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" />
         </svg>
       ),
     },
     {
-      name: "Riwayat Transaksi",
+      name: "Produk",
+      href: "/kasir/produk",
+      icon: (
+        <svg
+          aria-hidden="true"
+          className="w-4 h-4 stroke-current shrink-0"
+          fill="none"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          viewBox="0 0 24 24"
+        >
+          <path d="m7.5 4.27 9 5.15" />
+          <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
+          <path d="m3.3 7 8.7 5 8.7-5" />
+          <path d="M12 22V12" />
+        </svg>
+      ),
+    },
+    {
+      name: "Riwayat",
       href: "/kasir/riwayat",
       icon: (
         <svg
           aria-hidden="true"
-          className="w-5 h-5 stroke-current"
+          className="w-4 h-4 stroke-current shrink-0"
           fill="none"
-          strokeWidth="1.75"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
           viewBox="0 0 24 24"
         >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-          />
+          <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+          <path d="M3 3v5h5" />
+          <path d="M12 7v5l4 2" />
         </svg>
       ),
     },
@@ -71,24 +72,30 @@ export default function KasirSidebar() {
   return (
     <aside
       aria-label="Navigasi Kasir Panel"
-      className="w-64 shrink-0 border-r-2 border-black bg-white flex flex-col justify-between p-4 min-h-screen"
+      className="w-[210px] shrink-0 border-r border-[#E1E4E0] bg-white flex flex-col justify-between p-4 sticky top-0 h-screen"
     >
       <div className="flex flex-col gap-6">
-        {/* Logo / Brand Header */}
-        <div className="flex items-center gap-2.5 pb-4 border-b-2 border-black">
-          <div className="w-10 h-10 rounded-full border-2 border-black flex items-center justify-center font-bold text-sm tracking-tighter bg-neutral-100">
-            KS
-          </div>
-          <div className="flex flex-col min-w-0">
-            <span className="font-bold text-base tracking-tight truncate">Kasir Panel</span>
-            {user?.nama && (
-              <span className="text-xs text-neutral-600 truncate">{user.nama}</span>
-            )}
-          </div>
+        {/* Brand Header */}
+        <div className="flex items-center gap-2 font-bold text-[#2F6F5E] px-1 pt-0.5">
+          <svg
+            aria-hidden="true"
+            className="w-4 h-4 stroke-current shrink-0"
+            fill="none"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            viewBox="0 0 24 24"
+          >
+            <path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7" />
+            <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+            <path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4" />
+            <path d="M2 7h20" />
+          </svg>
+          <span>StockArt</span>
         </div>
 
         {/* Navigation Menu */}
-        <nav className="flex flex-col gap-2.5" aria-label="Menu Utama">
+        <nav className="flex flex-col gap-1" aria-label="Menu utama">
           {navItems.map((item) => {
             const isActive =
               pathname === item.href ||
@@ -99,13 +106,19 @@ export default function KasirSidebar() {
                 key={item.href}
                 href={item.href}
                 aria-current={isActive ? "page" : undefined}
-                className={`flex items-center gap-3 px-3 py-2.5 min-h-[44px] rounded border text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black ${
+                className={`relative flex items-center gap-2.5 px-4 min-h-[44px] rounded-md text-sm transition-colors ${
                   isActive
-                    ? "bg-neutral-200 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] text-black"
-                    : "border-black/40 hover:border-black hover:bg-neutral-100 text-neutral-800"
+                    ? "bg-[#E6F0ED] text-[#2F6F5E] font-semibold"
+                    : "text-[#1F2A27] font-medium hover:bg-[#F5F6F4]"
                 }`}
               >
-                <span className="shrink-0">{item.icon}</span>
+                {isActive && (
+                  <span
+                    aria-hidden="true"
+                    className="absolute left-0 top-2 bottom-2 w-[3px] rounded-xs bg-[#E0A458]"
+                  />
+                )}
+                {item.icon}
                 <span>{item.name}</span>
               </Link>
             );
@@ -113,14 +126,35 @@ export default function KasirSidebar() {
         </nav>
       </div>
 
-      {/* Bottom Logout Button */}
-      <div className="pt-4 border-t-2 border-black">
+      {/* Bottom User Info & Logout */}
+      <div className="flex flex-col gap-2.5 pt-4 border-t border-[#E1E4E0]">
+        <div className="px-1">
+          <div className="font-semibold text-sm text-[#1F2A27] truncate">
+            {user?.nama || "Kasir"}
+          </div>
+          <div className="text-xs text-[#6B7773] leading-snug">
+            Kasir &middot; Toko Kelontong Berkah
+          </div>
+        </div>
         <button
           type="button"
           onClick={logout}
-          className="w-full flex items-center justify-center min-h-[44px] px-4 py-2 border-2 border-black rounded text-sm font-bold bg-white hover:bg-neutral-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]"
+          className="w-full min-h-[44px] px-4 border border-[#E1E4E0] rounded-md bg-white hover:bg-[#F5F6F4] text-sm font-semibold text-[#1F2A27] flex items-center justify-center gap-2 transition-colors cursor-pointer"
         >
-          Logout
+          <svg
+            aria-hidden="true"
+            className="w-4 h-4 stroke-current"
+            fill="none"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            viewBox="0 0 24 24"
+          >
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <polyline points="16 17 21 12 16 7" />
+            <line x1="21" x2="9" y1="12" y2="12" />
+          </svg>
+          <span>Keluar</span>
         </button>
       </div>
     </aside>

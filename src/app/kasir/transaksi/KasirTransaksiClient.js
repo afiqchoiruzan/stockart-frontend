@@ -1,7 +1,13 @@
 "use client";
 
-import { useState, useMemo, useEffect, useCallback } from "react";
-import { formatRupiah, isLowStock, normalizeProduct } from "@/lib/mockProducts";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
+import {
+  ALL_CATEGORIES,
+  buildCategoryList,
+  formatRupiah,
+  isLowStock,
+  normalizeProduct,
+} from "@/lib/mockProducts";
 import {
   formatTanggalSingkat,
   makeInvoiceNo,
@@ -17,13 +23,15 @@ export default function KasirTransaksiClient() {
   const [products, setProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState(ALL_CATEGORIES);
   const [cart, setCart] = useState([]);
+  const [paymentMethod, setPaymentMethod] = useState("Tunai");
   const [paymentAmount, setPaymentAmount] = useState("");
   const [showInvoice, setShowInvoice] = useState(false);
   const [lastInvoice, setLastInvoice] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const [isFromBackend, setIsFromBackend] = useState(false);
+  const searchRef = useRef(null);
 
   // Load products from backend (hanya produk aktif)
   const loadProducts = useCallback(() => {
@@ -31,7 +39,6 @@ export default function KasirTransaksiClient() {
       .then((res) => {
         const list = (res?.data || []).map(normalizeProduct);
         setProducts(list);
-        setIsFromBackend(true);
 
         // Sinkronkan batas stok item di keranjang dengan stok terbaru
         setCart((prev) =>
@@ -45,8 +52,9 @@ export default function KasirTransaksiClient() {
         );
       })
       .catch((err) => {
-        setErrorMessage(err.message || "Gagal mengambil data produk dari server.");
-        setIsFromBackend(false);
+        setErrorMessage(
+          err.message || "Gagal mengambil data produk dari server."
+        );
       })
       .finally(() => {
         setLoadingProducts(false);
@@ -57,62 +65,81 @@ export default function KasirTransaksiClient() {
     loadProducts();
   }, [loadProducts]);
 
-  // Filter products based on search (nama / kode barcode / kategori)
+  // Kategori unik dari produk aktif
+  const categoryList = useMemo(() => buildCategoryList(products), [products]);
+
+  // Filter products based on search (nama / kode barcode / kategori) & category chip
   const filteredProducts = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    if (q === "") return products;
     return products.filter((p) => {
-      return (
+      const matchCat =
+        selectedCategory === ALL_CATEGORIES || p.kategori === selectedCategory;
+      const matchQ =
+        q === "" ||
         p.nama.toLowerCase().includes(q) ||
         p.kodeProduk.toLowerCase().includes(q) ||
-        p.kategori.toLowerCase().includes(q)
-      );
+        p.kategori.toLowerCase().includes(q);
+      return matchCat && matchQ;
     });
-  }, [products, searchQuery]);
+  }, [products, searchQuery, selectedCategory]);
 
   // Cart calculations
   const totalHarga = useMemo(() => {
     return cart.reduce((acc, item) => acc + item.harga * item.qty, 0);
   }, [cart]);
 
-  const paymentNum = Number(paymentAmount) || 0;
-  const kembalian = paymentNum - totalHarga;
+  const totalQty = useMemo(() => {
+    return cart.reduce((acc, item) => acc + item.qty, 0);
+  }, [cart]);
+
+  const paidNum =
+    paymentMethod === "QRIS"
+      ? totalHarga
+      : Number(String(paymentAmount).replace(/\D/g, "")) || 0;
+  const kembalian = Math.max(0, paidNum - totalHarga);
+  const canPay =
+    cart.length > 0 &&
+    !isSubmitting &&
+    (paymentMethod === "QRIS" || paidNum >= totalHarga);
 
   // Add item to cart
-  const handleAddToCart = (product) => {
-    setErrorMessage("");
-    const prodId = product.id;
-    const maxStock = product.stok;
+  const handleAddToCart = useCallback(
+    (product) => {
+      setErrorMessage("");
+      const prodId = product.id;
+      const maxStock = product.stok;
 
-    const existing = cart.find((item) => item.id === prodId);
-    if (existing) {
-      if (existing.qty + 1 > maxStock) {
-        setErrorMessage(`Stok "${product.nama}" hanya tersisa ${maxStock}`);
+      if (maxStock < 1) {
+        setErrorMessage(`Stok "${product.nama}" habis`);
         return;
       }
-      setCart((prev) =>
-        prev.map((item) =>
-          item.id === prodId ? { ...item, qty: item.qty + 1 } : item
-        )
-      );
-      return;
-    }
-    if (maxStock < 1) {
-      setErrorMessage(`Stok "${product.nama}" habis`);
-      return;
-    }
-    setCart((prev) => [
-      ...prev,
-      {
-        id: prodId,
-        nama: product.nama,
-        harga: product.hargaJual,
-        kodeProduk: product.kodeProduk,
-        stok: maxStock,
-        qty: 1,
-      },
-    ]);
-  };
+
+      setCart((prev) => {
+        const existing = prev.find((item) => item.id === prodId);
+        if (existing) {
+          if (existing.qty + 1 > maxStock) {
+            setErrorMessage(`Stok "${product.nama}" hanya tersisa ${maxStock}`);
+            return prev;
+          }
+          return prev.map((item) =>
+            item.id === prodId ? { ...item, qty: item.qty + 1 } : item
+          );
+        }
+        return [
+          ...prev,
+          {
+            id: prodId,
+            nama: product.nama,
+            harga: product.hargaJual,
+            kodeProduk: product.kodeProduk,
+            stok: maxStock,
+            qty: 1,
+          },
+        ];
+      });
+    },
+    []
+  );
 
   // Remove item from cart
   const handleRemoveFromCart = (productId) => {
@@ -132,13 +159,22 @@ export default function KasirTransaksiClient() {
       return;
     }
     setCart((prev) =>
-      prev.map((item) => (item.id === productId ? { ...item, qty: newQty } : item))
+      prev.map((item) =>
+        item.id === productId ? { ...item, qty: newQty } : item
+      )
     );
   };
 
+  // Clear cart
+  const handleClearCart = () => {
+    setCart([]);
+    setPaymentAmount("");
+    setErrorMessage("");
+  };
+
   // Handle payment & checkout to backend
-  const handleBayar = async () => {
-    if (cart.length === 0 || paymentNum < totalHarga) return;
+  const handleBayar = useCallback(async () => {
+    if (!canPay) return;
     setErrorMessage("");
     setIsSubmitting(true);
 
@@ -152,18 +188,21 @@ export default function KasirTransaksiClient() {
       const res = await apiCheckout(payload);
       const trx = res.data;
       const totalServer = Number(trx.totalHarga || 0);
-      const kembalianServer = paymentNum - totalServer;
+      const effectivePaid =
+        paymentMethod === "QRIS" ? totalServer : paidNum;
+      const kembalianServer = effectivePaid - totalServer;
 
       if (kembalianServer < 0) {
-        // Harga berubah di server sehingga uang bayar kurang (kasus jarang)
         setErrorMessage(
-          `Perhatian: total dari server ${formatRupiah(totalServer)} lebih besar dari uang bayar.`
+          `Perhatian: total dari server ${formatRupiah(
+            totalServer
+          )} lebih besar dari uang bayar.`
         );
       }
 
       savePaymentInfo(trx._id, {
-        metodePembayaran: "Tunai",
-        uangBayar: paymentNum,
+        metodePembayaran: paymentMethod,
+        uangBayar: effectivePaid,
         kembalian: Math.max(0, kembalianServer),
       });
 
@@ -176,6 +215,7 @@ export default function KasirTransaksiClient() {
         namaToko: "Toko Kelontong Berkah",
         tanggal: formatTanggalSingkat(toDateKey(createdAt)),
         waktu: toTimeLabel(createdAt),
+        metode: paymentMethod,
         items: (trx.detailBarang || []).map((item) => ({
           nama: item.namaProduk,
           qty: item.jumlah,
@@ -183,7 +223,7 @@ export default function KasirTransaksiClient() {
           subtotal: item.subtotal,
         })),
         total: totalServer,
-        bayar: paymentNum,
+        bayar: effectivePaid,
         kembalian: Math.max(0, kembalianServer),
       };
 
@@ -198,10 +238,41 @@ export default function KasirTransaksiClient() {
     } catch (err) {
       console.error("Checkout failed:", err);
       setErrorMessage(err.message || "Gagal memproses transaksi di server.");
-      // Stok mungkin berubah (409) — muat ulang agar kasir melihat stok terbaru
       if (err.status === 409 || err.status === 404) loadProducts();
     } finally {
       setIsSubmitting(false);
+    }
+  }, [canPay, cart, paymentMethod, paidNum, user, loadProducts]);
+
+  // Keyboard shortcuts: F2 focus search, F4 uang pas, F9 bayar
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === "F2") {
+        e.preventDefault();
+        searchRef.current?.focus();
+      } else if (e.key === "F4") {
+        e.preventDefault();
+        if (totalHarga > 0) setPaymentAmount(String(totalHarga));
+      } else if (e.key === "F9") {
+        e.preventDefault();
+        if (canPay) handleBayar();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [totalHarga, canPay, handleBayar]);
+
+  const handleSearchKeyDown = (e) => {
+    if (e.key !== "Enter") return;
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return;
+    const exact = products.find((p) => p.kodeProduk.toLowerCase() === q);
+    const target =
+      exact || (filteredProducts.length === 1 ? filteredProducts[0] : null);
+    if (target && target.stok > 0) {
+      e.preventDefault();
+      handleAddToCart(target);
+      setSearchQuery("");
     }
   };
 
@@ -211,369 +282,456 @@ export default function KasirTransaksiClient() {
     setLastInvoice(null);
   };
 
-  // Invoice view
-  if (showInvoice && lastInvoice) {
-    return (
-      <div className="flex flex-col gap-6 max-w-3xl mx-auto">
-        <header className="flex items-center justify-between pb-4 border-b-2 border-black">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Invoice Transaksi</h1>
-            <p className="text-xs text-neutral-500">
-              Transaksi berhasil dicatat ke sistem
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={handleCloseInvoice}
-            className="px-4 py-2 min-h-[44px] border-2 border-black rounded text-sm font-bold bg-white hover:bg-neutral-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black"
-          >
-            ← Kembali ke POS
-          </button>
-        </header>
-
-        {/* Invoice Card */}
-        <div className="border-2 border-black rounded p-6 bg-white shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
-          {/* Invoice Header */}
-          <div className="text-center pb-4 border-b border-dashed border-black">
-            <p className="font-bold text-lg">INVOICE {lastInvoice.noInvoice}</p>
-            <p className="text-sm text-neutral-600">{lastInvoice.namaToko}</p>
-            <p className="text-xs text-neutral-500 mt-1">
-              Kasir: {lastInvoice.namaKasir} | {lastInvoice.tanggal} — {lastInvoice.waktu}
-            </p>
-          </div>
-
-          {/* Invoice Items */}
-          <div className="py-4 space-y-2">
-            {lastInvoice.items.map((item, idx) => (
-              <div key={idx} className="flex justify-between text-sm">
-                <span>
-                  {item.qty}x {item.nama}
-                </span>
-                <span className="font-mono">{formatRupiah(item.subtotal)}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Invoice Totals */}
-          <div className="pt-4 border-t border-dashed border-black space-y-1">
-            <div className="flex justify-between font-bold text-base">
-              <span>TOTAL</span>
-              <span className="text-red-600">{formatRupiah(lastInvoice.total)}</span>
-            </div>
-            <div className="flex justify-between text-sm text-neutral-600">
-              <span>Bayar:</span>
-              <span>{formatRupiah(lastInvoice.bayar)}</span>
-            </div>
-            <div className="flex justify-between text-sm text-neutral-600">
-              <span>Kembali:</span>
-              <span>{formatRupiah(lastInvoice.kembalian)}</span>
-            </div>
-          </div>
-
-          {/* Print Button */}
-          <div className="mt-6 pt-4 border-t border-black">
-            <button
-              type="button"
-              onClick={() => window.print()}
-              className="w-full min-h-[48px] px-4 py-3 border-2 border-black rounded text-sm font-bold bg-white hover:bg-neutral-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black flex items-center justify-center gap-2"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5Zm-3 0h.008v.008H15V10.5Z"
-                />
-              </svg>
-              Print Invoice
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // POS View
   return (
-    <div className="flex flex-col gap-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b-2 border-black">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-black">
-            Buat Transaksi Penjualan (POS) → Payment → Invoice
-          </h1>
-          <p className="text-xs text-neutral-500 mt-1">
-            Kasir: <span className="font-bold text-black">{user?.nama || "Kasir"}</span>
-            {isFromBackend
-              ? " | Backend Connected"
-              : loadingProducts
-              ? " | Memuat..."
-              : " | Backend Tidak Terhubung"}
-          </p>
-        </div>
-      </header>
-
+    <div className="flex flex-col gap-3 max-w-7xl mx-auto">
       {/* Error Notice */}
       {errorMessage && (
-        <div className="p-3 border-2 border-black rounded bg-red-100 text-sm font-medium text-red-800 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="font-mono font-bold">[!]</span>
-            <span>{errorMessage}</span>
-          </div>
+        <div
+          role="alert"
+          className="px-4 py-2.5 border border-[#EBC5C1] rounded-lg bg-[#F8E8E6] text-xs font-medium text-[#C4574F] flex items-center justify-between"
+        >
+          <span>{errorMessage}</span>
           <button
             type="button"
             onClick={() => setErrorMessage("")}
-            className="text-xs font-bold underline"
+            className="text-xs font-semibold underline cursor-pointer"
           >
             Tutup
           </button>
         </div>
       )}
 
-      <div className="flex flex-col lg:flex-row gap-6">
-        {/* Left: Product Search & Selection */}
-        <div className="flex-1 flex flex-col gap-4">
+      {/* Split POS Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4 items-start">
+        {/* Left: Product Search & Catalog */}
+        <div className="flex flex-col gap-3 min-w-0">
           {/* Search Bar */}
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-400">
+          <div className="relative w-full">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6B7773] pointer-events-none">
               <svg
                 className="w-4 h-4"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
                 viewBox="0 0 24 24"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
-                />
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
               </svg>
             </span>
             <input
+              ref={searchRef}
               type="text"
-              placeholder="Scan Barcode / Pilih Barang..."
+              placeholder="Scan barcode atau cari barang, lalu Enter"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => {
-                // Scanner barcode biasanya mengirim Enter setelah kode
-                if (e.key !== "Enter") return;
-                const code = searchQuery.trim().toLowerCase();
-                const match = products.find((p) => p.kodeProduk.toLowerCase() === code);
-                if (match) {
-                  e.preventDefault();
-                  handleAddToCart(match);
-                  setSearchQuery("");
-                }
-              }}
-              className="w-full pl-9 pr-3 py-2.5 min-h-[44px] border-2 border-black rounded text-sm bg-white placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-black"
+              onKeyDown={handleSearchKeyDown}
+              className="w-full h-9 pl-9 pr-12 border border-[#E1E4E0] rounded-lg text-[13px] text-[#1F2A27] bg-white placeholder:text-[#6B7773] focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15 transition-all"
             />
+            <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 font-mono text-[11px] px-1.5 py-0.5 rounded border border-[#E1E4E0] bg-white text-[#6B7773] pointer-events-none">
+              F2
+            </kbd>
           </div>
 
-          {loadingProducts && products.length === 0 && (
-            <div className="p-8 border-2 border-black rounded text-center text-sm font-mono bg-neutral-50">
-              Memuat produk dari server...
-            </div>
-          )}
-          {!loadingProducts && filteredProducts.length === 0 && (
-            <div className="p-8 border-2 border-dashed border-black/50 rounded text-center text-sm text-neutral-600 bg-neutral-50">
-              {products.length === 0
-                ? "Belum ada produk aktif di database."
-                : "Produk tidak ditemukan. Coba kata kunci / kode lain."}
-            </div>
-          )}
-
-          {/* Product Grid for Selection */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-            {filteredProducts.map((product) => {
-              const prodId = product.id;
-              const price = product.hargaJual;
-              const stock = product.stok;
-              const inCart = cart.find((c) => c.id === prodId);
-              const isOutOfStock = stock <= 0;
-
+          {/* Category Filter Chips */}
+          <div className="flex flex-wrap gap-1.5">
+            {categoryList.map((cat) => {
+              const active = selectedCategory === cat;
               return (
-                <div
-                  key={prodId}
-                  className={`border-2 rounded bg-white overflow-hidden transition-shadow ${
-                    inCart
-                      ? "border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
-                      : "border-black/60 hover:border-black hover:shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]"
-                  }`}
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => setSelectedCategory(cat)}
+                  className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors cursor-pointer ${active
+                    ? "bg-[#2F6F5E] text-white border-[#2F6F5E]"
+                    : "bg-white text-[#6B7773] border-[#E1E4E0] hover:text-[#1F2A27]"
+                    }`}
                 >
-                  {/* Item Image Placeholder */}
-                  <div className="aspect-[4/3] border-b-2 border-black bg-neutral-100 flex items-center justify-center relative">
-                    <svg
-                      className="absolute inset-0 w-full h-full text-neutral-300"
-                      preserveAspectRatio="none"
-                      viewBox="0 0 100 75"
-                    >
-                      <line
-                        x1="0"
-                        y1="0"
-                        x2="100"
-                        y2="75"
-                        stroke="currentColor"
-                        strokeWidth="0.5"
-                      />
-                      <line
-                        x1="100"
-                        y1="0"
-                        x2="0"
-                        y2="75"
-                        stroke="currentColor"
-                        strokeWidth="0.5"
-                      />
-                    </svg>
-                    <span className="relative z-10 text-xs font-bold text-neutral-500 bg-white/80 px-2 py-0.5 border border-neutral-300">
-                      ITEM
-                    </span>
-                  </div>
-
-                  {/* Product Info */}
-                  <div className="p-3">
-                    <h3 className="font-bold text-sm text-black truncate">
-                      {product.nama}
-                    </h3>
-                    <p className="text-sm font-semibold text-neutral-800 mt-0.5">
-                      {formatRupiah(price)}
-                    </p>
-                    <p className="text-xs text-neutral-500 mt-0.5">
-                      Stok:{" "}
-                      <span className={isLowStock(product) ? "font-bold text-red-600" : "font-medium"}>
-                        {stock}
-                      </span>
-                    </p>
-                  </div>
-
-                  {/* Add Button */}
-                  <div className="px-3 pb-3">
-                    <button
-                      type="button"
-                      onClick={() => handleAddToCart(product)}
-                      disabled={isOutOfStock}
-                      className="w-full min-h-[40px] px-3 py-2 border-2 border-black rounded text-xs font-bold bg-white hover:bg-neutral-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black"
-                    >
-                      {isOutOfStock ? "Stok Habis" : `+ Tambah${inCart ? ` (${inCart.qty})` : ""}`}
-                    </button>
-                  </div>
-                </div>
+                  {cat === ALL_CATEGORIES ? "Semua" : cat}
+                </button>
               );
             })}
           </div>
+
+          {/* Product Grid */}
+          {loadingProducts && products.length === 0 ? (
+            <div className="p-8 bg-white border border-[#E1E4E0] rounded-lg text-center text-[13px] text-[#6B7773]">
+              Memuat produk dari server…
+            </div>
+          ) : filteredProducts.length === 0 ? (
+            <div className="p-8 bg-white border border-[#E1E4E0] rounded-lg text-center text-[13px] text-[#6B7773]">
+              {products.length === 0
+                ? "Belum ada produk aktif di database."
+                : "Produk tidak ditemukan."}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2.5">
+              {filteredProducts.map((product) => {
+                const prodId = product.id;
+                const price = product.hargaJual;
+                const stock = Number(product.stok || 0);
+                const inCart = cart.find((c) => c.id === prodId);
+                const isOut = stock <= 0;
+                const low = !isOut && isLowStock(product);
+
+                return (
+                  <button
+                    key={prodId}
+                    type="button"
+                    disabled={isOut}
+                    onClick={() => handleAddToCart(product)}
+                    className={`text-left bg-white border rounded-lg p-3 flex flex-col justify-between gap-2 min-h-[96px] transition-all ${isOut
+                      ? "opacity-45 cursor-not-allowed border-[#E1E4E0]"
+                      : inCart
+                        ? "border-[#2F6F5E] ring-1 ring-[#2F6F5E]/30 cursor-pointer"
+                        : "border-[#E1E4E0] hover:border-[#2F6F5E] cursor-pointer"
+                      }`}
+                  >
+                    <div className="text-[13px] font-semibold text-[#1F2A27] leading-[1.3] line-clamp-2">
+                      {product.nama}
+                    </div>
+                    <div className="flex items-center justify-between gap-1.5 w-full mt-1">
+                      <span className="font-mono text-[13px] font-bold text-[#2F6F5E]">
+                        {formatRupiah(price)}
+                      </span>
+                      {inCart ? (
+                        <span className="font-mono text-[11px] font-bold px-2 py-0.5 rounded-full bg-[#E0A458] text-[#1F2A27]">
+                          ×{inCart.qty}
+                        </span>
+                      ) : isOut ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#F8E8E6] text-[#C4574F]">
+                          Habis
+                        </span>
+                      ) : low ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#FBF1DC] text-[#D9A441]">
+                          Sisa {stock}
+                        </span>
+                      ) : (
+                        <span className="font-mono text-[11px] text-[#6B7773]">
+                          Stok {stock}
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
-        {/* Right: Cart & Payment */}
-        <div className="w-full lg:w-80 xl:w-96 shrink-0">
-          <div className="border-2 border-black rounded bg-white sticky top-6 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-            {/* Cart Header */}
-            <div className="px-4 py-3 border-b-2 border-black bg-neutral-50">
-              <h2 className="font-bold text-sm">Keranjang &amp; Payment</h2>
-            </div>
-
-            {/* Cart Items */}
-            <div className="p-4 space-y-2 max-h-[300px] overflow-y-auto">
-              {cart.length === 0 ? (
-                <p className="text-xs text-neutral-500 text-center py-4">
-                  Belum ada barang di keranjang
-                </p>
-              ) : (
-                cart.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex items-center justify-between text-sm py-1 border-b border-neutral-100 last:border-b-0"
-                  >
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                      <span className="truncate">{item.nama}</span>
-                      <div className="flex items-center gap-1 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => handleUpdateQty(item.id, item.qty - 1)}
-                          className="w-6 h-6 border border-black rounded text-xs font-bold bg-white hover:bg-neutral-200 flex items-center justify-center"
-                          aria-label={`Kurangi ${item.nama}`}
-                        >
-                          −
-                        </button>
-                        <span className="text-xs font-bold w-5 text-center">
-                          {item.qty}x
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleUpdateQty(item.id, item.qty + 1)}
-                          className="w-6 h-6 border border-black rounded text-xs font-bold bg-white hover:bg-neutral-200 flex items-center justify-center"
-                          aria-label={`Tambah ${item.nama}`}
-                        >
-                          +
-                        </button>
-                      </div>
-                    </div>
-                    <span className="font-mono text-xs ml-2 shrink-0">
-                      {formatRupiah(item.harga * item.qty)}
-                    </span>
-                  </div>
-                ))
-              )}
-            </div>
-
-            {/* Totals & Payment */}
-            <div className="px-4 py-3 border-t-2 border-black space-y-3">
-              {/* Total */}
-              <div className="flex justify-between font-bold text-sm">
-                <span>Total:</span>
-                <span className="text-red-600">{formatRupiah(totalHarga)}</span>
+        {/* Right: Cart & Payment Panel */}
+        <div className="bg-white border border-[#E1E4E0] rounded-lg flex flex-col lg:sticky lg:top-4 max-h-[calc(100vh-88px)] overflow-hidden">
+          {/* Cart Header */}
+          <div className="px-4 py-3 border-b border-[#E1E4E0] flex items-center justify-between">
+            <div>
+              <div className="text-sm font-semibold text-[#1F2A27]">
+                Pesanan
               </div>
-
-              {/* Payment Input */}
-              <div>
-                <label
-                  htmlFor="payment"
-                  className="block text-xs font-bold mb-1 text-neutral-700"
-                >
-                  Payment Tunai:
-                </label>
-                <input
-                  id="payment"
-                  type="number"
-                  value={paymentAmount}
-                  onChange={(e) => setPaymentAmount(e.target.value)}
-                  placeholder="0"
-                  min="0"
-                  className="w-full px-3 py-2 min-h-[40px] border-2 border-black rounded text-sm text-right font-mono bg-white placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-black"
-                />
-              </div>
-
-              {/* Kembalian */}
-              <div className="flex justify-between text-sm">
-                <span className="font-semibold">Kembalian:</span>
-                <span
-                  className={`font-bold font-mono ${
-                    kembalian >= 0 ? "text-black" : "text-red-600"
-                  }`}
-                >
-                  {paymentNum > 0 ? formatRupiah(Math.max(0, kembalian)) : "-"}
-                </span>
+              <div className="text-xs text-[#6B7773]">
+                {totalQty > 0 ? `${totalQty} item` : "Belum ada item"}
               </div>
             </div>
-
-            {/* Pay Button */}
-            <div className="p-4 pt-0">
+            {cart.length > 0 && (
               <button
                 type="button"
-                onClick={handleBayar}
-                disabled={cart.length === 0 || paymentNum < totalHarga || isSubmitting}
-                className="w-full min-h-[48px] px-4 py-3 border-2 border-black rounded text-sm font-bold bg-black text-white hover:bg-neutral-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2"
+                onClick={handleClearCart}
+                className="px-2.5 py-1 text-xs font-medium text-[#C4574F] hover:bg-[#FAFBF9] rounded-md transition-colors cursor-pointer"
               >
-                {isSubmitting ? "Memproses Transaksi..." : "Bayar & Cetak Invoice"}
+                Kosongkan
+              </button>
+            )}
+          </div>
+
+          {/* Cart Items */}
+          <div className="flex-1 overflow-y-auto px-3.5 py-2 divide-y divide-[#EEF0EC] min-h-[160px]">
+            {cart.length === 0 ? (
+              <div className="py-10 text-center text-xs text-[#6B7773]">
+                Klik produk atau scan barcode untuk menambahkan ke pesanan.
+              </div>
+            ) : (
+              cart.map((item) => (
+                <div
+                  key={item.id}
+                  className="py-2.5 grid grid-cols-[1fr_auto_auto] gap-2.5 items-center"
+                >
+                  <div className="min-w-0">
+                    <div className="text-xs font-medium text-[#1F2A27] truncate">
+                      {item.nama}
+                    </div>
+                    <div className="text-[11px] text-[#6B7773] font-mono">
+                      {formatRupiah(item.harga)} ·{" "}
+                      <strong className="text-[#1F2A27]">
+                        {formatRupiah(item.harga * item.qty)}
+                      </strong>
+                    </div>
+                  </div>
+
+                  {/* Stepper */}
+                  <div className="inline-flex items-center border border-[#E1E4E0] rounded-md overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateQty(item.id, item.qty - 1)}
+                      className="w-6 h-6 bg-white hover:bg-[#E6F0ED] hover:text-[#2F6F5E] text-xs font-semibold flex items-center justify-center cursor-pointer"
+                      aria-label={`Kurangi ${item.nama}`}
+                    >
+                      −
+                    </button>
+                    <span className="min-w-[26px] text-center font-mono text-xs font-semibold text-[#1F2A27]">
+                      {item.qty}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateQty(item.id, item.qty + 1)}
+                      className="w-6 h-6 bg-white hover:bg-[#E6F0ED] hover:text-[#2F6F5E] text-xs font-semibold flex items-center justify-center cursor-pointer"
+                      aria-label={`Tambah ${item.nama}`}
+                    >
+                      +
+                    </button>
+                  </div>
+
+                  {/* Remove Button */}
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveFromCart(item.id)}
+                    title="Hapus"
+                    className="px-1.5 py-1 text-[#6B7773] hover:text-[#C4574F] text-sm leading-none cursor-pointer"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Cart Footer / Checkout */}
+          <div className="p-3.5 border-t border-[#E1E4E0] bg-[#FAFBF9] flex flex-col gap-2.5">
+            {/* Total Row */}
+            <div className="flex items-baseline justify-between">
+              <span className="text-xs font-semibold text-[#6B7773]">
+                Total
+              </span>
+              <span className="font-mono text-lg font-bold text-[#1F2A27]">
+                {formatRupiah(totalHarga)}
+              </span>
+            </div>
+
+            {/* Payment Method Segmented Control */}
+            <div className="grid grid-cols-2 gap-1.5">
+              {["Tunai", "QRIS"].map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setPaymentMethod(m)}
+                  className={`py-1.5 px-2.5 rounded-md border text-xs font-semibold transition-colors cursor-pointer ${paymentMethod === m
+                    ? "bg-[#E6F0ED] border-[#2F6F5E] text-[#2F6F5E]"
+                    : "bg-white border-[#E1E4E0] text-[#6B7773] hover:text-[#1F2A27]"
+                    }`}
+                >
+                  {m}
+                </button>
+              ))}
+            </div>
+
+            {/* Cash Input & Quick Nominal */}
+            {paymentMethod === "Tunai" && (
+              <>
+                <div className="flex flex-col gap-1">
+                  <label
+                    htmlFor="payment"
+                    className="text-xs font-medium text-[#1F2A27]"
+                  >
+                    Uang diterima
+                  </label>
+                  <input
+                    id="payment"
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="0"
+                    value={
+                      paymentAmount
+                        ? Number(paymentAmount).toLocaleString("id-ID")
+                        : ""
+                    }
+                    onChange={(e) =>
+                      setPaymentAmount(e.target.value.replace(/\D/g, ""))
+                    }
+                    className="w-full h-9 px-3 border border-[#E1E4E0] rounded-lg text-[13px] font-mono text-[#1F2A27] bg-white placeholder:text-[#6B7773] focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15"
+                  />
+                </div>
+
+                {/* Quick Cash Buttons */}
+                <div className="grid grid-cols-4 gap-1">
+                  <button
+                    type="button"
+                    disabled={totalHarga === 0}
+                    onClick={() => setPaymentAmount(String(totalHarga))}
+                    className="py-1 px-1.5 text-[11px] font-mono border border-[#E1E4E0] rounded-md bg-white text-[#6B7773] hover:border-[#2F6F5E] hover:text-[#2F6F5E] disabled:opacity-40 cursor-pointer"
+                  >
+                    Pas
+                  </button>
+                  {[20000, 50000, 100000].map((v) => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => setPaymentAmount(String(v))}
+                      className="py-1 px-1.5 text-[11px] font-mono border border-[#E1E4E0] rounded-md bg-white text-[#6B7773] hover:border-[#2F6F5E] hover:text-[#2F6F5E] cursor-pointer"
+                    >
+                      {(v / 1000).toFixed(0)}.000
+                    </button>
+                  ))}
+                </div>
+
+                {/* Kembalian Row */}
+                <div className="flex items-center justify-between text-xs text-[#6B7773]">
+                  <span>Kembalian</span>
+                  <strong className="font-mono text-[#1F2A27]">
+                    {formatRupiah(kembalian)}
+                  </strong>
+                </div>
+              </>
+            )}
+
+            {/* Pay Button */}
+            <button
+              type="button"
+              disabled={!canPay}
+              onClick={handleBayar}
+              className="w-full py-2.5 px-4 rounded-lg bg-[#2F6F5E] hover:bg-[#255a4c] text-white font-semibold text-[13px] disabled:opacity-45 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              {isSubmitting ? "Memproses…" : "Bayar (F9)"}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Invoice Modal */}
+      {showInvoice && lastInvoice && (
+        <div
+          className="fixed inset-0 z-50 bg-[#1F2A27]/40 flex items-center justify-center p-5"
+          onClick={handleCloseInvoice}
+        >
+          <div
+            id="printable-receipt"
+            className="bg-white border border-[#E1E4E0] rounded-xl w-full max-w-[440px] max-h-[90vh] overflow-y-auto shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="px-4 py-3.5 border-b border-[#E1E4E0] flex items-center justify-between print:hidden">
+              <h3 className="text-[15px] font-semibold text-[#1F2A27]">
+                Transaksi berhasil
+              </h3>
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#E6F2EC] text-[#3E8E6A]">
+                Lunas
+              </span>
+            </div>
+
+            {/* Modal Receipt Body */}
+            <div className="p-4 text-xs">
+              <div className="text-center">
+                <h4 className="text-sm font-bold text-[#1F2A27]">
+                  {lastInvoice.namaToko}
+                </h4>
+                <p className="text-[11px] text-[#6B7773]">
+                  Jl. Kaliurang Km 5, Yogyakarta
+                </p>
+              </div>
+
+              <div className="border-t border-dashed border-[#E1E4E0] my-2.5" />
+
+              <div className="space-y-1 text-[#1F2A27]">
+                <div className="flex justify-between">
+                  <span className="text-[#6B7773]">Invoice</span>
+                  <span className="font-mono font-medium">
+                    {lastInvoice.noInvoice}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[#6B7773]">Waktu</span>
+                  <span className="font-mono">
+                    {lastInvoice.tanggal}, {lastInvoice.waktu}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[#6B7773]">Kasir</span>
+                  <span>{lastInvoice.namaKasir}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-[#6B7773]">Metode</span>
+                  <span>{lastInvoice.metode || "Tunai"}</span>
+                </div>
+              </div>
+
+              <div className="border-t border-dashed border-[#E1E4E0] my-2.5" />
+
+              <div className="space-y-1.5">
+                {lastInvoice.items.map((item, idx) => (
+                  <div key={idx}>
+                    <div className="font-medium text-[#1F2A27]">{item.nama}</div>
+                    <div className="flex justify-between text-[#6B7773] font-mono">
+                      <span>
+                        {item.qty} × {formatRupiah(item.harga)}
+                      </span>
+                      <span className="text-[#1F2A27]">
+                        {formatRupiah(item.subtotal)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="border-t border-dashed border-[#E1E4E0] my-2.5" />
+
+              <div className="space-y-1 font-mono">
+                <div className="flex justify-between font-bold text-[13px] text-[#1F2A27] pt-0.5">
+                  <span>Total</span>
+                  <span>{formatRupiah(lastInvoice.total)}</span>
+                </div>
+                <div className="flex justify-between text-[#6B7773]">
+                  <span>Dibayar</span>
+                  <span>{formatRupiah(lastInvoice.bayar)}</span>
+                </div>
+                <div className="flex justify-between text-[#6B7773]">
+                  <span>Kembali</span>
+                  <span>{formatRupiah(lastInvoice.kembalian)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-4 py-3 border-t border-[#E1E4E0] flex justify-end gap-2 print:hidden">
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="px-3.5 py-2 border border-[#E1E4E0] rounded-lg text-[13px] font-semibold text-[#1F2A27] bg-white hover:bg-[#FAFBF9] transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+              >
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  viewBox="0 0 24 24"
+                >
+                  <polyline points="6 9 6 2 18 2 18 9" />
+                  <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                  <rect x="6" y="14" width="12" height="8" />
+                </svg>
+                Cetak struk
+              </button>
+              <button
+                type="button"
+                onClick={handleCloseInvoice}
+                className="px-3.5 py-2 rounded-lg text-[13px] font-semibold text-white bg-[#2F6F5E] hover:bg-[#255a4c] transition-colors cursor-pointer"
+              >
+                Transaksi baru
               </button>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
