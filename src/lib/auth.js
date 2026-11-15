@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { apiLogin, apiGetMe, TOKEN_KEY, USER_KEY } from "@/lib/api";
+import { apiLogin, apiLogout, apiGetMe, TOKEN_KEY, USER_KEY } from "@/lib/api";
 
 // NEXT_PUBLIC_API_URL berisi origin backend (mis. http://localhost:5000) dan
 // dipakai juga oleh apiFetch() yang menambahkan "/api/..." sendiri. Helper lama
@@ -20,7 +20,7 @@ export function getAuthToken() {
     const stored = window.localStorage.getItem(TOKEN_KEY);
     if (stored) return stored;
   }
-  return process.env.NEXT_PUBLIC_DEV_OWNER_TOKEN || null;
+  return null;
 }
 
 export function getAuthUser() {
@@ -80,6 +80,21 @@ function clearSession() {
   localStorage.removeItem(USER_KEY);
 }
 
+/** Hitung sisa waktu aktif JWT (ms) dari klaim `exp`. */
+function getTokenRemainingMs(jwtToken) {
+  if (!jwtToken || typeof jwtToken !== "string") return 0;
+  try {
+    const parts = jwtToken.split(".");
+    if (parts.length !== 3) return 0;
+    const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const payload = JSON.parse(window.atob(base64));
+    if (!payload?.exp) return 8 * 60 * 60 * 1000;
+    return payload.exp * 1000 - Date.now();
+  } catch {
+    return 0;
+  }
+}
+
 export function AuthProvider({ children }) {
   const router = useRouter();
   const [user, setUser] = useState(null); // { _id, nama, username, role }
@@ -96,7 +111,8 @@ export function AuthProvider({ children }) {
       savedUser = null;
     }
 
-    const hasSession = !!savedToken && !!savedUser;
+    const isTokenAlive = getTokenRemainingMs(savedToken) > 0;
+    const hasSession = !!savedToken && !!savedUser && isTokenAlive;
     if (!hasSession) clearSession();
 
     // localStorage hanya tersedia di browser, jadi sesi dipulihkan sekali setelah mount
@@ -117,6 +133,7 @@ export function AuthProvider({ children }) {
       })
       .catch((err) => {
         if (err.status === 401) {
+          clearSession();
           setToken(null);
           setUser(null);
         }
@@ -137,11 +154,42 @@ export function AuthProvider({ children }) {
   }, []);
 
   const logout = useCallback(() => {
+    if (localStorage.getItem(TOKEN_KEY)) {
+      apiLogout().catch(() => {});
+    }
     clearSession();
     setToken(null);
     setUser(null);
     router.push("/login");
   }, [router]);
+
+  // Sinkronisasi sesi antar-tab browser (jika logout di Tab 1, Tab 2 langsung ikut logout)
+  useEffect(() => {
+    const handleStorageChange = (event) => {
+      if (event.key === TOKEN_KEY && !event.newValue) {
+        setToken(null);
+        setUser(null);
+        router.replace("/login");
+      }
+    };
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, [router]);
+
+  // Otomatis logout tepat saat masa berlaku token (8 jam) habis meskipun tab dibiarkan diam
+  useEffect(() => {
+    if (!token) return;
+    const remainingMs = getTokenRemainingMs(token);
+    if (remainingMs <= 0) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      logout();
+      return;
+    }
+    const timerId = window.setTimeout(() => {
+      logout();
+    }, remainingMs);
+    return () => window.clearTimeout(timerId);
+  }, [token, logout]);
 
   const value = {
     user,
@@ -192,20 +240,4 @@ export function RoleGuard({ role, children }) {
   }
 
   return children;
-}
-
-export async function ensureOwnerAuthSession(forceRefresh = false) {
-  if (forceRefresh) {
-    clearAuthSession();
-  } else {
-    const token = getAuthToken();
-    if (token) return token;
-  }
-
-  try {
-    const data = await loginWithBackend("pemilik", "gantidulu123");
-    return data?.token || null;
-  } catch {
-    return null;
-  }
 }

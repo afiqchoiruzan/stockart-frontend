@@ -1,4 +1,4 @@
-import { API_BASE_URL, getAuthToken, ensureOwnerAuthSession } from "./auth";
+import { API_BASE_URL, getAuthToken } from "./auth";
 import { CASHIERS, formatTanggalSingkat } from "./mockTransactions";
 
 /**
@@ -255,10 +255,7 @@ export function buildCashierRoster(transactions = [], isLiveBackend = false) {
 }
 
 export async function apiRequest(path, options = {}) {
-  let token = getAuthToken();
-  if (!token && typeof window !== "undefined") {
-    token = await ensureOwnerAuthSession();
-  }
+  const token = getAuthToken();
 
   const headers = {
     "Content-Type": "application/json",
@@ -280,7 +277,7 @@ export async function apiRequest(path, options = {}) {
 
     if (isConnErr) {
       const friendlyErr = new Error(
-        `Server backend di ${API_BASE_URL} belum aktif atau tidak dapat dijangkau. Pastikan server Express sudah berjalan (jalankan "npm run dev" di terminal stockart-backend).`
+        `Server backend di ${API_BASE_URL} belum aktif atau tidak dapat dijangkau.`
       );
       friendlyErr.isOffline = true;
       throw friendlyErr;
@@ -288,19 +285,13 @@ export async function apiRequest(path, options = {}) {
     throw fetchErr;
   }
 
-  // Jika token kadaluarsa atau milik DB berbeda (401) di browser, hapus sesi lama dan login owner sekali lagi
+  // Jika token kadaluarsa atau tidak valid (401), hapus sesi dan arahkan ke halaman login
   if (response.status === 401 && typeof window !== "undefined") {
-    try {
-      const freshToken = await ensureOwnerAuthSession(true);
-      if (freshToken) {
-        headers["Authorization"] = `Bearer ${freshToken}`;
-        response = await fetch(`${API_BASE_URL}${path}`, {
-          ...options,
-          headers,
-        });
-      }
-    } catch {
-      // Abaikan jika refresh token gagal
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+    if (!window.location.pathname.startsWith("/login")) {
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+      window.location.href = "/login";
     }
   }
 
@@ -554,6 +545,12 @@ export async function apiLogin(username, password) {
   return apiFetch("/api/auth/login", {
     method: "POST",
     body: JSON.stringify({ username, password }),
+  });
+}
+
+export async function apiLogout() {
+  return apiFetch("/api/auth/logout", {
+    method: "POST",
   });
 }
 
