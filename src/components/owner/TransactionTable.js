@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import {
   formatRupiah,
   formatTanggalSingkat,
@@ -16,158 +15,153 @@ export default function TransactionTable({
 }) {
   if (transactions.length === 0) {
     return (
-      <div className="p-10 border-2 border-dashed border-black/50 rounded text-center flex flex-col items-center justify-center gap-3 bg-neutral-50">
-        <p className="font-bold text-base text-black">
-          Tidak ada riwayat transaksi yang cocok
-        </p>
-        <p className="text-xs text-neutral-600 max-w-sm">
-          Coba ubah filter tanggal, kasir, atau kata kunci pencarian.
+      <div className="bg-white border border-[#E1E4E0] rounded-lg p-8 flex flex-col items-center justify-center text-center gap-2 text-[#6B7773]">
+        <svg
+          aria-hidden="true"
+          className="w-6 h-6 stroke-current"
+          fill="none"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          viewBox="0 0 24 24"
+        >
+          <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z" />
+          <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8" />
+          <path d="M12 17.5v-11" />
+        </svg>
+        <strong className="text-[#1F2A27] font-semibold text-sm">
+          Belum ada transaksi
+        </strong>
+        <p className="text-xs max-w-sm">
+          Tidak ada riwayat transaksi yang cocok dengan filter saat ini.
         </p>
         {onResetFilter && (
           <button
             type="button"
             onClick={onResetFilter}
-            className="mt-1 px-4 py-2 min-h-[38px] border border-black rounded text-xs font-bold font-mono bg-white hover:bg-neutral-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black"
+            className="mt-2 min-h-[36px] px-3.5 border border-[#E1E4E0] rounded-md bg-white hover:bg-[#F5F6F4] text-xs font-semibold text-[#1F2A27] transition-colors cursor-pointer"
           >
-            [Reset Filter Transaksi]
+            Reset filter
           </button>
         )}
       </div>
     );
   }
 
+  const totalSum = transactions.reduce(
+    (sum, t) => sum + Number(t.totalHarga || 0),
+    0
+  );
+
   return (
-    <div className="border-2 border-black rounded overflow-hidden bg-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+    <div className="bg-white border border-[#E1E4E0] rounded-lg overflow-hidden">
       <div className="overflow-x-auto">
-        <table className="w-full border-collapse text-left text-xs sm:text-sm">
+        <table className="w-full border-collapse text-left text-[13px]">
           <thead>
-            <tr className="bg-neutral-100 border-b-2 border-black font-bold text-black">
-              <th className="py-3 px-3.5 border-r border-black/40 font-mono">
-                Invoice
-              </th>
-              <th className="py-3 px-3.5 border-r border-black/40">Waktu</th>
+            <tr className="bg-[#FAFBF9] border-b border-[#E1E4E0] text-[11px] font-semibold uppercase tracking-[0.04em] text-[#6B7773]">
+              <th className="py-2.5 px-3.5 whitespace-nowrap">Invoice</th>
+              <th className="py-2.5 px-3.5 whitespace-nowrap">Waktu</th>
               {showKasirColumn && (
-                <th className="py-3 px-3.5 border-r border-black/40">Kasir</th>
+                <th className="py-2.5 px-3.5 whitespace-nowrap">Kasir</th>
               )}
-              <th className="py-3 px-3.5 border-r border-black/40">
+              <th className="py-2.5 px-3.5 hidden md:table-cell">
                 Ringkasan Barang
               </th>
-              <th className="py-3 px-3.5 border-r border-black/40 text-center">
+              <th className="py-2.5 px-3.5 hidden sm:table-cell whitespace-nowrap">
                 Metode
               </th>
-              <th className="py-3 px-3.5 border-r border-black/40">Total</th>
-              <th className="py-3 px-3.5 text-center">Aksi</th>
+              <th className="py-2.5 px-3.5 text-right whitespace-nowrap">
+                Total
+              </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-black/30">
+          <tbody className="divide-y divide-[#EEF0EC]">
             {transactions.map((trx) => {
               const isSelected = trx.id === selectedTransactionId;
               const totalPcs = getTotalItemCount(trx.detailBarang);
               const firstItem = trx.detailBarang?.[0]?.namaProduk || "-";
               const extraCount = (trx.detailBarang?.length || 0) - 1;
+              const metode = trx.metodePembayaran || "Tunai";
 
               return (
                 <tr
                   key={trx.id}
                   onClick={() => onSelectTransaction(trx)}
                   className={`cursor-pointer transition-colors ${
-                    isSelected
-                      ? "bg-neutral-200 font-semibold"
-                      : "hover:bg-neutral-50"
+                    isSelected ? "bg-[#E6F0ED]" : "hover:bg-[#FAFBF9]"
                   }`}
                 >
-                  {/* ID Struk */}
-                  <td className="py-3 px-3.5 border-r border-black/30 font-mono font-bold whitespace-nowrap">
-                    <span>{trx.noInvoice}</span>
-                    {isSelected && (
-                      <span
-                        className="ml-1.5 inline-block text-[10px] px-1 border border-black bg-white rounded"
-                        aria-label="Sedang ditampilkan di panel detail"
-                      >
-                        &bull;
-                      </span>
-                    )}
+                  {/* Invoice */}
+                  <td
+                    className={`py-2.5 px-3.5 font-mono font-semibold whitespace-nowrap text-[#1F2A27] ${
+                      isSelected ? "border-l-[3px] border-l-[#2F6F5E]" : ""
+                    }`}
+                  >
+                    {trx.noInvoice.replace(/^#/, "")}
                   </td>
 
                   {/* Waktu */}
-                  <td className="py-3 px-3.5 border-r border-black/30 whitespace-nowrap">
-                    <div className="font-mono font-bold text-black">
-                      {trx.waktu} WIB
-                    </div>
-                    <div className="text-[11px] text-neutral-600">
+                  <td className="py-2.5 px-3.5 whitespace-nowrap font-mono">
+                    <div className="text-[#1F2A27]">{trx.waktu}</div>
+                    <div className="text-[11px] text-[#6B7773]">
                       {formatTanggalSingkat(trx.tanggal)}
                     </div>
                   </td>
 
                   {/* Kasir */}
                   {showKasirColumn && (
-                    <td
-                      className="py-3 px-3.5 border-r border-black/30 whitespace-nowrap"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <Link
-                        href={`/owner/transaksi/${trx.kasirId}`}
-                        title={`Lihat semua transaksi ${trx.namaKasir}`}
-                        className="inline-flex items-center gap-1.5 font-semibold text-black hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black rounded"
-                      >
-                        <span className="w-5 h-5 rounded-full border border-black bg-neutral-100 inline-flex items-center justify-center text-[10px] font-mono font-bold">
-                          {trx.panggilanKasir.slice(0, 1)}
-                        </span>
-                        <span>{trx.panggilanKasir}</span>
-                      </Link>
+                    <td className="py-2.5 px-3.5 whitespace-nowrap text-[#1F2A27] font-medium">
+                      {trx.namaKasir}
                     </td>
                   )}
 
                   {/* Ringkasan Barang */}
-                  <td className="py-3 px-3.5 border-r border-black/30">
-                    <div className="text-black font-medium truncate max-w-[180px] sm:max-w-[220px]">
+                  <td className="py-2.5 px-3.5 hidden md:table-cell">
+                    <div className="text-[#1F2A27] truncate max-w-[220px]">
                       {firstItem}
                       {extraCount > 0 && (
-                        <span className="text-xs text-neutral-600 font-mono">
+                        <span className="text-xs text-[#6B7773]">
                           {" "}
                           (+{extraCount} lainnya)
                         </span>
                       )}
                     </div>
-                    <div className="text-[11px] text-neutral-600 font-mono">
-                      {trx.detailBarang?.length || 0} jenis &bull; {totalPcs} pcs
+                    <div className="text-[11px] text-[#6B7773]">
+                      {totalPcs} item terjual
                     </div>
                   </td>
 
                   {/* Metode */}
-                  <td className="py-3 px-3.5 border-r border-black/30 text-center whitespace-nowrap">
-                    <span className="inline-block px-2 py-0.5 border border-black rounded text-[11px] font-mono font-bold bg-neutral-50 text-black">
-                      {trx.metodePembayaran}
+                  <td className="py-2.5 px-3.5 hidden sm:table-cell whitespace-nowrap">
+                    <span
+                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${
+                        metode === "QRIS"
+                          ? "bg-[#E8F0F6] text-[#4A7FA7]"
+                          : "bg-[#E6F2EC] text-[#3E8E6A]"
+                      }`}
+                    >
+                      {metode}
                     </span>
                   </td>
 
-                  {/* Total Harga */}
-                  <td className="py-3 px-3.5 border-r border-black/30 font-mono font-bold whitespace-nowrap text-black">
+                  {/* Total */}
+                  <td className="py-2.5 px-3.5 text-right font-mono font-semibold whitespace-nowrap text-[#1F2A27]">
                     {formatRupiah(trx.totalHarga)}
-                  </td>
-
-                  {/* Tombol Aksi */}
-                  <td
-                    className="py-3 px-3.5 text-center whitespace-nowrap"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => onSelectTransaction(trx)}
-                      className={`min-h-[32px] px-2.5 py-1 border border-black rounded text-xs font-mono font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black ${
-                        isSelected
-                          ? "bg-black text-white"
-                          : "bg-white hover:bg-neutral-200 text-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]"
-                      }`}
-                    >
-                      [Detail]
-                    </button>
                   </td>
                 </tr>
               );
             })}
           </tbody>
         </table>
+      </div>
+
+      {/* Footer Tabel */}
+      <div className="px-3.5 py-2.5 border-t border-[#E1E4E0] bg-[#FAFBF9] flex items-center justify-between text-xs text-[#6B7773]">
+        <span>{transactions.length} transaksi</span>
+        <span className="font-mono">
+          Total:{" "}
+          <strong className="text-[#1F2A27]">{formatRupiah(totalSum)}</strong>
+        </span>
       </div>
     </div>
   );

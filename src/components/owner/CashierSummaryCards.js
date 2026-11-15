@@ -1,34 +1,62 @@
 "use client";
 
-import Link from "next/link";
-import { CASHIERS, formatRupiah, getTotalItemCount } from "@/lib/mockTransactions";
+import {
+  CASHIERS,
+  formatRupiah,
+  formatTanggalSingkat,
+  getTotalItemCount,
+} from "@/lib/mockTransactions";
 
 export default function CashierSummaryCards({
   cashiers = CASHIERS,
   transactions = [],
   selectedKasirId = "semua",
   onSelectKasir,
+  selectedDate = "",
 }) {
+  const dateLabel = selectedDate
+    ? formatTanggalSingkat(selectedDate)
+    : "Semua tanggal";
+
   return (
-    <section aria-label="Ringkasan Transaksi Masing-Masing Kasir" className="flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-bold uppercase tracking-wider text-neutral-700">
-          Ringkasan Performa Masing-Masing Kasir ({cashiers.length} Kasir)
-        </h2>
+    <section
+      aria-label="Ringkasan Transaksi Masing-Masing Kasir"
+      className="flex flex-col gap-2.5"
+    >
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="flex items-center flex-wrap gap-2">
+          <h2 className="text-xs font-semibold uppercase tracking-[0.04em] text-[#6B7773]">
+            Ringkasan Performa Kasir ({cashiers.length})
+          </h2>
+          <span
+            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${
+              selectedDate
+                ? "bg-[#E6F0ED] text-[#2F6F5E] border border-[#2F6F5E]/25"
+                : "bg-white text-[#6B7773] border border-[#E1E4E0]"
+            }`}
+          >
+            {selectedDate ? `Tanggal: ${dateLabel}` : "Periode: Semua tanggal"}
+          </span>
+        </div>
+
         {selectedKasirId !== "semua" && (
           <button
             type="button"
             onClick={() => onSelectKasir("semua")}
-            className="text-xs font-mono font-bold underline hover:text-neutral-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black px-1"
+            className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#E6F0ED] text-[#2F6F5E] border border-[#2F6F5E]/30 hover:bg-[#2F6F5E] hover:text-white transition-colors cursor-pointer"
           >
-            [Reset Filter Kasir: Tampilkan Semua]
+            Tampilkan semua kasir
           </button>
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
         {cashiers.map((kasir) => {
-          const kasirTrx = transactions.filter((t) => t.kasirId === kasir.id);
+          const kasirTrx = transactions.filter(
+            (t) =>
+              t.kasirId === kasir.id &&
+              (!selectedDate || t.tanggal === selectedDate)
+          );
           const totalOmzet = kasirTrx.reduce(
             (sum, t) => sum + Number(t.totalHarga || 0),
             0
@@ -40,84 +68,68 @@ export default function CashierSummaryCards({
           const isSelected = selectedKasirId === kasir.id;
 
           return (
-            <article
+            <button
               key={kasir.id}
-              aria-label={`Ringkasan kasir ${kasir.nama}`}
-              className={`border-2 border-black rounded p-4 flex flex-col justify-between gap-3 transition-all ${
+              type="button"
+              onClick={() =>
+                onSelectKasir && onSelectKasir(isSelected ? "semua" : kasir.id)
+              }
+              aria-pressed={isSelected}
+              aria-label={`Filter transaksi kasir ${kasir.nama}`}
+              className={`text-left border rounded-lg p-4 flex flex-col justify-between gap-3 transition-all cursor-pointer ${
                 isSelected
-                  ? "bg-neutral-100 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
-                  : "bg-white hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]"
+                  ? "border-[#2F6F5E] bg-[#E6F0ED] ring-1 ring-[#2F6F5E]/30"
+                  : "border-[#E1E4E0] bg-white hover:border-[#2F6F5E]"
               }`}
             >
               {/* Header Kasir */}
-              <div className="flex items-start justify-between gap-2 pb-2.5 border-b border-black/30">
-                <div className="flex items-center gap-2.5">
-                  <div
-                    className="w-9 h-9 rounded-full border-2 border-black bg-neutral-100 flex items-center justify-center font-mono font-bold text-xs shrink-0"
-                    aria-hidden="true"
-                  >
-                    KS
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-sm text-black leading-tight">
-                      {kasir.nama}
-                    </h3>
-                    <p className="text-xs text-neutral-600 font-mono">
-                      {kasir.kode} &bull; {kasir.username}
-                    </p>
-                  </div>
+              <div className="flex items-start justify-between gap-2 w-full">
+                <div>
+                  <h3 className="font-semibold text-sm text-[#1F2A27] leading-tight">
+                    {kasir.nama}
+                  </h3>
+                  <p className="text-xs text-[#6B7773] font-mono mt-0.5">
+                    @{kasir.username}
+                  </p>
+                  <p className="text-[11px] text-[#6B7773] mt-0.5">
+                    {dateLabel}
+                  </p>
                 </div>
-                <span className="px-2 py-0.5 border border-black rounded text-[11px] font-mono font-bold bg-white">
-                  {kasir.panggilan}
+                <span
+                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${
+                    isSelected
+                      ? "bg-[#2F6F5E] text-white"
+                      : "bg-[#F5F6F4] text-[#1F2A27]"
+                  }`}
+                >
+                  {kasirTrx.length} Transaksi
                 </span>
               </div>
 
               {/* Statistik Kasir */}
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="p-2 border border-black/40 rounded bg-neutral-50">
-                  <span className="text-neutral-600 block">Total Transaksi</span>
-                  <span className="font-mono font-bold text-sm text-black">
-                    {kasirTrx.length} Struk
+              <div
+                className={`grid grid-cols-2 gap-3 pt-2.5 border-t w-full ${
+                  isSelected ? "border-[#2F6F5E]/20" : "border-[#EEF0EC]"
+                }`}
+              >
+                <div>
+                  <span className="text-[11px] text-[#6B7773] block">
+                    Barang Terjual
                   </span>
-                  <span className="block text-[11px] font-mono text-neutral-600">
-                    {totalPcs} pcs terjual
+                  <span className="font-semibold text-sm text-[#1F2A27] font-mono">
+                    {totalPcs} pcs
                   </span>
                 </div>
-                <div className="p-2 border border-black/40 rounded bg-neutral-50">
-                  <span className="text-neutral-600 block">Omzet Kasir</span>
-                  <span className="font-mono font-bold text-sm text-black">
+                <div className="text-right">
+                  <span className="text-[11px] text-[#6B7773] block">
+                    Omzet Kasir
+                  </span>
+                  <span className="font-bold text-sm text-[#2F6F5E] font-mono">
                     {formatRupiah(totalOmzet)}
                   </span>
-                  <span className="block text-[11px] text-neutral-600 truncate">
-                    {(kasir.shift || "Shift POS").replace("Shift ", "")}
-                  </span>
                 </div>
               </div>
-
-              {/* Tombol Aksi */}
-              <div className="pt-1 flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() =>
-                    onSelectKasir(isSelected ? "semua" : kasir.id)
-                  }
-                  className={`flex-1 min-h-[36px] px-2.5 py-1.5 border border-black rounded text-xs font-mono font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black ${
-                    isSelected
-                      ? "bg-black text-white"
-                      : "bg-white hover:bg-neutral-200 text-black"
-                  }`}
-                >
-                  {isSelected ? "[Difilter]" : "[Filter Tabel]"}
-                </button>
-
-                <Link
-                  href={`/owner/transaksi/${kasir.id}`}
-                  className="flex-1 min-h-[36px] px-2.5 py-1.5 border border-black rounded text-xs font-mono font-bold text-center flex items-center justify-center bg-white hover:bg-neutral-200 text-black transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]"
-                >
-                  [Detail Kasir &rarr;]
-                </Link>
-              </div>
-            </article>
+            </button>
           );
         })}
       </div>

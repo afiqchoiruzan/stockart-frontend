@@ -36,42 +36,70 @@ export default function ApiSourceBar({
     }
   };
 
+  const isOffline = Boolean(apiError && dataSource === "api");
+
   return (
-    <div className="border-2 border-black rounded bg-neutral-100 p-3 flex flex-col gap-2.5 text-xs">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+    <div className="border border-[#E1E4E0] rounded-lg bg-white p-3.5 flex flex-col gap-2.5 text-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
         <div className="flex flex-wrap items-center gap-2">
           <span
-            className={`px-2 py-0.5 border border-black rounded font-mono font-bold ${
-              apiError && dataSource === "api"
-                ? "bg-neutral-300 text-black"
-                : "bg-white text-black"
+            className={`inline-flex items-center gap-1.5 min-h-[24px] px-2.5 rounded-md font-semibold ${
+              isLoading
+                ? "bg-[#E8F0F6] text-[#2c5473]"
+                : isOffline
+                ? "bg-[#F8E8E6] text-[#8c322b]"
+                : dataSource === "api"
+                ? "bg-[#E6F2EC] text-[#245942]"
+                : "bg-[#FBF1DC] text-[#7a5612]"
             }`}
           >
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${
+                isLoading
+                  ? "bg-[#4A7FA7] animate-pulse"
+                  : isOffline
+                  ? "bg-[#C4574F]"
+                  : dataSource === "api"
+                  ? "bg-[#3E8E6A]"
+                  : "bg-[#D9A441]"
+              }`}
+            />
             {isLoading
-              ? "[SYNC...]"
+              ? "Sinkronisasi API..."
               : dataSource === "api"
-              ? apiError
-                ? "[API BACKEND: OFFLINE]"
-                : "[LIVE API BACKEND]"
-              : "[MODE DATA MOCK]"}
+              ? isOffline
+                ? "API Backend Offline"
+                : "Live API Terhubung"
+              : "Mode Data Simulasi"}
           </span>
-          <span className="font-medium text-neutral-800">
+
+          <span className="text-[#6B7773]">
             {dataSource === "api" ? (
-              apiError ? (
+              isOffline ? (
                 <>
-                  <span className="text-black font-semibold">Kendala API:</span>{" "}
-                  <span className="text-black">{apiError}</span> — endpoint{" "}
-                  <code className="font-mono font-bold">{API_BASE_URL}{endpointPath}</code>
+                  <strong className="text-[#C4574F] font-semibold">
+                    Kendala API:
+                  </strong>{" "}
+                  <span className="text-[#1F2A27]">{apiError}</span> —{" "}
+                  <code className="font-mono text-[11px] bg-[#F5F6F4] px-1.5 py-0.5 rounded">
+                    {API_BASE_URL}
+                    {endpointPath}
+                  </code>
                 </>
               ) : (
                 <>
-                  Terhubung ke <code className="font-mono font-bold">{API_BASE_URL}{endpointPath}</code>{" "}
-                  (MongoDB Atlas / Lokal)
+                  Endpoint{" "}
+                  <code className="font-mono text-[11px] text-[#1F2A27] bg-[#F5F6F4] px-1.5 py-0.5 rounded">
+                    {API_BASE_URL}
+                    {endpointPath}
+                  </code>{" "}
+                  (MongoDB Atlas)
                 </>
               )
             ) : (
               <>
-                Menampilkan data simulasi lokal (<code className="font-mono">{mockName}</code>)
+                Menampilkan data simulasi lokal (
+                <code className="font-mono text-[11px]">{mockName}</code>)
                 {apiError ? ` — ${apiError}` : ""}
               </>
             )}
@@ -83,9 +111,9 @@ export default function ApiSourceBar({
             type="button"
             onClick={onRefreshApi}
             disabled={isLoading}
-            className="min-h-[32px] px-2.5 py-1 border border-black rounded font-mono font-bold bg-white hover:bg-neutral-200 text-black disabled:opacity-50 transition-colors"
+            className="min-h-[34px] px-3 py-1 border border-[#E1E4E0] rounded-md font-semibold bg-white hover:bg-[#F5F6F4] text-[#1F2A27] disabled:opacity-50 transition-colors cursor-pointer"
           >
-            {isLoading ? "[Memuat...]" : "[ Sinkron API ]"}
+            {isLoading ? "Memuat..." : "Sinkron API"}
           </button>
 
           {typeof onSwitchSource === "function" && (
@@ -94,26 +122,24 @@ export default function ApiSourceBar({
               onClick={() =>
                 onSwitchSource(dataSource === "api" ? "mock" : "api")
               }
-              className="min-h-[32px] px-2.5 py-1 border border-black rounded font-mono font-bold bg-white hover:bg-neutral-200 text-black transition-colors"
+              className="min-h-[34px] px-3 py-1 border border-[#E1E4E0] rounded-md font-semibold bg-white hover:bg-[#F5F6F4] text-[#1F2A27] transition-colors cursor-pointer"
             >
-              {dataSource === "api"
-                ? "[Ke Mode Mock]"
-                : "[Hubungkan Live API]"}
+              {dataSource === "api" ? "Mode Simulasi" : "Hubungkan Live API"}
             </button>
           )}
 
           <button
             type="button"
             onClick={() => setShowLoginBox((prev) => !prev)}
-            className="min-h-[32px] px-2.5 py-1 border border-black rounded font-mono font-bold bg-black text-white hover:bg-neutral-800 transition-colors"
+            className="min-h-[34px] px-3 py-1 border border-[#2F6F5E] rounded-md font-semibold bg-[#2F6F5E] text-white hover:bg-[#255a4c] transition-colors cursor-pointer"
           >
-            [Auth Owner]
+             Sesi Owner
           </button>
         </div>
       </div>
 
       {loginMsg && (
-        <div className="font-mono font-semibold text-black pt-1 border-t border-black/20">
+        <div className="font-medium text-[#2F6F5E] pt-1.5 border-t border-[#E1E4E0]">
           {loginMsg}
         </div>
       )}
@@ -121,35 +147,34 @@ export default function ApiSourceBar({
       {showLoginBox && (
         <form
           onSubmit={handleLogin}
-          className="pt-2.5 border-t border-black/30 flex flex-col sm:flex-row items-stretch sm:items-center gap-2"
+          className="pt-2.5 border-t border-[#E1E4E0] flex flex-col sm:flex-row items-stretch sm:items-center gap-2"
         >
-          <span className="font-bold text-black shrink-0">
+          <span className="font-semibold text-[#1F2A27] shrink-0">
             Login API Owner:
           </span>
           <input
             type="text"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
-            placeholder="Username (misal: owner / pemilik)"
-            className="min-h-[34px] px-2.5 py-1 border border-black rounded bg-white text-xs font-mono"
+            placeholder="Username (misal: pemilik)"
+            className="min-h-[36px] px-3 py-1 border border-[#E1E4E0] rounded-md bg-white text-xs focus:outline-2 focus:outline-[#2F6F5E]"
           />
           <input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="Password"
-            className="min-h-[34px] px-2.5 py-1 border border-black rounded bg-white text-xs font-mono"
+            placeholder="Kata sandi"
+            className="min-h-[36px] px-3 py-1 border border-[#E1E4E0] rounded-md bg-white text-xs focus:outline-2 focus:outline-[#2F6F5E]"
           />
           <button
             type="submit"
             disabled={loginLoading}
-            className="min-h-[34px] px-3 py-1 border border-black rounded font-mono font-bold bg-black text-white hover:bg-neutral-800"
+            className="min-h-[36px] px-3.5 py-1 rounded-md font-semibold bg-[#2F6F5E] text-white hover:bg-[#255a4c] cursor-pointer"
           >
-            {loginLoading ? "Memproses..." : "[Login JWT]"}
+            {loginLoading ? "Memproses..." : "Login JWT"}
           </button>
         </form>
       )}
     </div>
   );
 }
-

@@ -1,10 +1,11 @@
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
 const geistMono = Geist_Mono({
@@ -13,20 +14,19 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "StockArt - Manajemen Toko Kelontong",
-  description: "Aplikasi manajemen stok dan kasir toko kelontong",
+  title: "StockArt — Kasir & Manajemen Stok",
+  description: "Aplikasi manajemen stok dan kasir Toko Kelontong Berkah",
 };
 
 export default function RootLayout({ children }) {
   return (
     <html
       lang="id"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${inter.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-white text-black font-sans">
+      <body className="min-h-full flex flex-col bg-[#F5F6F4] text-[#1F2A27] font-sans">
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );
 }
-

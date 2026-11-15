@@ -11,7 +11,6 @@ export default function LowStockDropdown({
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef(null);
 
-  // Close when clicking outside or pressing Escape
   useEffect(() => {
     function handleClickOutside(event) {
       if (containerRef.current && !containerRef.current.contains(event.target)) {
@@ -47,23 +46,28 @@ export default function LowStockDropdown({
         aria-haspopup="true"
         aria-expanded={isOpen}
         aria-label={`Peringatan stok menipis: ${count} produk`}
-        className={`flex items-center gap-2 px-3 py-2 min-h-[44px] border-2 border-black rounded text-sm font-bold transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black ${
+        className={`flex items-center gap-2 px-3.5 min-h-[44px] border rounded-md text-sm font-semibold transition-colors cursor-pointer ${
           count > 0
-            ? "bg-neutral-100 hover:bg-neutral-200 text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
-            : "bg-white hover:bg-neutral-50 text-neutral-600"
+            ? "border-[#D9A441] bg-[#FBF1DC] hover:bg-[#f7e8c8] text-[#1F2A27]"
+            : "border-[#E1E4E0] bg-white hover:bg-[#F5F6F4] text-[#6B7773]"
         }`}
       >
-        <span
-          className={`w-5 h-5 rounded-full border flex items-center justify-center text-xs font-black ${
-            count > 0
-              ? "border-red-600 bg-red-50 text-red-700"
-              : "border-black bg-white text-black"
-          }`}
+        <svg
           aria-hidden="true"
+          className={`w-4 h-4 stroke-current ${
+            count > 0 ? "text-[#D9A441]" : "text-[#6B7773]"
+          }`}
+          fill="none"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          viewBox="0 0 24 24"
         >
-          !
-        </span>
-        <span>Low Stock ({count})</span>
+          <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" />
+          <path d="M12 9v4" />
+          <path d="M12 17h.01" />
+        </svg>
+        <span>Perlu Restock ({count})</span>
         <svg
           aria-hidden="true"
           className={`w-4 h-4 transition-transform ${isOpen ? "rotate-180" : ""}`}
@@ -85,67 +89,72 @@ export default function LowStockDropdown({
         <div
           role="region"
           aria-label="Daftar Produk Stok Menipis"
-          className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white border-2 border-black rounded shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] z-40 overflow-hidden"
+          className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white border border-[#E1E4E0] rounded-lg shadow-lg z-40 overflow-hidden"
         >
-          <div className="p-3 border-b-2 border-black bg-neutral-100 flex items-center justify-between">
-            <span className="font-bold text-xs uppercase tracking-wider">
-              Alert Low Stock (&le; Min. Stok)
+          <div className="p-3.5 border-b border-[#E1E4E0] bg-[#F5F6F4] flex items-center justify-between">
+            <span className="font-semibold text-xs text-[#1F2A27]">
+              Peringatan Stok Menipis (&le; Min. Stok)
             </span>
             <span
-              className={`text-xs font-mono font-bold px-1.5 py-0.5 border rounded ${
+              className={`inline-flex items-center gap-1.5 min-h-[22px] px-2 rounded-md text-xs font-semibold ${
                 count > 0
-                  ? "border-red-600 bg-red-50 text-red-700"
-                  : "border-black bg-white text-black"
+                  ? "bg-[#F8E8E6] text-[#8c322b]"
+                  : "bg-white text-[#6B7773]"
               }`}
             >
               {count} Item
             </span>
           </div>
 
-          <div className="max-h-64 overflow-y-auto divide-y divide-black/20">
+          <div className="max-h-64 overflow-y-auto divide-y divide-[#E1E4E0]">
             {count === 0 ? (
-              <div className="p-4 text-center text-sm text-neutral-500 italic">
+              <div className="p-4 text-center text-sm text-[#6B7773]">
                 Semua stok produk aman (tidak ada di bawah batas).
               </div>
             ) : (
-              items.map((prod) => (
-                <div
-                  key={prod.id}
-                  className="p-3 flex items-center justify-between gap-3 hover:bg-neutral-50 transition-colors"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-bold truncate text-black">
-                      {prod.nama}
-                    </p>
-                    <p className="text-xs text-neutral-600">
-                      {prod.kategori} &bull;{" "}
-                      <span className="font-mono font-bold text-red-700">
-                        Stok: {prod.stok} {prod.satuan || "pcs"}
-                      </span>{" "}
-                      <span className="text-neutral-500">
-                        (Min: {prod.stokMinimum ?? 0})
-                      </span>
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (onSelectProduct) onSelectProduct(prod);
-                      setIsOpen(false);
-                    }}
-                    className="shrink-0 px-2.5 py-1.5 min-h-[36px] border border-black text-xs font-bold rounded bg-white hover:bg-neutral-200 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black"
+              items.map((prod) => {
+                const isZero = Number(prod.stok) <= 0;
+                return (
+                  <div
+                    key={prod.id}
+                    className="p-3.5 flex items-center justify-between gap-3 hover:bg-[#F5F6F4] transition-colors"
                   >
-                    [Edit Stok]
-                  </button>
-                </div>
-              ))
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold truncate text-[#1F2A27]">
+                        {prod.nama}
+                      </p>
+                      <p className="text-xs text-[#6B7773] mt-0.5">
+                        {prod.kategori} &middot;{" "}
+                        <span
+                          className={`font-semibold ${
+                            isZero ? "text-[#C4574F]" : "text-[#7a5612]"
+                          }`}
+                        >
+                          Stok: {prod.stok} {prod.satuan || "pcs"}
+                        </span>{" "}
+                        <span>(Min: {prod.stokMinimum ?? 0})</span>
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (onSelectProduct) onSelectProduct(prod);
+                        setIsOpen(false);
+                      }}
+                      className="shrink-0 px-3 min-h-[34px] border border-[#E1E4E0] text-xs font-semibold rounded-md bg-white hover:bg-[#E6F0ED] hover:border-[#2F6F5E] hover:text-[#2F6F5E] transition-colors cursor-pointer"
+                    >
+                      Edit Stok
+                    </button>
+                  </div>
+                );
+              })
             )}
           </div>
 
           {typeof onNotifyEmail === "function" && (
-            <div className="p-3 border-t-2 border-black bg-neutral-50 flex items-center justify-between gap-2">
-              <span className="text-[11px] text-neutral-600 leading-tight">
-                Kirim ringkasan stok menipis ke email owner
+            <div className="p-3.5 border-t border-[#E1E4E0] bg-[#F5F6F4] flex items-center justify-between gap-2">
+              <span className="text-xs text-[#6B7773] leading-tight">
+                Kirim pengingat ke email owner
               </span>
               <button
                 type="button"
@@ -153,9 +162,9 @@ export default function LowStockDropdown({
                 onClick={async () => {
                   await onNotifyEmail();
                 }}
-                className="shrink-0 px-3 py-1.5 min-h-[36px] border border-black rounded text-xs font-mono font-bold bg-black text-white hover:bg-neutral-800 disabled:opacity-50 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black"
+                className="shrink-0 px-3 min-h-[34px] rounded-md text-xs font-semibold bg-[#2F6F5E] text-white hover:bg-[#255a4c] disabled:opacity-50 transition-colors cursor-pointer"
               >
-                {isNotifying ? "[Mengirim...]" : "[Kirim Email Alert]"}
+                {isNotifying ? "Mengirim..." : "Kirim Email Alert"}
               </button>
             </div>
           )}

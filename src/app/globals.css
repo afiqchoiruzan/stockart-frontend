@@ -1,20 +1,54 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --primary: #2F6F5E;
+  --primary-hover: #255a4c;
+  --primary-bg: #E6F0ED;
+  --accent: #E0A458;
+  --background: #F5F6F4;
+  --foreground: #1F2A27;
+  --card: #FFFFFF;
+  --border: #E1E4E0;
+  --text-muted: #6B7773;
+  --ok: #3E8E6A;
+  --ok-bg: #E6F2EC;
+  --warn: #D9A441;
+  --warn-bg: #FBF1DC;
+  --error: #C4574F;
+  --error-bg: #F8E8E6;
+  --info: #4A7FA7;
+  --info-bg: #E8F0F6;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-inter), var(--font-geist-sans), system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  line-height: 1.45;
 }
 
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #printable-receipt,
+  #printable-receipt * {
+    visibility: visible;
+  }
+  #printable-receipt {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 80mm;
+    border: none !important;
+    box-shadow: none !important;
+  }
+}

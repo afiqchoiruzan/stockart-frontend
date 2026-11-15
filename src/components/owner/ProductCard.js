@@ -4,103 +4,102 @@ import { LOW_STOCK_THRESHOLD, formatRupiah } from "@/lib/mockProducts";
 
 export default function ProductCard({ product, onEdit }) {
   const isInactive = product.aktif === false;
+  const stokNum = Number(product.stok || 0);
+  const isOutOfStock = !isInactive && stokNum <= 0;
   const isLowStock =
-    product.isLowStock !== undefined
+    !isInactive &&
+    !isOutOfStock &&
+    (product.isLowStock !== undefined
       ? Boolean(product.isLowStock)
-      : Number(product.stok) <= Number(product.stokMinimum ?? LOW_STOCK_THRESHOLD);
+      : stokNum <= Number(product.stokMinimum ?? LOW_STOCK_THRESHOLD));
 
   return (
     <article
       aria-label={`Kartu produk ${product.nama}`}
-      className={`border-2 rounded p-3.5 flex flex-col justify-between transition-all ${
+      className={`border rounded-lg p-4 flex flex-col justify-between gap-3 transition-colors ${
         isInactive
-          ? "border-dashed border-neutral-500 bg-neutral-100 opacity-85"
-          : "border-black bg-white hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
+          ? "border-dashed border-[#E1E4E0] bg-[#F5F6F4] opacity-75"
+          : "border-[#E1E4E0] bg-white hover:border-[#2F6F5E]"
       }`}
     >
-      <div>
-        {/* Lo-Fi Image Wireframe with Diagonal Cross */}
-        <div
-          className="relative w-full h-36 border-2 border-black rounded bg-neutral-50 flex items-center justify-center overflow-hidden select-none"
-          aria-hidden="true"
-        >
-          {/* SVG Diagonal Cross Lines */}
-          <svg
-            className="absolute inset-0 w-full h-full stroke-black/40"
-            preserveAspectRatio="none"
-            viewBox="0 0 100 100"
+      <div className="flex flex-col gap-1.5">
+        <div className="flex items-center justify-between gap-2">
+          <span
+            className="text-xs font-mono text-[#6B7773] truncate"
+            title={product.kodeProduk}
           >
-            <line x1="0" y1="0" x2="100" y2="100" strokeWidth="1" />
-            <line x1="0" y1="100" x2="100" y2="0" strokeWidth="1" />
-          </svg>
-
-          {/* Center [IMG] Badge */}
-          <span className="relative z-10 px-3 py-1 border border-black rounded bg-white text-xs font-mono font-bold tracking-wider shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]">
-            [IMG]
+            {product.kodeProduk || "-"}
           </span>
-
-          {isInactive && (
-            <span className="absolute top-2 right-2 z-10 px-2 py-0.5 border border-black rounded bg-black text-white text-[10px] font-mono font-bold tracking-wider">
-              [NONAKTIF]
+          {isInactive ? (
+            <span className="inline-flex items-center gap-1 min-h-[22px] px-2 rounded-md text-xs font-semibold bg-[#F5F6F4] text-[#6B7773]">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#6B7773]" />
+              Nonaktif
             </span>
+          ) : isOutOfStock ? (
+            <span className="inline-flex items-center gap-1 min-h-[22px] px-2 rounded-md text-xs font-semibold bg-[#F8E8E6] text-[#8c322b]">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#C4574F]" />
+              Habis
+            </span>
+          ) : isLowStock ? (
+            <span className="inline-flex items-center gap-1 min-h-[22px] px-2 rounded-md text-xs font-semibold bg-[#FBF1DC] text-[#7a5612]">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#D9A441]" />
+              Menipis
+            </span>
+          ) : (
+            <span className="text-xs text-[#6B7773]">{product.kategori}</span>
           )}
         </div>
 
-        {/* Product Details */}
-        <div className="mt-3 flex flex-col gap-1">
-          <div className="flex items-center justify-between gap-2">
-            <span
-              className="text-[11px] font-mono text-neutral-600 truncate"
-              title={product.kodeProduk}
-            >
-              {product.kodeProduk || "-"}
-            </span>
-            {isInactive && (
-              <span className="shrink-0 text-[10px] font-mono font-bold px-1.5 py-0.5 border border-black rounded bg-white text-black">
-                NONAKTIF
-              </span>
-            )}
-          </div>
-          <h2 className="text-base font-bold text-black truncate" title={product.nama}>
-            {product.nama}
-          </h2>
-          <p className="text-xs text-neutral-600 font-medium">
-            <span>{product.kategori}</span>
-            <span className="mx-1.5 font-bold">&bull;</span>
-            <span className="font-mono text-black font-semibold">
-              {formatRupiah(product.harga)}
-            </span>
-          </p>
+        <h2
+          className="text-sm font-semibold text-[#1F2A27] line-clamp-2"
+          title={product.nama}
+        >
+          {product.nama}
+        </h2>
+
+        <div className="flex items-baseline justify-between gap-2 pt-0.5">
+          <span className="font-semibold text-sm text-[#1F2A27] tabular-nums">
+            {formatRupiah(product.harga)}
+          </span>
+          <span className="text-xs text-[#6B7773]">{product.kategori}</span>
         </div>
       </div>
 
-      {/* Footer: Stock & [Edit] Button */}
-      <div className="mt-4 pt-3 border-t border-black/30 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5 text-xs">
-          <span className="text-neutral-600 font-medium">Stok:</span>
-          {isLowStock ? (
-            <span
-              className="inline-flex items-center gap-1 font-mono font-bold text-red-700 px-1.5 py-0.5 border border-red-600 rounded bg-red-50"
-              title="Peringatan stok menipis!"
-            >
-              <span>
-                {product.stok} {product.satuan || "pcs"}
-              </span>
-              <span className="font-black text-red-700">!</span>
-            </span>
-          ) : (
-            <span className="font-mono font-bold text-black">
-              {product.stok} {product.satuan || "pcs"}
-            </span>
-          )}
+      {/* Footer: Stock & Edit Button */}
+      <div className="pt-3 border-t border-[#E1E4E0] flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5 text-xs tabular-nums">
+          <span className="text-[#6B7773]">Stok:</span>
+          <strong
+            className={`font-semibold ${
+              isOutOfStock
+                ? "text-[#C4574F]"
+                : isLowStock
+                ? "text-[#7a5612]"
+                : "text-[#1F2A27]"
+            }`}
+          >
+            {stokNum} {product.satuan || "pcs"}
+          </strong>
         </div>
 
         <button
           type="button"
           onClick={() => onEdit(product)}
-          className="min-h-[36px] px-3 py-1 border border-black rounded text-xs font-bold font-mono bg-white hover:bg-neutral-200 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]"
+          className="min-h-[34px] px-3 py-1 border border-[#E1E4E0] rounded-md text-xs font-semibold bg-white hover:bg-[#F5F6F4] text-[#1F2A27] inline-flex items-center gap-1.5 transition-colors cursor-pointer"
         >
-          [Edit]
+          <svg
+            aria-hidden="true"
+            className="w-3.5 h-3.5 stroke-current"
+            fill="none"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            viewBox="0 0 24 24"
+          >
+            <path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" />
+            <path d="m15 5 4 4" />
+          </svg>
+          <span>Edit</span>
         </button>
       </div>
     </article>

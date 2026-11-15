@@ -5,64 +5,66 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 
 export default function OwnerSidebar() {
-  const pathname = usePathname();
+  const pathname = usePathname() || "";
   const { user, logout } = useAuth();
 
   const navItems = [
     {
-      name: "Menu Produk",
+      name: "Produk",
       href: "/owner/produk",
       icon: (
         <svg
           aria-hidden="true"
-          className="w-5 h-5 stroke-current"
+          className="w-4 h-4 stroke-current shrink-0"
           fill="none"
-          strokeWidth="1.75"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
           viewBox="0 0 24 24"
         >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="m21 7.5-9-5.25L3 7.5m18 0-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"
-          />
+          <path d="m7.5 4.27 9 5.15" />
+          <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
+          <path d="m3.3 7 8.7 5 8.7-5" />
+          <path d="M12 22V12" />
         </svg>
       ),
     },
     {
-      name: "Menu Transaksi",
+      name: "Transaksi",
       href: "/owner/transaksi",
       icon: (
         <svg
           aria-hidden="true"
-          className="w-5 h-5 stroke-current"
+          className="w-4 h-4 stroke-current shrink-0"
           fill="none"
-          strokeWidth="1.75"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
           viewBox="0 0 24 24"
         >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M9 12h6m-6 4h6m2 5H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5.586a1 1 0 0 1 .707.293l5.414 5.414a1 1 0 0 1 .293.707V19a2 2 0 0 1-2 2Z"
-          />
+          <path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z" />
+          <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8" />
+          <path d="M12 17.5v-11" />
         </svg>
       ),
     },
     {
-      name: "Menu Laporan",
+      name: "Laporan",
       href: "/owner/laporan",
       icon: (
         <svg
           aria-hidden="true"
-          className="w-5 h-5 stroke-current"
+          className="w-4 h-4 stroke-current shrink-0"
           fill="none"
-          strokeWidth="1.75"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
           viewBox="0 0 24 24"
         >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z"
-          />
+          <path d="M3 3v18h18" />
+          <path d="M18 17V9" />
+          <path d="M13 17V5" />
+          <path d="M8 17v-3" />
         </svg>
       ),
     },
@@ -71,24 +73,30 @@ export default function OwnerSidebar() {
   return (
     <aside
       aria-label="Navigasi Owner Panel"
-      className="w-64 shrink-0 border-r-2 border-black bg-white flex flex-col justify-between p-4 min-h-screen"
+      className="w-[210px] shrink-0 border-r border-[#E1E4E0] bg-white flex flex-col justify-between p-4 sticky top-0 h-screen"
     >
       <div className="flex flex-col gap-6">
-        {/* Logo / Brand Header */}
-        <div className="flex items-center gap-2.5 pb-4 border-b-2 border-black">
-          <div className="w-10 h-10 rounded-full border-2 border-black flex items-center justify-center font-bold text-sm tracking-tighter bg-neutral-100">
-            OW
-          </div>
-          <div className="flex flex-col min-w-0">
-            <span className="font-bold text-lg tracking-tight truncate">Owner Panel</span>
-            {user?.nama && (
-              <span className="text-xs text-neutral-600 truncate">{user.nama}</span>
-            )}
-          </div>
+        {/* Brand Header */}
+        <div className="flex items-center gap-2 font-bold text-[#2F6F5E] px-1 pt-0.5">
+          <svg
+            aria-hidden="true"
+            className="w-4 h-4 stroke-current shrink-0"
+            fill="none"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            viewBox="0 0 24 24"
+          >
+            <path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7" />
+            <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+            <path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4" />
+            <path d="M2 7h20" />
+          </svg>
+          <span>StockArt</span>
         </div>
 
         {/* Navigation Menu */}
-        <nav className="flex flex-col gap-2.5" aria-label="Menu Utama">
+        <nav className="flex flex-col gap-1" aria-label="Menu utama">
           {navItems.map((item) => {
             const isActive =
               pathname === item.href ||
@@ -99,13 +107,19 @@ export default function OwnerSidebar() {
                 key={item.href}
                 href={item.href}
                 aria-current={isActive ? "page" : undefined}
-                className={`flex items-center gap-3 px-3 py-2.5 min-h-11 rounded border text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black ${
+                className={`relative flex items-center gap-2.5 px-4 min-h-[44px] rounded-md text-sm transition-colors ${
                   isActive
-                    ? "bg-neutral-200 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] text-black"
-                    : "border-black/40 hover:border-black hover:bg-neutral-100 text-neutral-800"
+                    ? "bg-[#E6F0ED] text-[#2F6F5E] font-semibold"
+                    : "text-[#1F2A27] font-medium hover:bg-[#F5F6F4]"
                 }`}
               >
-                <span className="shrink-0">{item.icon}</span>
+                {isActive && (
+                  <span
+                    aria-hidden="true"
+                    className="absolute left-0 top-2 bottom-2 w-[3px] rounded-xs bg-[#E0A458]"
+                  />
+                )}
+                {item.icon}
                 <span>{item.name}</span>
               </Link>
             );
@@ -113,14 +127,35 @@ export default function OwnerSidebar() {
         </nav>
       </div>
 
-      {/* Bottom Logout Button */}
-      <div className="pt-4 border-t-2 border-black">
+      {/* Bottom User Info & Logout */}
+      <div className="flex flex-col gap-2.5 pt-4 border-t border-[#E1E4E0]">
+        <div className="px-1">
+          <div className="font-semibold text-sm text-[#1F2A27] truncate">
+            {user?.nama || "Owner"}
+          </div>
+          <div className="text-xs text-[#6B7773] leading-snug">
+            Owner &middot; Toko Kelontong Berkah
+          </div>
+        </div>
         <button
           type="button"
           onClick={logout}
-          className="w-full flex items-center justify-center min-h-11 px-4 py-2 border-2 border-black rounded text-sm font-bold bg-white hover:bg-neutral-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)]"
+          className="w-full min-h-[44px] px-4 border border-[#E1E4E0] rounded-md bg-white hover:bg-[#F5F6F4] text-sm font-semibold text-[#1F2A27] flex items-center justify-center gap-2 transition-colors cursor-pointer"
         >
-          Logout
+          <svg
+            aria-hidden="true"
+            className="w-4 h-4 stroke-current"
+            fill="none"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            viewBox="0 0 24 24"
+          >
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <polyline points="16 17 21 12 16 7" />
+            <line x1="21" x2="9" y1="12" y2="12" />
+          </svg>
+          <span>Keluar</span>
         </button>
       </div>
     </aside>
