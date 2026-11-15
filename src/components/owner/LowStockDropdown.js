@@ -6,6 +6,7 @@ export default function LowStockDropdown({
   items = [],
   onSelectProduct,
   onNotifyEmail,
+  onOpenScheduleSettings,
   isNotifying = false,
 }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -151,21 +152,37 @@ export default function LowStockDropdown({
             )}
           </div>
 
-          {typeof onNotifyEmail === "function" && (
+          {(typeof onNotifyEmail === "function" ||
+            typeof onOpenScheduleSettings === "function") && (
             <div className="p-3.5 border-t border-[#E1E4E0] bg-[#F5F6F4] flex items-center justify-between gap-2">
-              <span className="text-xs text-[#6B7773] leading-tight">
-                Kirim pengingat ke email owner
-              </span>
-              <button
-                type="button"
-                disabled={isNotifying}
-                onClick={async () => {
-                  await onNotifyEmail();
-                }}
-                className="shrink-0 px-3 min-h-[34px] rounded-md text-xs font-semibold bg-[#2F6F5E] text-white hover:bg-[#255a4c] disabled:opacity-50 transition-colors cursor-pointer"
-              >
-                {isNotifying ? "Mengirim..." : "Kirim Email Alert"}
-              </button>
+              {typeof onOpenScheduleSettings === "function" ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsOpen(false);
+                    onOpenScheduleSettings();
+                  }}
+                  className="px-3 min-h-[34px] border border-[#E1E4E0] bg-white hover:bg-[#E6F0ED] hover:border-[#2F6F5E] hover:text-[#2F6F5E] rounded-md text-xs font-semibold text-[#1F2A27] transition-colors cursor-pointer"
+                >
+                  Atur Jadwal
+                </button>
+              ) : (
+                <span className="text-xs text-[#6B7773] leading-tight">
+                  Kirim pengingat ke email owner
+                </span>
+              )}
+              {typeof onNotifyEmail === "function" && (
+                <button
+                  type="button"
+                  disabled={isNotifying}
+                  onClick={async () => {
+                    await onNotifyEmail();
+                  }}
+                  className="shrink-0 px-3 min-h-[34px] rounded-md text-xs font-semibold bg-[#2F6F5E] text-white hover:bg-[#255a4c] disabled:opacity-50 transition-colors cursor-pointer"
+                >
+                  {isNotifying ? "Mengirim..." : "Kirim Email Alert"}
+                </button>
+              )}
             </div>
           )}
         </div>

@@ -420,6 +420,27 @@ export async function notifyLowStockInApi(email) {
   });
 }
 
+/**
+ * Mengambil konfigurasi jadwal alert low stock (GET /api/notifications/low-stock/settings).
+ */
+export async function apiGetLowStockAlertSettings() {
+  const result = await apiRequest("/notifications/low-stock/settings", {
+    method: "GET",
+  });
+  return result.data;
+}
+
+/**
+ * Memperbarui konfigurasi jadwal alert low stock (PUT /api/notifications/low-stock/settings).
+ */
+export async function apiUpdateLowStockAlertSettings(payload) {
+  const result = await apiRequest("/notifications/low-stock/settings", {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+  return result.data;
+}
+
 export async function fetchTransactionsFromApi(filters = {}) {
   const params = new URLSearchParams();
   if (filters.kasir && filters.kasir !== "semua") {
