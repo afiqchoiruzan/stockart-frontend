@@ -93,6 +93,12 @@ function ModalContent({
       })
       .catch((err) => {
         if (cancelled) return;
+        if (err?.status === 404) {
+          setLoadError(
+            "Endpoint pengaturan jadwal belum tersedia di server backend yang terhubung (404). Jika menggunakan Railway, pastikan deployment terbaru branch main sudah aktif di Railway; atau arahkan NEXT_PUBLIC_API_URL ke backend lokal terbaru."
+          );
+          return;
+        }
         setLoadError(err.message || "Gagal memuat pengaturan jadwal alert.");
       })
       .finally(() => {
