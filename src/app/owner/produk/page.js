@@ -14,6 +14,7 @@ import {
   notifyLowStockInApi,
 } from "@/lib/api";
 import LowStockDropdown from "@/components/owner/LowStockDropdown";
+import LowStockAlertSettingsModal from "@/components/owner/LowStockAlertSettingsModal";
 import ProductToolbar from "@/components/owner/ProductToolbar";
 import ProductFormDrawer from "@/components/owner/ProductFormDrawer";
 
@@ -53,6 +54,7 @@ export default function OwnerProdukPage() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [drawerMode, setDrawerMode] = useState("add"); // 'add' | 'edit'
   const [activeProduct, setActiveProduct] = useState(null);
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
 
   const [statusMessage, setStatusMessage] = useState("");
 
@@ -369,7 +371,7 @@ export default function OwnerProdukPage() {
                 ...outOfStockItems.map((p) => `${p.nama} (habis)`),
                 ...runningLowItems.map((p) => `${p.nama} (${p.stok})`),
               ].join(", ")}
-              . Pengingat dikirim ke email owner.
+              . Rekap stok menipis dikirim sesuai jadwal ke email owner.
             </div>
           </div>
 
@@ -378,6 +380,7 @@ export default function OwnerProdukPage() {
               items={lowStockProducts}
               onSelectProduct={handleOpenEdit}
               onNotifyEmail={handleNotifyLowStockEmail}
+              onOpenScheduleSettings={() => setIsScheduleModalOpen(true)}
               isNotifying={isNotifyingEmail}
             />
           </div>
@@ -418,6 +421,7 @@ export default function OwnerProdukPage() {
         categories={availableCategories}
         totalResults={filteredProducts.length}
         onAddProduct={handleOpenAdd}
+        onOpenScheduleSettings={() => setIsScheduleModalOpen(true)}
       />
 
       {/* Tabel Produk Hi-Fi (Sesuai screenshot 4 & stockart-pos.html) */}
@@ -564,6 +568,18 @@ export default function OwnerProdukPage() {
         onDeactivate={handleDeactivateProduct}
         onRestore={handleRestoreProduct}
         onPermanentDelete={handlePermanentDeleteProduct}
+      />
+
+      {/* Modal Pengaturan Jadwal Alert Low Stock */}
+      <LowStockAlertSettingsModal
+        isOpen={isScheduleModalOpen}
+        onClose={() => setIsScheduleModalOpen(false)}
+        onNotifyNow={handleNotifyLowStockEmail}
+        isNotifying={isNotifyingEmail}
+        lowStockCount={lowStockProducts.length}
+        onSaved={() => {
+          showFlashMessage("Jadwal alert low stock berhasil diperbarui.");
+        }}
       />
     </div>
   );

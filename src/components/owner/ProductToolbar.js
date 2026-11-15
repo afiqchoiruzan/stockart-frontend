@@ -17,6 +17,7 @@ export default function ProductToolbar({
   onStatusFilterChange,
   categories = CATEGORIES,
   onAddProduct,
+  onOpenScheduleSettings,
 }) {
   return (
     <div className="w-full flex flex-wrap items-center gap-2.5">
@@ -87,6 +88,29 @@ export default function ProductToolbar({
             ))}
           </select>
         </div>
+      )}
+
+      {/* Tombol Jadwal Alert Stok */}
+      {typeof onOpenScheduleSettings === "function" && (
+        <button
+          type="button"
+          onClick={onOpenScheduleSettings}
+          className="min-h-[40px] px-3.5 rounded-lg border border-[#E1E4E0] bg-white hover:bg-[#F5F6F4] hover:border-[#2F6F5E] text-[#1F2A27] text-[13px] font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+        >
+          <svg
+            aria-hidden="true"
+            className="w-4 h-4 stroke-current text-[#2F6F5E]"
+            fill="none"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            viewBox="0 0 24 24"
+          >
+            <circle cx="12" cy="12" r="9" />
+            <polyline points="12 7 12 12 15 15" />
+          </svg>
+          <span>Jadwal Alert</span>
+        </button>
       )}
 
       {/* Tombol Tambah Produk */}
