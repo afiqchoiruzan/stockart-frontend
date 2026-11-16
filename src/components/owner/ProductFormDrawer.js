@@ -123,6 +123,9 @@ function DrawerFormInner({
     if (!formData.nama.trim()) {
       newErrors.nama = "Nama produk wajib diisi.";
     }
+    if (!isEdit && !formData.kodeProduk.trim()) {
+      newErrors.kodeProduk = "Kode produk wajib diisi.";
+    }
     if (!formData.kategori.trim()) {
       newErrors.kategori = "Kategori wajib dipilih.";
     }
@@ -273,10 +276,12 @@ function DrawerFormInner({
               htmlFor="field-kodeProduk"
               className="text-sm font-medium text-[#1F2A27]"
             >
-              Kode produk / barcode{" "}
-              <span className="font-normal text-xs text-[#6B7773]">
-                {isEdit ? "(tidak dapat diubah)" : "(opsional)"}
-              </span>
+              Kode produk
+              {isEdit && (
+                <span className="font-normal text-xs text-[#6B7773]">
+                  {" "}(tidak dapat diubah)
+                </span>
+              )}
             </label>
             <input
               id="field-kodeProduk"
@@ -290,14 +295,20 @@ function DrawerFormInner({
                   ...prev,
                   kodeProduk: e.target.value.toUpperCase(),
                 }));
+                if (errors.kodeProduk) {
+                  setErrors((prev) => ({ ...prev, kodeProduk: undefined }));
+                }
               }}
-              placeholder="Otomatis (PRD-...) jika kosong"
+              placeholder="Contoh: SM001"
               className={`w-full min-h-[44px] px-4 border border-[#E1E4E0] rounded-md text-sm font-mono ${
                 isEdit
                   ? "bg-[#F5F6F4] text-[#6B7773] cursor-not-allowed"
                   : "bg-white focus:outline-2 focus:outline-[#2F6F5E] focus:border-[#2F6F5E]"
               }`}
             />
+            {errors.kodeProduk && (
+              <span className="text-xs text-[#C4574F]">{errors.kodeProduk}</span>
+            )}
           </div>
 
           {/* Kategori & Satuan */}
