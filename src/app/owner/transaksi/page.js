@@ -133,13 +133,13 @@ export default function OwnerTransaksiPage() {
       {apiError && (
         <div
           role="alert"
-          className="px-4 py-3 border border-[#EBC5C1] rounded-lg bg-[#F8E8E6] text-xs font-medium text-[#C4574F] flex items-center justify-between"
+          className="px-3 sm:px-4 py-3 border border-[#EBC5C1] rounded-lg bg-[#F8E8E6] text-xs font-medium text-[#C4574F] flex items-center justify-between gap-3"
         >
-          <span>{apiError}</span>
+          <span className="min-w-0">{apiError}</span>
           <button
             type="button"
             onClick={loadFromBackend}
-            className="text-xs font-semibold underline cursor-pointer"
+            className="shrink-0 inline-flex items-center min-h-11 -my-3 lg:min-h-0 lg:my-0 text-xs font-semibold underline cursor-pointer"
           >
             Coba Lagi
           </button>
@@ -178,7 +178,7 @@ export default function OwnerTransaksiPage() {
       ) : (
         <section
           aria-label="Tabel dan Rincian Struk Transaksi"
-          className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_360px] gap-4 items-start"
+          className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_340px] 2xl:grid-cols-[minmax(0,1fr)_360px] gap-4 items-start"
         >
           <TransactionTable
             transactions={filteredTransactions}
@@ -188,7 +188,7 @@ export default function OwnerTransaksiPage() {
             onResetFilter={handleResetFilters}
           />
 
-          <div className="lg:sticky lg:top-6">
+          <div className="min-w-0 xl:sticky xl:top-6">
             <TransactionDetailPanel
               key={activeTransaction?.id || "empty"}
               transaction={activeTransaction}

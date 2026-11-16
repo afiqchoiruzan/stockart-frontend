@@ -15,7 +15,7 @@ export default function TransactionTable({
 }) {
   if (transactions.length === 0) {
     return (
-      <div className="bg-white border border-[#E1E4E0] rounded-lg p-8 flex flex-col items-center justify-center text-center gap-2 text-[#6B7773]">
+      <div className="bg-white border border-[#E1E4E0] rounded-lg p-6 sm:p-8 flex flex-col items-center justify-center text-center gap-2 text-[#6B7773]">
         <svg
           aria-hidden="true"
           className="w-6 h-6 stroke-current"
@@ -39,7 +39,7 @@ export default function TransactionTable({
           <button
             type="button"
             onClick={onResetFilter}
-            className="mt-2 min-h-[36px] px-3.5 border border-[#E1E4E0] rounded-md bg-white hover:bg-[#F5F6F4] text-xs font-semibold text-[#1F2A27] transition-colors cursor-pointer"
+            className="mt-2 min-h-11 lg:min-h-[36px] px-3.5 border border-[#E1E4E0] rounded-md bg-white hover:bg-[#F5F6F4] text-xs font-semibold text-[#1F2A27] transition-colors cursor-pointer"
           >
             Reset filter
           </button>
@@ -54,23 +54,23 @@ export default function TransactionTable({
   );
 
   return (
-    <div className="bg-white border border-[#E1E4E0] rounded-lg overflow-hidden">
+    <div className="min-w-0 bg-white border border-[#E1E4E0] rounded-lg overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-left text-[13px]">
           <thead>
             <tr className="bg-[#FAFBF9] border-b border-[#E1E4E0] text-[11px] font-semibold uppercase tracking-[0.04em] text-[#6B7773]">
-              <th className="py-2.5 px-3.5 whitespace-nowrap">Invoice</th>
-              <th className="py-2.5 px-3.5 whitespace-nowrap">Waktu</th>
+              <th className="py-2.5 px-3 sm:px-3.5 whitespace-nowrap">Invoice</th>
+              <th className="py-2.5 px-3 sm:px-3.5 whitespace-nowrap hidden sm:table-cell">Waktu</th>
               {showKasirColumn && (
-                <th className="py-2.5 px-3.5 whitespace-nowrap">Kasir</th>
+                <th className="py-2.5 px-3 sm:px-3.5 whitespace-nowrap hidden sm:table-cell">Kasir</th>
               )}
-              <th className="py-2.5 px-3.5 hidden md:table-cell">
+              <th className="py-2.5 px-3.5 hidden 2xl:table-cell">
                 Ringkasan Barang
               </th>
               <th className="py-2.5 px-3.5 hidden sm:table-cell whitespace-nowrap">
                 Metode
               </th>
-              <th className="py-2.5 px-3.5 text-right whitespace-nowrap">
+              <th className="py-2.5 px-3 sm:px-3.5 text-right whitespace-nowrap">
                 Total
               </th>
             </tr>
@@ -93,15 +93,24 @@ export default function TransactionTable({
                 >
                   {/* Invoice */}
                   <td
-                    className={`py-2.5 px-3.5 font-mono font-semibold whitespace-nowrap text-[#1F2A27] ${
+                    className={`py-2.5 px-3 sm:px-3.5 font-mono font-semibold whitespace-nowrap text-[#1F2A27] ${
                       isSelected ? "border-l-[3px] border-l-[#2F6F5E]" : ""
                     }`}
                   >
                     {trx.noInvoice.replace(/^#/, "")}
+                    {/* Waktu ditampilkan di bawah invoice pada layar kecil */}
+                    <div className="sm:hidden text-[11px] font-normal text-[#6B7773]">
+                      {formatTanggalSingkat(trx.tanggal)}, {trx.waktu}
+                    </div>
+                    {showKasirColumn && (
+                      <div className="sm:hidden max-w-[180px] truncate font-sans text-xs font-medium text-[#1F2A27]">
+                        {trx.namaKasir}
+                      </div>
+                    )}
                   </td>
 
                   {/* Waktu */}
-                  <td className="py-2.5 px-3.5 whitespace-nowrap font-mono">
+                  <td className="py-2.5 px-3 sm:px-3.5 whitespace-nowrap font-mono hidden sm:table-cell">
                     <div className="text-[#1F2A27]">{trx.waktu}</div>
                     <div className="text-[11px] text-[#6B7773]">
                       {formatTanggalSingkat(trx.tanggal)}
@@ -110,14 +119,14 @@ export default function TransactionTable({
 
                   {/* Kasir */}
                   {showKasirColumn && (
-                    <td className="py-2.5 px-3.5 whitespace-nowrap text-[#1F2A27] font-medium">
+                    <td className="hidden sm:table-cell py-2.5 px-3 sm:px-3.5 text-[#1F2A27] font-medium max-w-[160px] truncate">
                       {trx.namaKasir}
                     </td>
                   )}
 
                   {/* Ringkasan Barang */}
-                  <td className="py-2.5 px-3.5 hidden md:table-cell">
-                    <div className="text-[#1F2A27] truncate max-w-[220px]">
+                  <td className="py-2.5 px-3.5 hidden 2xl:table-cell">
+                    <div className="text-[#1F2A27] truncate max-w-[200px]">
                       {firstItem}
                       {extraCount > 0 && (
                         <span className="text-xs text-[#6B7773]">
@@ -145,7 +154,7 @@ export default function TransactionTable({
                   </td>
 
                   {/* Total */}
-                  <td className="py-2.5 px-3.5 text-right font-mono font-semibold whitespace-nowrap text-[#1F2A27]">
+                  <td className="py-2.5 px-3 sm:px-3.5 text-right font-mono font-semibold whitespace-nowrap text-[#1F2A27]">
                     {formatRupiah(trx.totalHarga)}
                   </td>
                 </tr>
@@ -156,7 +165,7 @@ export default function TransactionTable({
       </div>
 
       {/* Footer Tabel */}
-      <div className="px-3.5 py-2.5 border-t border-[#E1E4E0] bg-[#FAFBF9] flex items-center justify-between text-xs text-[#6B7773]">
+      <div className="px-3 sm:px-3.5 py-2.5 border-t border-[#E1E4E0] bg-[#FAFBF9] flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs text-[#6B7773]">
         <span>{transactions.length} transaksi</span>
         <span className="font-mono">
           Total:{" "}

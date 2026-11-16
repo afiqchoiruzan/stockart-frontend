@@ -91,10 +91,10 @@ export default function LoginPage() {
   const activeRoleMeta = selectedRole ? ROLE_OPTIONS[selectedRole] : null;
 
   return (
-    <main className="min-h-screen grid place-items-center p-4 bg-[#F5F6F4] text-[#1F2A27]">
+    <main className="min-h-dvh grid place-items-center p-4 sm:p-6 bg-[#F5F6F4] text-[#1F2A27]">
       {!selectedRole ? (
         /* Step 1: Pilih Peran (Sesuai Hi-Fi stockart-pos.html) */
-        <section className="w-full max-w-[400px] bg-white border border-[#E1E4E0] rounded-lg p-6 flex flex-col gap-4 shadow-xs">
+        <section className="w-full max-w-[400px] bg-white border border-[#E1E4E0] rounded-lg p-5 sm:p-6 flex flex-col gap-4 shadow-xs">
           {/* Brand */}
           <div className="flex items-center gap-2 font-bold text-[#2F6F5E]">
             <svg
@@ -115,7 +115,7 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <h1 className="text-2xl font-bold leading-tight text-[#1F2A27]">
+            <h1 className="text-[clamp(1.25rem,1.05rem+1vw,1.5rem)] font-bold leading-tight text-[#1F2A27] wrap-break-word">
               Pilih peran
             </h1>
             <p className="text-sm text-[#6B7773] mt-0.5">
@@ -127,7 +127,7 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={() => handlePickRole("owner")}
-            className="flex items-center gap-4 w-full min-h-[64px] p-4 border border-[#E1E4E0] hover:border-[#2F6F5E] rounded-lg bg-white text-left transition-colors cursor-pointer group"
+            className="flex items-center gap-3 sm:gap-4 w-full min-h-[64px] p-3.5 sm:p-4 border border-[#E1E4E0] hover:border-[#2F6F5E] rounded-lg bg-white text-left transition-colors cursor-pointer group"
           >
             <span className="w-10 h-10 rounded-md bg-[#E6F0ED] text-[#2F6F5E] grid place-items-center shrink-0">
               <svg
@@ -167,7 +167,7 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={() => handlePickRole("kasir")}
-            className="flex items-center gap-4 w-full min-h-[64px] p-4 border border-[#E1E4E0] hover:border-[#2F6F5E] rounded-lg bg-white text-left transition-colors cursor-pointer group"
+            className="flex items-center gap-3 sm:gap-4 w-full min-h-[64px] p-3.5 sm:p-4 border border-[#E1E4E0] hover:border-[#2F6F5E] rounded-lg bg-white text-left transition-colors cursor-pointer group"
           >
             <span className="w-10 h-10 rounded-md bg-[#E6F0ED] text-[#2F6F5E] grid place-items-center shrink-0">
               <svg
@@ -210,7 +210,7 @@ export default function LoginPage() {
         <form
           onSubmit={handleLogin}
           noValidate
-          className="w-full max-w-[400px] bg-white border border-[#E1E4E0] rounded-lg p-6 flex flex-col gap-4 shadow-xs"
+          className="w-full max-w-[400px] bg-white border border-[#E1E4E0] rounded-lg p-5 sm:p-6 flex flex-col gap-4 shadow-xs"
         >
           {/* Brand */}
           <div className="flex items-center gap-2 font-bold text-[#2F6F5E]">
@@ -232,7 +232,7 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <h1 className="text-2xl font-bold leading-tight text-[#1F2A27]">
+            <h1 className="text-[clamp(1.25rem,1.05rem+1vw,1.5rem)] font-bold leading-tight text-[#1F2A27] wrap-break-word">
               Masuk sebagai {activeRoleMeta.label}
             </h1>
             <p className="text-sm text-[#6B7773] mt-0.5">
@@ -295,12 +295,12 @@ export default function LoginPage() {
                 placeholder="Masukkan kata sandi"
                 autoComplete="current-password"
                 disabled={isLoading}
-                className="w-full min-h-[44px] pl-4 pr-16 bg-white border border-[#E1E4E0] rounded-md text-sm focus:outline-2 focus:outline-[#2F6F5E] focus:border-[#2F6F5E] disabled:opacity-60"
+                className="w-full min-h-[44px] pl-4 pr-20 bg-white border border-[#E1E4E0] rounded-md text-sm focus:outline-2 focus:outline-[#2F6F5E] focus:border-[#2F6F5E] disabled:opacity-60"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 text-xs font-medium text-[#6B7773] hover:text-[#1F2A27] rounded cursor-pointer"
+                className="absolute right-1 top-1/2 -translate-y-1/2 min-h-10 px-2.5 py-1 text-xs font-medium text-[#6B7773] hover:text-[#1F2A27] rounded cursor-pointer"
                 aria-label={
                   showPassword ? "Sembunyikan sandi" : "Tampilkan sandi"
                 }

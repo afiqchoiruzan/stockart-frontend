@@ -288,19 +288,19 @@ function ScannerModal({ onDetected, onClose, feedback, continuous }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-[#1F2A27]/40 flex items-center justify-center p-5"
+      className="fixed inset-0 z-50 bg-[#1F2A27]/40 flex items-center justify-center p-3 sm:p-5"
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-label="Scan barcode"
     >
       <div
-        className="bg-white border border-[#E1E4E0] rounded-xl w-full max-w-110 max-h-[90vh] overflow-y-auto shadow-xl"
+        className="bg-white border border-[#E1E4E0] rounded-xl w-full max-w-110 max-h-[calc(100dvh-24px)] sm:max-h-[90dvh] overflow-y-auto shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="px-4 py-3.5 border-b border-[#E1E4E0] flex items-center justify-between">
-          <div>
+        <div className="px-4 py-3 sm:py-3.5 border-b border-[#E1E4E0] flex items-center justify-between gap-2">
+          <div className="min-w-0">
             <h3 className="text-[15px] font-semibold text-[#1F2A27]">
               Scan barcode
             </h3>
@@ -312,7 +312,7 @@ function ScannerModal({ onDetected, onClose, feedback, continuous }) {
             type="button"
             onClick={onClose}
             aria-label="Tutup pemindai"
-            className="w-8 h-8 inline-flex items-center justify-center rounded-lg text-[#6B7773] hover:bg-[#F5F6F4] hover:text-[#1F2A27] transition-colors"
+            className="w-11 h-11 lg:w-8 lg:h-8 -mr-2 lg:mr-0 shrink-0 inline-flex items-center justify-center rounded-lg text-[#6B7773] hover:bg-[#F5F6F4] hover:text-[#1F2A27] transition-colors"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M18 6 6 18M6 6l12 12" />
@@ -339,7 +339,7 @@ function ScannerModal({ onDetected, onClose, feedback, continuous }) {
                 autoPlay
               />
               {/* Bingkai bidik */}
-              <div className="pointer-events-none absolute inset-x-8 top-1/2 h-24 -translate-y-1/2 rounded-md border-2 border-white/80 shadow-[0_0_0_9999px_rgba(31,42,39,0.35)]" />
+              <div className="pointer-events-none absolute inset-x-6 sm:inset-x-8 top-1/2 h-20 sm:h-24 -translate-y-1/2 rounded-md border-2 border-white/80 shadow-[0_0_0_9999px_rgba(31,42,39,0.35)]" />
               {status === "starting" && (
                 <div className="absolute inset-0 flex items-center justify-center text-xs text-white/90">
                   Membuka kamera...
@@ -364,7 +364,7 @@ function ScannerModal({ onDetected, onClose, feedback, continuous }) {
                 type="button"
                 onClick={handleSwitchCamera}
                 disabled={status === "starting"}
-                className="shrink-0 px-3 py-1.5 rounded-lg border border-[#E1E4E0] bg-white font-medium text-[#1F2A27] hover:bg-[#F5F6F4] disabled:opacity-50 transition-colors"
+                className="shrink-0 min-h-11 lg:min-h-0 px-3 py-1.5 rounded-lg border border-[#E1E4E0] bg-white font-medium text-[#1F2A27] hover:bg-[#F5F6F4] disabled:opacity-50 transition-colors"
               >
                 Ganti kamera
               </button>
@@ -395,12 +395,12 @@ function ScannerModal({ onDetected, onClose, feedback, continuous }) {
               onChange={(e) => setManualCode(e.target.value)}
               placeholder="Ketik kode barcode / kode produk"
               aria-label="Kode barcode manual"
-              className="flex-1 min-w-0 rounded-lg border border-[#E1E4E0] bg-white px-3 py-2 text-xs text-[#1F2A27] placeholder:text-[#6B7773] focus:outline-none focus:border-[#2F6F5E] focus:ring-2 focus:ring-[#E6F0ED]"
+              className="flex-1 min-w-0 min-h-11 lg:min-h-0 rounded-lg border border-[#E1E4E0] bg-white px-3 py-2 text-xs text-[#1F2A27] placeholder:text-[#6B7773] focus:outline-none focus:border-[#2F6F5E] focus:ring-2 focus:ring-[#E6F0ED]"
             />
             <button
               type="submit"
               disabled={!manualCode.trim()}
-              className="shrink-0 px-3 py-2 rounded-lg bg-[#2F6F5E] text-xs font-semibold text-white hover:bg-[#255a4c] disabled:opacity-50 transition-colors"
+              className="shrink-0 min-h-11 lg:min-h-0 px-3 py-2 rounded-lg bg-[#2F6F5E] text-xs font-semibold text-white hover:bg-[#255a4c] disabled:opacity-50 transition-colors"
             >
               Tambah
             </button>

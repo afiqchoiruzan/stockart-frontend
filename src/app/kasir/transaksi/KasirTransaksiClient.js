@@ -566,18 +566,22 @@ export default function KasirTransaksiClient() {
   };
 
   return (
-    <div className="flex flex-col gap-3 max-w-7xl mx-auto">
+    <div
+      className={`flex flex-col gap-3 max-w-7xl mx-auto ${
+        cart.length > 0 ? "pb-20 lg:pb-0" : ""
+      }`}
+    >
       {/* Error Notice */}
       {errorMessage && (
         <div
           role="alert"
-          className="px-4 py-2.5 border border-[#EBC5C1] rounded-lg bg-[#F8E8E6] text-xs font-medium text-[#C4574F] flex items-center justify-between"
+          className="px-3 sm:px-4 py-2.5 border border-[#EBC5C1] rounded-lg bg-[#F8E8E6] text-xs font-medium text-[#C4574F] flex items-center justify-between gap-3"
         >
-          <span>{errorMessage}</span>
+          <span className="min-w-0">{errorMessage}</span>
           <button
             type="button"
             onClick={() => setErrorMessage("")}
-            className="text-xs font-semibold underline cursor-pointer"
+            className="shrink-0 inline-flex items-center min-h-11 -my-3 lg:min-h-0 lg:my-0 text-xs font-semibold underline cursor-pointer"
           >
             Tutup
           </button>
@@ -585,7 +589,7 @@ export default function KasirTransaksiClient() {
       )}
 
       {/* Split POS Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_360px] gap-4 items-start">
         {/* Left: Product Search & Catalog */}
         <div className="flex flex-col gap-3 min-w-0">
           {/* Search Bar + tombol Scan kamera */}
@@ -612,9 +616,9 @@ export default function KasirTransaksiClient() {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={handleSearchKeyDown}
-                className="w-full h-9 pl-9 pr-12 border border-[#E1E4E0] rounded-lg text-[13px] text-[#1F2A27] bg-white placeholder:text-[#6B7773] focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15 transition-all"
+                className="w-full h-11 lg:h-9 pl-9 pr-3 sm:pr-12 border border-[#E1E4E0] rounded-lg text-[13px] text-[#1F2A27] bg-white placeholder:text-[#6B7773] focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15 transition-all"
               />
-              <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 font-mono text-[11px] px-1.5 py-0.5 rounded border border-[#E1E4E0] bg-white text-[#6B7773] pointer-events-none">
+              <kbd className="hidden lg:block absolute right-2.5 top-1/2 -translate-y-1/2 font-mono text-[11px] px-1.5 py-0.5 rounded border border-[#E1E4E0] bg-white text-[#6B7773] pointer-events-none">
                 F2
               </kbd>
             </div>
@@ -622,7 +626,7 @@ export default function KasirTransaksiClient() {
               type="button"
               onClick={handleOpenScanner}
               aria-label="Scan barcode dengan kamera"
-              className="shrink-0 h-9 px-3 inline-flex items-center gap-1.5 rounded-lg bg-[#2F6F5E] text-[13px] font-semibold text-white hover:bg-[#255a4c] transition-colors cursor-pointer"
+              className="shrink-0 h-11 lg:h-9 min-w-11 justify-center px-3 inline-flex items-center gap-1.5 rounded-lg bg-[#2F6F5E] text-[13px] font-semibold text-white hover:bg-[#255a4c] transition-colors cursor-pointer"
             >
               <svg
                 className="w-4 h-4"
@@ -641,8 +645,8 @@ export default function KasirTransaksiClient() {
             </button>
           </div>
 
-          {/* Category Filter Chips */}
-          <div className="flex flex-wrap gap-1.5">
+          {/* Category Filter Chips: scroll horizontal di mobile, wrap di layar lebih besar */}
+          <div className="flex gap-1.5 overflow-x-auto pb-1 -mb-1 sm:flex-wrap sm:overflow-visible sm:pb-0 sm:mb-0">
             {categoryList.map((cat) => {
               const active = selectedCategory === cat;
               return (
@@ -650,7 +654,7 @@ export default function KasirTransaksiClient() {
                   key={cat}
                   type="button"
                   onClick={() => setSelectedCategory(cat)}
-                  className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors cursor-pointer ${active
+                  className={`shrink-0 whitespace-nowrap min-h-10 lg:min-h-0 px-3.5 lg:px-3 py-1 rounded-full text-xs font-medium border transition-colors cursor-pointer ${active
                     ? "bg-[#2F6F5E] text-white border-[#2F6F5E]"
                     : "bg-white text-[#6B7773] border-[#E1E4E0] hover:text-[#1F2A27]"
                     }`}
@@ -673,7 +677,7 @@ export default function KasirTransaksiClient() {
                 : "Produk tidak ditemukan."}
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2.5">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-2 sm:gap-2.5">
               {filteredProducts.map((product) => {
                 const prodId = product.id;
                 const price = product.hargaJual;
@@ -688,7 +692,7 @@ export default function KasirTransaksiClient() {
                     type="button"
                     disabled={isOut}
                     onClick={() => handleAddToCart(product)}
-                    className={`text-left bg-white border rounded-lg p-3 flex flex-col justify-between gap-2 min-h-[96px] transition-all ${isOut
+                    className={`min-w-0 text-left bg-white border rounded-lg p-3 flex flex-col justify-between gap-2 min-h-[96px] transition-all ${isOut
                       ? "opacity-45 cursor-not-allowed border-[#E1E4E0]"
                       : inCart
                         ? "border-[#2F6F5E] ring-1 ring-[#2F6F5E]/30 cursor-pointer"
@@ -698,7 +702,7 @@ export default function KasirTransaksiClient() {
                     <div className="text-[13px] font-semibold text-[#1F2A27] leading-[1.3] line-clamp-2">
                       {product.nama}
                     </div>
-                    <div className="flex items-center justify-between gap-1.5 w-full mt-1">
+                    <div className="flex flex-wrap items-center justify-between gap-1.5 w-full mt-1">
                       <span className="font-mono text-[13px] font-bold text-[#2F6F5E]">
                         {formatRupiah(price)}
                       </span>
@@ -728,7 +732,10 @@ export default function KasirTransaksiClient() {
         </div>
 
         {/* Right: Cart & Payment Panel */}
-        <div className="bg-white border border-[#E1E4E0] rounded-lg flex flex-col lg:sticky lg:top-4 max-h-[calc(100vh-88px)] overflow-hidden">
+        <div
+          id="pesanan"
+          className="scroll-mt-20 bg-white border border-[#E1E4E0] rounded-lg flex flex-col lg:sticky lg:top-4 lg:max-h-[calc(100vh-88px)] overflow-hidden"
+        >
           {/* Cart Header */}
           <div className="px-4 py-3 border-b border-[#E1E4E0] flex items-center justify-between">
             <div>
@@ -743,7 +750,7 @@ export default function KasirTransaksiClient() {
               <button
                 type="button"
                 onClick={handleClearCart}
-                className="px-2.5 py-1 text-xs font-medium text-[#C4574F] hover:bg-[#FAFBF9] rounded-md transition-colors cursor-pointer"
+                className="min-h-11 lg:min-h-0 px-2.5 py-1 text-xs font-medium text-[#C4574F] hover:bg-[#FAFBF9] rounded-md transition-colors cursor-pointer"
               >
                 Kosongkan
               </button>
@@ -751,7 +758,7 @@ export default function KasirTransaksiClient() {
           </div>
 
           {/* Cart Items */}
-          <div className="flex-1 overflow-y-auto px-3.5 py-2 divide-y divide-[#EEF0EC] min-h-[160px]">
+          <div className="flex-1 overflow-y-auto px-3.5 py-2 divide-y divide-[#EEF0EC] min-h-[120px] lg:min-h-[160px]">
             {cart.length === 0 ? (
               <div className="py-10 text-center text-xs text-[#6B7773]">
                 Klik produk atau scan barcode untuk menambahkan ke pesanan.
@@ -779,7 +786,7 @@ export default function KasirTransaksiClient() {
                     <button
                       type="button"
                       onClick={() => handleUpdateQty(item.id, item.qty - 1)}
-                      className="w-6 h-6 bg-white hover:bg-[#E6F0ED] hover:text-[#2F6F5E] text-xs font-semibold flex items-center justify-center cursor-pointer"
+                      className="w-10 h-10 lg:w-6 lg:h-6 bg-white hover:bg-[#E6F0ED] hover:text-[#2F6F5E] text-sm lg:text-xs font-semibold flex items-center justify-center cursor-pointer"
                       aria-label={`Kurangi ${item.nama}`}
                     >
                       −
@@ -790,7 +797,7 @@ export default function KasirTransaksiClient() {
                     <button
                       type="button"
                       onClick={() => handleUpdateQty(item.id, item.qty + 1)}
-                      className="w-6 h-6 bg-white hover:bg-[#E6F0ED] hover:text-[#2F6F5E] text-xs font-semibold flex items-center justify-center cursor-pointer"
+                      className="w-10 h-10 lg:w-6 lg:h-6 bg-white hover:bg-[#E6F0ED] hover:text-[#2F6F5E] text-sm lg:text-xs font-semibold flex items-center justify-center cursor-pointer"
                       aria-label={`Tambah ${item.nama}`}
                     >
                       +
@@ -802,7 +809,8 @@ export default function KasirTransaksiClient() {
                     type="button"
                     onClick={() => handleRemoveFromCart(item.id)}
                     title="Hapus"
-                    className="px-1.5 py-1 text-[#6B7773] hover:text-[#C4574F] text-sm leading-none cursor-pointer"
+                    aria-label={`Hapus ${item.nama}`}
+                    className="min-w-10 min-h-10 lg:min-w-0 lg:min-h-0 px-1.5 py-1 text-lg lg:text-sm text-[#6B7773] hover:text-[#C4574F] leading-none cursor-pointer"
                   >
                     ×
                   </button>
@@ -830,7 +838,7 @@ export default function KasirTransaksiClient() {
                   key={m}
                   type="button"
                   onClick={() => setPaymentMethod(m)}
-                  className={`py-1.5 px-2.5 rounded-md border text-xs font-semibold transition-colors cursor-pointer ${paymentMethod === m
+                  className={`min-h-11 lg:min-h-0 py-1.5 px-2.5 rounded-md border text-xs font-semibold transition-colors cursor-pointer ${paymentMethod === m
                     ? "bg-[#E6F0ED] border-[#2F6F5E] text-[#2F6F5E]"
                     : "bg-white border-[#E1E4E0] text-[#6B7773] hover:text-[#1F2A27]"
                     }`}
@@ -863,7 +871,7 @@ export default function KasirTransaksiClient() {
                     onChange={(e) =>
                       setPaymentAmount(e.target.value.replace(/\D/g, ""))
                     }
-                    className="w-full h-9 px-3 border border-[#E1E4E0] rounded-lg text-[13px] font-mono text-[#1F2A27] bg-white placeholder:text-[#6B7773] focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15"
+                    className="w-full h-11 lg:h-9 px-3 border border-[#E1E4E0] rounded-lg text-[13px] font-mono text-[#1F2A27] bg-white placeholder:text-[#6B7773] focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15"
                   />
                 </div>
 
@@ -873,7 +881,7 @@ export default function KasirTransaksiClient() {
                     type="button"
                     disabled={totalHarga === 0}
                     onClick={() => setPaymentAmount(String(totalHarga))}
-                    className="py-1 px-1.5 text-[11px] font-mono border border-[#E1E4E0] rounded-md bg-white text-[#6B7773] hover:border-[#2F6F5E] hover:text-[#2F6F5E] disabled:opacity-40 cursor-pointer"
+                    className="min-h-11 lg:min-h-0 py-1 px-1.5 text-[11px] font-mono border border-[#E1E4E0] rounded-md bg-white text-[#6B7773] hover:border-[#2F6F5E] hover:text-[#2F6F5E] disabled:opacity-40 cursor-pointer"
                   >
                     Pas
                   </button>
@@ -882,7 +890,7 @@ export default function KasirTransaksiClient() {
                       key={v}
                       type="button"
                       onClick={() => setPaymentAmount(String(v))}
-                      className="py-1 px-1.5 text-[11px] font-mono border border-[#E1E4E0] rounded-md bg-white text-[#6B7773] hover:border-[#2F6F5E] hover:text-[#2F6F5E] cursor-pointer"
+                      className="min-h-11 lg:min-h-0 py-1 px-1.5 text-[11px] font-mono border border-[#E1E4E0] rounded-md bg-white text-[#6B7773] hover:border-[#2F6F5E] hover:text-[#2F6F5E] cursor-pointer"
                     >
                       {(v / 1000).toFixed(0)}.000
                     </button>
@@ -904,7 +912,7 @@ export default function KasirTransaksiClient() {
               type="button"
               disabled={!canPay || qrisOpen}
               onClick={handlePay}
-              className="w-full py-2.5 px-4 rounded-lg bg-[#2F6F5E] hover:bg-[#255a4c] text-white font-semibold text-[13px] disabled:opacity-45 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+              className="w-full min-h-12 lg:min-h-0 py-2.5 px-4 rounded-lg bg-[#2F6F5E] hover:bg-[#255a4c] text-white font-semibold text-[13px] disabled:opacity-45 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
             >
               {isSubmitting ? "Memproses…" : "Bayar (F9)"}
             </button>
@@ -912,15 +920,46 @@ export default function KasirTransaksiClient() {
         </div>
       </div>
 
+      {/* Ringkasan pesanan melayang (mobile & tablet): keranjang berada di bawah
+          katalog, jadi tampilkan total dan pintasan ke panel Pesanan. */}
+      {cart.length > 0 && (
+        <a
+          href="#pesanan"
+          className="lg:hidden fixed inset-x-3 bottom-3 z-30 min-h-14 px-4 py-2.5 rounded-xl bg-[#2F6F5E] text-white shadow-lg flex items-center justify-between gap-3"
+        >
+          <span className="flex flex-col leading-tight min-w-0">
+            <span className="text-[11px] opacity-85">{totalQty} item</span>
+            <span className="font-mono text-base font-bold truncate">
+              {formatRupiah(totalHarga)}
+            </span>
+          </span>
+          <span className="shrink-0 inline-flex items-center gap-1 text-[13px] font-semibold">
+            Lihat pesanan
+            <svg
+              aria-hidden="true"
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              viewBox="0 0 24 24"
+            >
+              <path d="m6 9 6 6 6-6" />
+            </svg>
+          </span>
+        </a>
+      )}
+
       {/* Invoice Modal */}
       {showInvoice && lastInvoice && (
         <div
-          className="fixed inset-0 z-50 bg-[#1F2A27]/40 flex items-center justify-center p-5"
+          className="fixed inset-0 z-50 bg-[#1F2A27]/40 flex items-center justify-center p-3 sm:p-5"
           onClick={handleCloseInvoice}
         >
           <div
             id="printable-receipt"
-            className="bg-white border border-[#E1E4E0] rounded-xl w-full max-w-[440px] max-h-[90vh] overflow-y-auto shadow-xl"
+            className="bg-white border border-[#E1E4E0] rounded-xl w-full max-w-[440px] max-h-[calc(100dvh-24px)] sm:max-h-[90dvh] overflow-y-auto shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
@@ -1010,7 +1049,7 @@ export default function KasirTransaksiClient() {
               <button
                 type="button"
                 onClick={() => window.print()}
-                className="px-3.5 py-2 border border-[#E1E4E0] rounded-lg text-[13px] font-semibold text-[#1F2A27] bg-white hover:bg-[#FAFBF9] transition-colors inline-flex items-center gap-1.5 cursor-pointer"
+                className="flex-1 sm:flex-none justify-center min-h-11 lg:min-h-0 px-3.5 py-2 border border-[#E1E4E0] rounded-lg text-[13px] font-semibold text-[#1F2A27] bg-white hover:bg-[#FAFBF9] transition-colors inline-flex items-center gap-1.5 cursor-pointer"
               >
                 <svg
                   className="w-4 h-4"
@@ -1030,7 +1069,7 @@ export default function KasirTransaksiClient() {
               <button
                 type="button"
                 onClick={handleCloseInvoice}
-                className="px-3.5 py-2 rounded-lg text-[13px] font-semibold text-white bg-[#2F6F5E] hover:bg-[#255a4c] transition-colors cursor-pointer"
+                className="flex-1 sm:flex-none min-h-11 lg:min-h-0 px-3.5 py-2 rounded-lg text-[13px] font-semibold text-white bg-[#2F6F5E] hover:bg-[#255a4c] transition-colors cursor-pointer"
               >
                 Transaksi baru
               </button>

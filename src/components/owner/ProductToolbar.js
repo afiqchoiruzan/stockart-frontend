@@ -22,7 +22,7 @@ export default function ProductToolbar({
   return (
     <div className="w-full flex flex-wrap items-center gap-2.5">
       {/* Search Input Bar */}
-      <div className="relative flex-1 min-w-[240px]">
+      <div className="relative basis-full sm:basis-auto sm:flex-1 sm:min-w-[240px]">
         <label htmlFor="product-search" className="sr-only">
           Cari produk, kode, atau kategori
         </label>
@@ -46,12 +46,12 @@ export default function ProductToolbar({
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder="Cari nama, kode produk, atau barcode…"
-          className="w-full min-h-[40px] pl-9 pr-4 bg-white border border-[#E1E4E0] rounded-lg text-[13px] text-[#1F2A27] placeholder:text-[#6B7773] focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15 transition-all"
+          className="w-full min-h-11 lg:min-h-[40px] pl-9 pr-4 bg-white border border-[#E1E4E0] rounded-lg text-[13px] text-[#1F2A27] placeholder:text-[#6B7773] focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15 transition-all"
         />
       </div>
 
       {/* Filter Kategori */}
-      <div>
+      <div className="flex-1 basis-[40%] min-w-0 sm:basis-auto sm:flex-none">
         <label htmlFor="category-select" className="sr-only">
           Filter Kategori
         </label>
@@ -59,7 +59,7 @@ export default function ProductToolbar({
           id="category-select"
           value={selectedCategory}
           onChange={(e) => onCategoryChange(e.target.value)}
-          className="min-h-[40px] px-3.5 bg-white border border-[#E1E4E0] rounded-lg text-[13px] font-medium text-[#1F2A27] focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15 cursor-pointer"
+          className="w-full sm:w-auto max-w-full min-h-11 lg:min-h-[40px] px-3.5 bg-white border border-[#E1E4E0] rounded-lg text-[13px] font-medium text-[#1F2A27] focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15 cursor-pointer"
         >
           {categories.map((cat) => (
             <option key={cat} value={cat}>
@@ -71,7 +71,7 @@ export default function ProductToolbar({
 
       {/* Filter Status Aktif / Nonaktif */}
       {typeof onStatusFilterChange === "function" && (
-        <div>
+        <div className="flex-1 basis-[40%] min-w-0 sm:basis-auto sm:flex-none">
           <label htmlFor="status-select" className="sr-only">
             Filter Status Produk
           </label>
@@ -79,7 +79,7 @@ export default function ProductToolbar({
             id="status-select"
             value={statusFilter}
             onChange={(e) => onStatusFilterChange(e.target.value)}
-            className="min-h-[40px] px-3.5 bg-white border border-[#E1E4E0] rounded-lg text-[13px] font-medium text-[#1F2A27] focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15 cursor-pointer"
+            className="w-full sm:w-auto max-w-full min-h-11 lg:min-h-[40px] px-3.5 bg-white border border-[#E1E4E0] rounded-lg text-[13px] font-medium text-[#1F2A27] focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15 cursor-pointer"
           >
             {STATUS_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -95,7 +95,7 @@ export default function ProductToolbar({
         <button
           type="button"
           onClick={onOpenScheduleSettings}
-          className="min-h-[40px] px-3.5 rounded-lg border border-[#E1E4E0] bg-white hover:bg-[#F5F6F4] hover:border-[#2F6F5E] text-[#1F2A27] text-[13px] font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+          className="flex-1 basis-[40%] sm:basis-auto sm:flex-none justify-center min-h-11 lg:min-h-[40px] px-3.5 rounded-lg border border-[#E1E4E0] bg-white hover:bg-[#F5F6F4] hover:border-[#2F6F5E] text-[#1F2A27] text-[13px] font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
         >
           <svg
             aria-hidden="true"
@@ -118,7 +118,7 @@ export default function ProductToolbar({
         <button
           type="button"
           onClick={onAddProduct}
-          className="min-h-[40px] px-4 rounded-lg bg-[#2F6F5E] hover:bg-[#255a4c] text-white text-[13px] font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+          className="flex-1 basis-[40%] sm:basis-auto sm:flex-none justify-center whitespace-nowrap min-h-11 lg:min-h-[40px] px-4 rounded-lg bg-[#2F6F5E] hover:bg-[#255a4c] text-white text-[13px] font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
         >
           <svg
             aria-hidden="true"

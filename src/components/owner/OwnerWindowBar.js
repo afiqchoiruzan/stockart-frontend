@@ -29,15 +29,15 @@ export default function OwnerWindowBar() {
   return (
     <header
       aria-label="Header Halaman Owner"
-      className="w-full border-b border-[#E1E4E0] bg-white px-6 py-4 flex items-center justify-between gap-4"
+      className="w-full border-b border-[#E1E4E0] bg-white px-4 sm:px-5 lg:px-6 py-3 sm:py-4 flex items-center justify-between gap-4"
     >
-      <div>
-        <h1 className="text-sm font-bold text-[#1F2A27] leading-tight">
+      <div className="min-w-0">
+        <h1 className="text-base lg:text-sm font-bold text-[#1F2A27] leading-tight">
           {title}
         </h1>
         <p className="text-xs text-[#6B7773] mt-0.5">{subtitle}</p>
       </div>
-      <span className="hidden sm:inline-block text-xs text-[#6B7773]">
+      <span className="hidden sm:inline-block shrink-0 text-xs text-[#6B7773] text-right">
         {todayStr}
       </span>
     </header>

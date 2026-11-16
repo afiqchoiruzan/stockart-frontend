@@ -16,13 +16,13 @@ export default function ReportToolbar({
   actions = null,
 }) {
   return (
-    <div className="w-full flex flex-wrap items-center justify-between gap-2.5">
+    <div className="w-full flex flex-col sm:flex-row sm:flex-wrap sm:items-center justify-between gap-2.5">
       <div className="flex flex-wrap items-center gap-2.5">
         {/* Pilihan Periode Laporan */}
         <div
           role="group"
           aria-label="Periode laporan"
-          className="inline-flex p-1 bg-white border border-[#E1E4E0] rounded-lg"
+          className="flex w-full sm:inline-flex sm:w-auto p-1 bg-white border border-[#E1E4E0] rounded-lg"
         >
           {REPORT_PERIODS.map((item) => {
             const isActive = period === item.value;
@@ -32,7 +32,7 @@ export default function ReportToolbar({
                 type="button"
                 onClick={() => onPeriodChange(item.value)}
                 aria-pressed={isActive}
-                className={`min-h-[32px] px-3.5 rounded-md text-[13px] font-semibold transition-colors cursor-pointer ${
+                className={`flex-1 sm:flex-none min-h-10 lg:min-h-[32px] px-3.5 rounded-md text-[13px] font-semibold transition-colors cursor-pointer ${
                   isActive
                     ? "bg-[#2F6F5E] text-white"
                     : "text-[#6B7773] hover:bg-[#F5F6F4] hover:text-[#1F2A27]"
@@ -50,14 +50,14 @@ export default function ReportToolbar({
       </div>
 
       {/* Aksi: Kirim Laporan & Unduh PDF */}
-      <div className="flex flex-wrap items-center gap-2.5">
+      <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2.5">
         {actions}
 
         <button
           type="button"
           onClick={onDownloadPdf}
           disabled={isDownloadDisabled || isDownloading}
-          className="inline-flex items-center gap-2 min-h-[40px] px-3.5 bg-white border border-[#E1E4E0] rounded-lg text-[13px] font-semibold text-[#1F2A27] hover:border-[#2F6F5E] hover:text-[#2F6F5E] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full sm:w-auto justify-center inline-flex items-center gap-2 min-h-11 lg:min-h-[40px] px-3.5 bg-white border border-[#E1E4E0] rounded-lg text-[13px] font-semibold text-[#1F2A27] hover:border-[#2F6F5E] hover:text-[#2F6F5E] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <svg
             aria-hidden="true"

@@ -23,7 +23,7 @@ const WEEKDAY_OPTIONS = [
 ];
 
 const INPUT_CLASS =
-  "min-h-[34px] px-2.5 bg-white border border-[#E1E4E0] rounded-lg text-xs text-[#1F2A27] focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15";
+  "min-h-11 lg:min-h-[34px] max-w-full px-2.5 bg-white border border-[#E1E4E0] rounded-lg text-xs text-[#1F2A27] focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15";
 
 function formatWibDateTime(isoString) {
   if (!isoString) return "-";
@@ -48,7 +48,7 @@ function InlineSwitch({ id, label, checked, onChange, disabled = false, title })
     <label
       htmlFor={id}
       title={title}
-      className={`inline-flex items-center gap-2 text-[13px] font-semibold text-[#1F2A27] ${
+      className={`inline-flex items-center gap-2 min-h-11 lg:min-h-0 text-[13px] font-semibold text-[#1F2A27] ${
         disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
       }`}
     >
@@ -217,12 +217,12 @@ export default function ReportAutoSendPanel({ onSaved }) {
 
           {isEnabled && (
             <>
-              <span aria-hidden="true" className="h-5 w-px bg-[#E1E4E0]" />
+              <span aria-hidden="true" className="hidden sm:block h-5 w-px bg-[#E1E4E0]" />
 
               <div
                 role="group"
                 aria-label="Frekuensi laporan otomatis"
-                className="inline-flex p-0.5 bg-white border border-[#E1E4E0] rounded-lg"
+                className="flex w-full sm:inline-flex sm:w-auto p-0.5 bg-white border border-[#E1E4E0] rounded-lg"
               >
                 {FREQUENCY_OPTIONS.map((opt) => {
                   const active = digestFrequency === opt.value;
@@ -233,7 +233,7 @@ export default function ReportAutoSendPanel({ onSaved }) {
                       onClick={() => setDigestFrequency(opt.value)}
                       aria-pressed={active}
                       title={opt.desc}
-                      className={`min-h-[30px] px-3 rounded-md text-xs font-semibold transition-colors cursor-pointer ${
+                      className={`flex-1 sm:flex-none min-h-10 lg:min-h-[30px] px-3 rounded-md text-xs font-semibold transition-colors cursor-pointer ${
                         active
                           ? "bg-[#E6F0ED] text-[#2F6F5E]"
                           : "text-[#6B7773] hover:bg-[#F5F6F4] hover:text-[#1F2A27]"
@@ -315,7 +315,7 @@ export default function ReportAutoSendPanel({ onSaved }) {
           <button
             type="submit"
             disabled={isSaving || !hasChanges}
-            className="ml-auto inline-flex items-center justify-center min-h-[34px] px-3.5 rounded-lg bg-[#2F6F5E] hover:bg-[#255a4c] text-xs font-semibold text-white transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full sm:w-auto sm:ml-auto inline-flex items-center justify-center min-h-11 lg:min-h-[34px] px-3.5 rounded-lg bg-[#2F6F5E] hover:bg-[#255a4c] text-xs font-semibold text-white transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSaving ? "Menyimpan…" : "Simpan"}
           </button>

@@ -65,13 +65,13 @@ export default function KasirProdukClient() {
       {errorMsg && (
         <div
           role="alert"
-          className="px-4 py-3 border border-[#EBC5C1] rounded-lg bg-[#F8E8E6] text-xs font-medium text-[#C4574F] flex items-center justify-between"
+          className="px-3 sm:px-4 py-3 border border-[#EBC5C1] rounded-lg bg-[#F8E8E6] text-xs font-medium text-[#C4574F] flex items-center justify-between gap-3"
         >
-          <span>{errorMsg}</span>
+          <span className="min-w-0">{errorMsg}</span>
           <button
             type="button"
             onClick={refreshProducts}
-            className="text-xs font-semibold underline cursor-pointer"
+            className="shrink-0 inline-flex items-center min-h-11 -my-3 lg:min-h-0 lg:my-0 text-xs font-semibold underline cursor-pointer"
           >
             Coba Lagi
           </button>
@@ -81,7 +81,7 @@ export default function KasirProdukClient() {
       {/* Search & Filter Toolbar */}
       <div className="flex flex-wrap items-center gap-2.5">
         {/* Search Bar */}
-        <div className="flex-1 min-w-[240px] relative">
+        <div className="relative basis-full sm:basis-auto sm:flex-1 sm:min-w-[240px]">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6B7773] pointer-events-none">
             <svg
               className="w-4 h-4"
@@ -101,7 +101,7 @@ export default function KasirProdukClient() {
             placeholder="Cari nama, kode produk, atau barcode…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full h-9 pl-9 pr-3 border border-[#E1E4E0] rounded-lg text-[13px] text-[#1F2A27] bg-white placeholder:text-[#6B7773] focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15 transition-all"
+            className="w-full h-11 lg:h-9 pl-9 pr-3 border border-[#E1E4E0] rounded-lg text-[13px] text-[#1F2A27] bg-white placeholder:text-[#6B7773] focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15 transition-all"
           />
         </div>
 
@@ -109,7 +109,7 @@ export default function KasirProdukClient() {
         <select
           value={selectedCategory}
           onChange={(e) => setSelectedCategory(e.target.value)}
-          className="h-9 px-3 border border-[#E1E4E0] rounded-lg text-[13px] font-medium text-[#1F2A27] bg-white focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15 cursor-pointer"
+          className="flex-1 sm:flex-none w-full sm:w-auto max-w-full h-11 lg:h-9 px-3 border border-[#E1E4E0] rounded-lg text-[13px] font-medium text-[#1F2A27] bg-white focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15 cursor-pointer"
         >
           {categoryList.map((cat) => (
             <option key={cat} value={cat}>
@@ -128,16 +128,16 @@ export default function KasirProdukClient() {
           <table className="w-full text-[13px] border-collapse">
             <thead>
               <tr className="bg-[#FAFBF9] border-b border-[#E1E4E0]">
-                <th className="text-left px-3.5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.04em] text-[#6B7773]">
+                <th className="text-left px-3 sm:px-3.5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.04em] text-[#6B7773]">
                   Produk
                 </th>
-                <th className="text-left px-3.5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.04em] text-[#6B7773]">
+                <th className="hidden sm:table-cell text-left px-3.5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.04em] text-[#6B7773]">
                   Kategori
                 </th>
-                <th className="text-right px-3.5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.04em] text-[#6B7773]">
+                <th className="text-right px-3 sm:px-3.5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.04em] text-[#6B7773]">
                   Harga
                 </th>
-                <th className="text-right px-3.5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.04em] text-[#6B7773]">
+                <th className="text-right px-3 sm:px-3.5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.04em] text-[#6B7773]">
                   Stok
                 </th>
               </tr>
@@ -167,7 +167,7 @@ export default function KasirProdukClient() {
                             setSearchQuery("");
                             setSelectedCategory(ALL_CATEGORIES);
                           }}
-                          className="px-3 py-1.5 border border-[#E1E4E0] rounded-md text-xs font-semibold text-[#1F2A27] bg-white hover:bg-[#FAFBF9] cursor-pointer"
+                          className="min-h-11 lg:min-h-0 px-3 py-1.5 border border-[#E1E4E0] rounded-md text-xs font-semibold text-[#1F2A27] bg-white hover:bg-[#FAFBF9] cursor-pointer"
                         >
                           Reset filter
                         </button>
@@ -186,9 +186,12 @@ export default function KasirProdukClient() {
                       key={product.id}
                       className="hover:bg-[#FAFBF9] transition-colors"
                     >
-                      <td className="px-3.5 py-2.5">
-                        <div className="font-medium text-[#1F2A27]">
+                      <td className="px-3 sm:px-3.5 py-2.5">
+                        <div className="font-medium text-[#1F2A27] wrap-break-word">
                           {product.nama}
+                        </div>
+                        <div className="sm:hidden text-[11px] text-[#6B7773]">
+                          {product.kategori || "Umum"}
                         </div>
                         <div className="text-[11px] text-[#6B7773] font-mono mt-0.5">
                           {product.kodeProduk}
@@ -204,13 +207,13 @@ export default function KasirProdukClient() {
                           </div>
                         )}
                       </td>
-                      <td className="px-3.5 py-2.5 text-[#6B7773]">
+                      <td className="hidden sm:table-cell px-3.5 py-2.5 text-[#6B7773]">
                         {product.kategori || "Umum"}
                       </td>
-                      <td className="px-3.5 py-2.5 text-right font-mono font-semibold text-[#1F2A27]">
+                      <td className="px-3 sm:px-3.5 py-2.5 text-right font-mono font-semibold whitespace-nowrap text-[#1F2A27]">
                         {formatRupiah(product.hargaJual)}
                       </td>
-                      <td className="px-3.5 py-2.5 text-right font-mono">
+                      <td className="px-3 sm:px-3.5 py-2.5 text-right font-mono whitespace-nowrap">
                         <span className="font-medium text-[#1F2A27]">
                           {stock}
                         </span>

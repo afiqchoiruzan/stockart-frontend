@@ -37,7 +37,7 @@ export default function LowStockDropdown({
   const count = items.length;
 
   return (
-    <div className="relative inline-block text-left" ref={containerRef}>
+    <div className="relative block w-full sm:inline-block sm:w-auto text-left" ref={containerRef}>
       {/* Trigger Button */}
       <button
         type="button"
@@ -45,7 +45,7 @@ export default function LowStockDropdown({
         aria-haspopup="true"
         aria-expanded={isOpen}
         aria-label={`Peringatan stok menipis: ${count} produk`}
-        className={`flex items-center gap-2 px-3.5 min-h-[44px] border rounded-md text-sm font-semibold transition-colors cursor-pointer ${
+        className={`w-full sm:w-auto justify-center flex items-center gap-2 px-3.5 min-h-[44px] border rounded-md text-sm font-semibold transition-colors cursor-pointer ${
           count > 0
             ? "border-[#D9A441] bg-[#FBF1DC] hover:bg-[#f7e8c8] text-[#1F2A27]"
             : "border-[#E1E4E0] bg-white hover:bg-[#F5F6F4] text-[#6B7773]"
@@ -88,9 +88,9 @@ export default function LowStockDropdown({
         <div
           role="region"
           aria-label="Daftar Produk Stok Menipis"
-          className="absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white border border-[#E1E4E0] rounded-lg shadow-lg z-40 overflow-hidden"
+          className="absolute left-0 right-0 sm:left-auto top-full mt-2 sm:w-96 max-w-[calc(100vw-2rem)] bg-white border border-[#E1E4E0] rounded-lg shadow-lg z-40 overflow-hidden"
         >
-          <div className="p-3.5 border-b border-[#E1E4E0] bg-[#F5F6F4] flex items-center justify-between">
+          <div className="p-3.5 border-b border-[#E1E4E0] bg-[#F5F6F4] flex items-center justify-between gap-2">
             <span className="font-semibold text-xs text-[#1F2A27]">
               Peringatan Stok Menipis (&le; Min. Stok)
             </span>
@@ -140,7 +140,7 @@ export default function LowStockDropdown({
                         if (onSelectProduct) onSelectProduct(prod);
                         setIsOpen(false);
                       }}
-                      className="shrink-0 px-3 min-h-[34px] border border-[#E1E4E0] text-xs font-semibold rounded-md bg-white hover:bg-[#E6F0ED] hover:border-[#2F6F5E] hover:text-[#2F6F5E] transition-colors cursor-pointer"
+                      className="shrink-0 px-3 min-h-11 lg:min-h-[34px] border border-[#E1E4E0] text-xs font-semibold rounded-md bg-white hover:bg-[#E6F0ED] hover:border-[#2F6F5E] hover:text-[#2F6F5E] transition-colors cursor-pointer"
                     >
                       Edit Stok
                     </button>
@@ -158,7 +158,7 @@ export default function LowStockDropdown({
                   setIsOpen(false);
                   onOpenScheduleSettings();
                 }}
-                className="shrink-0 px-3 min-h-[34px] border border-[#E1E4E0] bg-white hover:bg-[#E6F0ED] hover:border-[#2F6F5E] hover:text-[#2F6F5E] rounded-md text-xs font-semibold text-[#1F2A27] transition-colors cursor-pointer"
+                className="shrink-0 px-3 min-h-11 lg:min-h-[34px] border border-[#E1E4E0] bg-white hover:bg-[#E6F0ED] hover:border-[#2F6F5E] hover:text-[#2F6F5E] rounded-md text-xs font-semibold text-[#1F2A27] transition-colors cursor-pointer"
               >
                 Atur Jadwal
               </button>

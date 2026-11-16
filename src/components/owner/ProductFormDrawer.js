@@ -268,7 +268,7 @@ function DrawerFormInner({
 
   return (
     <>
-      <div className="p-5 flex-1 flex flex-col gap-4 overflow-y-auto">
+      <div className="p-4 sm:p-5 flex-1 min-h-0 flex flex-col gap-4 overflow-y-auto">
         {isEdit && (
           <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-[#E1E4E0]">
             <div className="flex items-center gap-2">
@@ -396,7 +396,7 @@ function DrawerFormInner({
                 onClick={() => setScannerOpen(true)}
                 disabled={isSubmitting}
                 aria-label="Scan barcode dengan kamera"
-                className="shrink-0 min-h-11 px-3 inline-flex items-center gap-1.5 border border-[#2F6F5E] rounded-md bg-[#E6F0ED] text-[#2F6F5E] text-sm font-semibold hover:bg-[#d5e6e1] transition-colors cursor-pointer disabled:opacity-50"
+                className="shrink-0 min-h-11 min-w-11 justify-center px-3 inline-flex items-center gap-1.5 border border-[#2F6F5E] rounded-md bg-[#E6F0ED] text-[#2F6F5E] text-sm font-semibold hover:bg-[#d5e6e1] transition-colors cursor-pointer disabled:opacity-50"
               >
                 <svg
                   aria-hidden="true"
@@ -429,7 +429,7 @@ function DrawerFormInner({
                   <button
                     type="button"
                     onClick={() => setPendingBarcode(null)}
-                    className="min-h-8 px-3 border border-[#E1E4E0] rounded-md bg-white text-[#1F2A27] font-semibold text-xs hover:bg-[#F5F6F4] transition-colors cursor-pointer"
+                    className="flex-1 sm:flex-none min-h-11 lg:min-h-8 px-3 border border-[#E1E4E0] rounded-md bg-white text-[#1F2A27] font-semibold text-xs hover:bg-[#F5F6F4] transition-colors cursor-pointer"
                   >
                     Batal
                   </button>
@@ -439,7 +439,7 @@ function DrawerFormInner({
                       setBarcodeValue(pendingBarcode);
                       setPendingBarcode(null);
                     }}
-                    className="min-h-8 px-3 border border-[#2F6F5E] rounded-md bg-[#2F6F5E] text-white font-semibold text-xs hover:bg-[#255a4c] transition-colors cursor-pointer"
+                    className="flex-1 sm:flex-none min-h-11 lg:min-h-8 px-3 border border-[#2F6F5E] rounded-md bg-[#2F6F5E] text-white font-semibold text-xs hover:bg-[#255a4c] transition-colors cursor-pointer"
                   >
                     Ganti barcode
                   </button>
@@ -596,7 +596,7 @@ function DrawerFormInner({
                     key={preset}
                     type="button"
                     onClick={() => handleAddStockChip(preset)}
-                    className="px-2.5 py-1 text-xs font-semibold border border-[#E1E4E0] rounded-md bg-[#F5F6F4] text-[#2F6F5E] hover:bg-[#E6F0ED] hover:border-[#2F6F5E] transition-colors cursor-pointer"
+                    className="min-h-10 min-w-11 lg:min-h-0 lg:min-w-0 px-2.5 py-1 text-xs font-semibold border border-[#E1E4E0] rounded-md bg-[#F5F6F4] text-[#2F6F5E] hover:bg-[#E6F0ED] hover:border-[#2F6F5E] transition-colors cursor-pointer"
                   >
                     +{preset}
                   </button>
@@ -610,7 +610,7 @@ function DrawerFormInner({
                         stok: String(currentStok),
                       }))
                     }
-                    className="px-1.5 py-0.5 text-xs text-[#6B7773] underline hover:text-[#1F2A27] cursor-pointer"
+                    className="min-h-10 lg:min-h-0 px-1.5 py-0.5 text-xs text-[#6B7773] underline hover:text-[#1F2A27] cursor-pointer"
                   >
                     Reset
                   </button>
@@ -708,7 +708,7 @@ function DrawerFormInner({
                     type="button"
                     onClick={() => onDeactivate?.(initialData.id)}
                     disabled={isSubmitting}
-                    className="min-h-10 px-3 py-2 border border-[#E1E4E0] rounded-md bg-white text-[#1F2A27] font-semibold text-xs hover:bg-[#F5F6F4] transition-colors cursor-pointer disabled:opacity-50"
+                    className="min-h-11 lg:min-h-10 px-3 py-2 border border-[#E1E4E0] rounded-md bg-white text-[#1F2A27] font-semibold text-xs hover:bg-[#F5F6F4] transition-colors cursor-pointer disabled:opacity-50"
                   >
                     Nonaktifkan
                   </button>
@@ -717,7 +717,7 @@ function DrawerFormInner({
                     type="button"
                     onClick={() => onRestore?.(initialData.id)}
                     disabled={isSubmitting}
-                    className="min-h-10 px-3 py-2 border border-[#2F6F5E] rounded-md bg-[#E6F0ED] text-[#2F6F5E] font-semibold text-xs hover:bg-[#d5e6e1] transition-colors cursor-pointer disabled:opacity-50"
+                    className="min-h-11 lg:min-h-10 px-3 py-2 border border-[#2F6F5E] rounded-md bg-[#E6F0ED] text-[#2F6F5E] font-semibold text-xs hover:bg-[#d5e6e1] transition-colors cursor-pointer disabled:opacity-50"
                   >
                     Aktifkan kembali
                   </button>
@@ -727,7 +727,7 @@ function DrawerFormInner({
                   type="button"
                   onClick={() => setConfirmPermanentDelete(true)}
                   disabled={isSubmitting}
-                  className="min-h-10 px-3 py-2 border border-[#C4574F] rounded-md bg-white text-[#C4574F] font-semibold text-xs hover:bg-[#F8E8E6] transition-colors cursor-pointer disabled:opacity-50"
+                  className="min-h-11 lg:min-h-10 px-3 py-2 border border-[#C4574F] rounded-md bg-white text-[#C4574F] font-semibold text-xs hover:bg-[#F8E8E6] transition-colors cursor-pointer disabled:opacity-50"
                 >
                   Hapus produk
                 </button>
@@ -743,7 +743,7 @@ function DrawerFormInner({
                     type="button"
                     onClick={() => setConfirmPermanentDelete(false)}
                     disabled={isSubmitting}
-                    className="min-h-9 px-3 py-1.5 border border-[#E1E4E0] rounded-md bg-white text-[#1F2A27] font-semibold text-xs hover:bg-[#F5F6F4] transition-colors cursor-pointer"
+                    className="min-h-11 lg:min-h-9 px-3 py-1.5 border border-[#E1E4E0] rounded-md bg-white text-[#1F2A27] font-semibold text-xs hover:bg-[#F5F6F4] transition-colors cursor-pointer"
                   >
                     Batal
                   </button>
@@ -751,7 +751,7 @@ function DrawerFormInner({
                     type="button"
                     onClick={() => onPermanentDelete?.(initialData.id)}
                     disabled={isSubmitting}
-                    className="min-h-9 px-3 py-1.5 border border-[#C4574F] rounded-md bg-[#C4574F] text-white font-semibold text-xs hover:bg-[#a9453e] transition-colors cursor-pointer"
+                    className="min-h-11 lg:min-h-9 px-3 py-1.5 border border-[#C4574F] rounded-md bg-[#C4574F] text-white font-semibold text-xs hover:bg-[#a9453e] transition-colors cursor-pointer"
                   >
                     Ya, hapus produk
                   </button>
@@ -763,12 +763,12 @@ function DrawerFormInner({
       </div>
 
       {/* Footer Modal/Drawer */}
-      <div className="p-4 border-t border-[#E1E4E0] bg-white flex items-center justify-end gap-2 shrink-0">
+      <div className="p-3 sm:p-4 border-t border-[#E1E4E0] bg-white flex items-center justify-end gap-2 shrink-0">
         <button
           type="button"
           onClick={onClose}
           disabled={isSubmitting}
-          className="min-h-11 px-4 border border-[#E1E4E0] rounded-md bg-white hover:bg-[#F5F6F4] text-sm font-semibold text-[#1F2A27] transition-colors cursor-pointer"
+          className="flex-1 sm:flex-none min-h-11 px-4 border border-[#E1E4E0] rounded-md bg-white hover:bg-[#F5F6F4] text-sm font-semibold text-[#1F2A27] transition-colors cursor-pointer"
         >
           Batal
         </button>
@@ -776,7 +776,7 @@ function DrawerFormInner({
           type="submit"
           form="product-drawer-form"
           disabled={isSaveDisabled}
-          className="min-h-11 px-5 rounded-md bg-[#2F6F5E] hover:bg-[#255a4c] text-white text-sm font-semibold flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          className="flex-1 sm:flex-none justify-center min-h-11 px-5 rounded-md bg-[#2F6F5E] hover:bg-[#255a4c] text-white text-sm font-semibold flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         >
           <svg
             aria-hidden="true"
@@ -847,7 +847,7 @@ export default function ProductFormDrawer({
       role="dialog"
       aria-modal="true"
       aria-labelledby="drawer-title"
-      className="fixed inset-0 z-50 grid place-items-center p-4"
+      className="fixed inset-0 z-50 grid place-items-center p-3 sm:p-4"
     >
       {/* Backdrop */}
       <div
@@ -859,8 +859,8 @@ export default function ProductFormDrawer({
       />
 
       {/* Modal / Drawer Panel (Sesuai Hi-Fi stockart-pos.html) */}
-      <div className="relative w-full max-w-120 max-h-[calc(100vh-32px)] bg-white border border-[#E1E4E0] rounded-lg flex flex-col justify-between shadow-xl z-10 overflow-hidden">
-        <div className="p-4 border-b border-[#E1E4E0] flex items-center justify-between bg-white shrink-0">
+      <div className="relative w-full max-w-120 max-h-[calc(100dvh-24px)] sm:max-h-[calc(100dvh-32px)] bg-white border border-[#E1E4E0] rounded-lg flex flex-col justify-between shadow-xl z-10 overflow-hidden">
+        <div className="px-4 py-2 sm:py-3 border-b border-[#E1E4E0] flex items-center justify-between gap-2 bg-white shrink-0">
           <h2 id="drawer-title" className="font-semibold text-sm text-[#1F2A27]">
             {title}
           </h2>
@@ -869,7 +869,7 @@ export default function ProductFormDrawer({
             onClick={onClose}
             disabled={isSubmitting}
             aria-label="Tutup formulir"
-            className="w-8 h-8 rounded-md flex items-center justify-center text-[#6B7773] hover:bg-[#F5F6F4] hover:text-[#1F2A27] transition-colors cursor-pointer"
+            className="w-11 h-11 -mr-2 rounded-md flex items-center justify-center text-[#6B7773] hover:bg-[#F5F6F4] hover:text-[#1F2A27] transition-colors cursor-pointer"
           >
             <svg
               aria-hidden="true"

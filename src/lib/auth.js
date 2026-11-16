@@ -72,7 +72,7 @@ const AuthContext = createContext(null);
 
 /** Halaman awal untuk tiap role dari backend ('pemilik' | 'kasir'). */
 export function getHomePathForRole(role) {
-  return role === "pemilik" ? "/owner/produk" : "/kasir/produk";
+  return role === "pemilik" ? "/owner/produk" : "/kasir/transaksi";
 }
 
 function clearSession() {

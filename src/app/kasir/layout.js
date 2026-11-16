@@ -7,7 +7,7 @@ export const instant = false;
 
 export default function KasirLayout({ children }) {
   return (
-    <div className="min-h-screen flex bg-[#F5F6F4] text-[#1F2A27] font-sans">
+    <div className="min-h-screen flex flex-col lg:flex-row bg-[#F5F6F4] text-[#1F2A27] font-sans">
       {/* Skip to Main Content for Accessibility */}
       <a
         href="#main-content"
@@ -19,12 +19,18 @@ export default function KasirLayout({ children }) {
       {/* Left Sidebar (Hi-Fi Shell) */}
       <Suspense
         fallback={
-          <aside
-            aria-label="Memuat Navigasi"
-            className="w-[210px] shrink-0 border-r border-[#E1E4E0] bg-white p-4"
-          >
-            <div className="h-6 w-28 rounded bg-[#E6F0ED]" />
-          </aside>
+          <>
+            <div
+              aria-hidden="true"
+              className="lg:hidden h-14 shrink-0 border-b border-[#E1E4E0] bg-white"
+            />
+            <aside
+              aria-label="Memuat Navigasi"
+              className="hidden lg:block w-[210px] shrink-0 border-r border-[#E1E4E0] bg-white p-4"
+            >
+              <div className="h-6 w-28 rounded bg-[#E6F0ED]" />
+            </aside>
+          </>
         }
       >
         <KasirSidebar />
@@ -34,7 +40,7 @@ export default function KasirLayout({ children }) {
       <div className="flex-1 flex flex-col min-w-0">
         <Suspense
           fallback={
-            <header className="w-full border-b border-[#E1E4E0] bg-white px-6 py-4 flex items-center justify-between">
+            <header className="w-full border-b border-[#E1E4E0] bg-white px-4 sm:px-5 lg:px-6 py-3 sm:py-4 flex items-center justify-between">
               <div className="h-5 w-32 rounded bg-[#F5F6F4]" />
             </header>
           }
@@ -45,7 +51,7 @@ export default function KasirLayout({ children }) {
         <main
           id="main-content"
           tabIndex={-1}
-          className="flex-1 overflow-y-auto bg-[#F5F6F4] p-6 focus:outline-none"
+          className="flex-1 overflow-y-auto bg-[#F5F6F4] p-4 sm:p-5 lg:p-6 focus:outline-none"
         >
           <RoleGuard role="kasir">{children}</RoleGuard>
         </main>

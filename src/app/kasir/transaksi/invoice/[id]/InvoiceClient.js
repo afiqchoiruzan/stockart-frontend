@@ -58,10 +58,10 @@ function InvoiceContent({ id }) {
 
   return (
     <div className="flex flex-col gap-4 max-w-md mx-auto">
-      <div className="flex items-center justify-between print:hidden">
+      <div className="flex items-center justify-between gap-2 print:hidden">
         <Link
           href="/kasir/riwayat"
-          className="px-3 py-1.5 border border-[#E1E4E0] rounded-lg text-xs font-semibold text-[#1F2A27] bg-white hover:bg-[#FAFBF9] transition-colors inline-flex items-center gap-1"
+          className="min-h-11 lg:min-h-0 px-3 py-1.5 border border-[#E1E4E0] rounded-lg text-xs font-semibold text-[#1F2A27] bg-white hover:bg-[#FAFBF9] transition-colors inline-flex items-center gap-1"
         >
           ← Kembali ke Riwayat
         </Link>
@@ -74,7 +74,7 @@ function InvoiceContent({ id }) {
         id="printable-receipt"
         className="bg-white border border-[#E1E4E0] rounded-xl overflow-hidden shadow-sm"
       >
-        <div className="px-5 py-4 border-b border-[#E1E4E0] flex items-center justify-between print:hidden">
+        <div className="px-4 sm:px-5 py-3 sm:py-4 border-b border-[#E1E4E0] flex flex-wrap items-center justify-between gap-x-3 gap-y-1 print:hidden">
           <h1 className="text-sm font-semibold text-[#1F2A27]">
             Struk Transaksi
           </h1>
@@ -83,7 +83,7 @@ function InvoiceContent({ id }) {
           </span>
         </div>
 
-        <div className="p-5 text-xs">
+        <div className="p-4 sm:p-5 text-xs">
           <div className="text-center">
             <h2 className="text-sm font-bold text-[#1F2A27]">
               Toko Kelontong Berkah
@@ -124,7 +124,7 @@ function InvoiceContent({ id }) {
                 <div className="font-medium text-[#1F2A27]">
                   {item.namaProduk}
                 </div>
-                <div className="flex justify-between text-[#6B7773] font-mono">
+                <div className="flex justify-between gap-2 text-[#6B7773] font-mono">
                   <span>
                     {item.jumlah} × {formatRupiah(item.hargaSatuan)}
                   </span>
@@ -160,11 +160,11 @@ function InvoiceContent({ id }) {
           </div>
         </div>
 
-        <div className="px-5 py-3.5 border-t border-[#E1E4E0] bg-[#FAFBF9] print:hidden">
+        <div className="px-4 sm:px-5 py-3.5 border-t border-[#E1E4E0] bg-[#FAFBF9] print:hidden">
           <button
             type="button"
             onClick={() => window.print()}
-            className="w-full py-2.5 px-4 rounded-lg bg-[#2F6F5E] hover:bg-[#255a4c] text-white font-semibold text-[13px] transition-colors inline-flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full min-h-11 py-2.5 px-4 rounded-lg bg-[#2F6F5E] hover:bg-[#255a4c] text-white font-semibold text-[13px] transition-colors inline-flex items-center justify-center gap-2 cursor-pointer"
           >
             <svg
               className="w-4 h-4"

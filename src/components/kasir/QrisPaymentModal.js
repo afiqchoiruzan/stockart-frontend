@@ -82,12 +82,12 @@ function QrisModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-[#1F2A27]/40 flex items-center justify-center p-5"
+      className="fixed inset-0 z-50 bg-[#1F2A27]/40 flex items-center justify-center p-3 sm:p-5"
       role="dialog"
       aria-modal="true"
       aria-label="Pembayaran QRIS"
     >
-      <div className="bg-white border border-[#E1E4E0] rounded-xl w-full max-w-100 max-h-[90vh] overflow-y-auto shadow-xl">
+      <div className="bg-white border border-[#E1E4E0] rounded-xl w-full max-w-100 max-h-[calc(100dvh-24px)] sm:max-h-[90dvh] overflow-y-auto shadow-xl">
         {/* Header */}
         <div className="px-4 py-3.5 border-b border-[#E1E4E0]">
           <h3 className="text-[15px] font-semibold text-[#1F2A27]">
@@ -154,7 +154,7 @@ function QrisModal({
             <button
               type="button"
               onClick={onRetry}
-              className="px-3.5 py-2 rounded-lg text-[13px] font-semibold text-white bg-[#2F6F5E] hover:bg-[#255a4c] transition-colors cursor-pointer"
+              className="flex-1 sm:flex-none min-h-11 lg:min-h-0 px-3.5 py-2 rounded-lg text-[13px] font-semibold text-white bg-[#2F6F5E] hover:bg-[#255a4c] transition-colors cursor-pointer"
             >
               {finalStatus ? "Buat QR ulang" : "Coba lagi"}
             </button>
@@ -163,7 +163,7 @@ function QrisModal({
             type="button"
             onClick={onCancel}
             disabled={loading}
-            className="px-3.5 py-2 border border-[#E1E4E0] rounded-lg text-[13px] font-semibold text-[#1F2A27] bg-white hover:bg-[#FAFBF9] disabled:opacity-45 disabled:cursor-not-allowed transition-colors cursor-pointer"
+            className="flex-1 sm:flex-none min-h-11 lg:min-h-0 px-3.5 py-2 border border-[#E1E4E0] rounded-lg text-[13px] font-semibold text-[#1F2A27] bg-white hover:bg-[#FAFBF9] disabled:opacity-45 disabled:cursor-not-allowed transition-colors cursor-pointer"
           >
             {paidWithNote ? "Tutup" : "Batal"}
           </button>
@@ -192,7 +192,7 @@ function QrisBody({ payment, remainingSeconds }) {
         )}
       </div>
 
-      <div className="p-3 bg-white border border-[#E1E4E0] rounded-lg">
+      <div className="w-full max-w-[258px] p-3 bg-white border border-[#E1E4E0] rounded-lg [&>svg]:block [&>svg]:w-full [&>svg]:h-auto">
         <QRCodeSVG
           value={payment.qrString}
           size={232}

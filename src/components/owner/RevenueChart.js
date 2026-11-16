@@ -40,7 +40,7 @@ export default function RevenueChart({ title, points = [] }) {
         <div
           role="img"
           aria-label={ariaLabel}
-          className="h-[240px] p-4 flex items-end gap-2 overflow-x-auto"
+          className="h-[220px] sm:h-[240px] p-3 sm:p-4 flex items-end gap-1.5 sm:gap-2 overflow-x-auto"
         >
           {points.map((point) => {
             const omzet = Number(point.omzet || 0);
@@ -51,7 +51,7 @@ export default function RevenueChart({ title, points = [] }) {
                 title={`${point.label}: ${formatRupiah(omzet)} (${
                   point.jumlahTransaksi || 0
                 } transaksi)`}
-                className="flex-1 min-w-[28px] h-full flex flex-col items-center justify-end gap-1"
+                className="flex-1 min-w-[34px] sm:min-w-[28px] h-full flex flex-col items-center justify-end gap-1"
               >
                 <span className="text-[11px] text-[#6B7773] font-mono whitespace-nowrap">
                   {omzet > 0 ? formatShortRupiah(omzet) : ""}

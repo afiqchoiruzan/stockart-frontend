@@ -169,7 +169,7 @@ function ModalContent({
       role="dialog"
       aria-modal="true"
       aria-labelledby="low-stock-schedule-title"
-      className="fixed inset-0 z-50 grid place-items-center p-4"
+      className="fixed inset-0 z-50 grid place-items-center p-3 sm:p-4"
     >
       <div
         className="fixed inset-0 bg-[#1F2A27]/45 transition-opacity"
@@ -179,10 +179,10 @@ function ModalContent({
         aria-hidden="true"
       />
 
-      <div className="relative w-full max-w-[540px] max-h-[calc(100vh-32px)] bg-white border border-[#E1E4E0] rounded-lg flex flex-col shadow-xl z-10 overflow-hidden">
+      <div className="relative w-full max-w-[540px] max-h-[calc(100dvh-24px)] sm:max-h-[calc(100dvh-32px)] bg-white border border-[#E1E4E0] rounded-lg flex flex-col shadow-xl z-10 overflow-hidden">
         {/* Header */}
-        <div className="px-5 py-4 border-b border-[#E1E4E0] flex items-center justify-between bg-white shrink-0">
-          <div>
+        <div className="px-4 sm:px-5 py-3 sm:py-4 border-b border-[#E1E4E0] flex items-start sm:items-center justify-between gap-2 bg-white shrink-0">
+          <div className="min-w-0">
             <h2
               id="low-stock-schedule-title"
               className="font-semibold text-base text-[#1F2A27]"
@@ -198,7 +198,7 @@ function ModalContent({
             onClick={onClose}
             disabled={isSaving}
             aria-label="Tutup pengaturan jadwal"
-            className="w-8 h-8 rounded-md flex items-center justify-center text-[#6B7773] hover:bg-[#F5F6F4] hover:text-[#1F2A27] transition-colors cursor-pointer"
+            className="w-11 h-11 -mr-2 shrink-0 rounded-md flex items-center justify-center text-[#6B7773] hover:bg-[#F5F6F4] hover:text-[#1F2A27] transition-colors cursor-pointer"
           >
             <svg
               aria-hidden="true"
@@ -216,8 +216,8 @@ function ModalContent({
         </div>
 
         {/* Body */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto flex flex-col justify-between">
-          <div className="p-5 flex flex-col gap-4">
+        <form onSubmit={handleSubmit} className="flex-1 min-h-0 overflow-y-auto flex flex-col justify-between">
+          <div className="p-4 sm:p-5 flex flex-col gap-4">
             {isLoading ? (
               <div className="py-10 text-center text-sm text-[#6B7773]">
                 Memuat pengaturan jadwal dari server…
@@ -262,7 +262,7 @@ function ModalContent({
                           key={opt.value}
                           type="button"
                           onClick={() => setDigestFrequency(opt.value)}
-                          className={`px-3 py-2.5 rounded-md border text-left transition-colors cursor-pointer ${
+                          className={`min-h-11 px-3 py-2.5 rounded-md border text-left transition-colors cursor-pointer ${
                             active
                               ? "border-[#2F6F5E] bg-[#E6F0ED] text-[#1F2A27]"
                               : "border-[#E1E4E0] bg-white hover:bg-[#F5F6F4] text-[#1F2A27]"
@@ -301,7 +301,7 @@ function ModalContent({
                           id="digest-weekday"
                           value={digestWeekday}
                           onChange={(e) => setDigestWeekday(Number(e.target.value))}
-                          className="w-full min-h-[40px] px-3 bg-white border border-[#E1E4E0] rounded-md text-sm text-[#1F2A27] focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15"
+                          className="w-full min-h-11 lg:min-h-[40px] px-3 bg-white border border-[#E1E4E0] rounded-md text-sm text-[#1F2A27] focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15"
                         >
                           {WEEKDAY_OPTIONS.map((d) => (
                             <option key={d.value} value={d.value}>
@@ -324,7 +324,7 @@ function ModalContent({
                           id="digest-dom"
                           value={digestDayOfMonth}
                           onChange={(e) => setDigestDayOfMonth(Number(e.target.value))}
-                          className="w-full min-h-[40px] px-3 bg-white border border-[#E1E4E0] rounded-md text-sm text-[#1F2A27] focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15"
+                          className="w-full min-h-11 lg:min-h-[40px] px-3 bg-white border border-[#E1E4E0] rounded-md text-sm text-[#1F2A27] focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15"
                         >
                           {Array.from({ length: 28 }, (_, i) => i + 1).map((day) => (
                             <option key={day} value={day}>
@@ -348,7 +348,7 @@ function ModalContent({
                         required
                         value={digestTime}
                         onChange={(e) => setDigestTime(e.target.value)}
-                        className="w-full min-h-[40px] px-3 bg-white border border-[#E1E4E0] rounded-md text-sm text-[#1F2A27] focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15"
+                        className="w-full min-h-11 lg:min-h-[40px] px-3 bg-white border border-[#E1E4E0] rounded-md text-sm text-[#1F2A27] focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15"
                       />
                     </div>
                   </div>
@@ -373,14 +373,14 @@ function ModalContent({
                     type="checkbox"
                     checked={criticalAlertEnabled}
                     onChange={(e) => setCriticalAlertEnabled(e.target.checked)}
-                    className="mt-0.5 w-4 h-4 accent-[#2F6F5E] rounded cursor-pointer shrink-0"
+                    className="mt-0.5 w-5 h-5 lg:w-4 lg:h-4 accent-[#2F6F5E] rounded cursor-pointer shrink-0"
                   />
                 </label>
 
                 {/* Info Jadwal & Status Terakhir */}
                 {serverData && (
                   <div className="p-3.5 border border-[#E1E4E0] rounded-md bg-white flex flex-col gap-2 text-xs">
-                    <div className="flex items-center justify-between gap-2">
+                    <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5">
                       <span className="text-[#6B7773]">Jadwal Berikutnya:</span>
                       <span className="font-semibold text-[#1F2A27] text-right">
                         {serverData.digestFrequency === "off"
@@ -388,7 +388,7 @@ function ModalContent({
                           : formatWibDateTime(serverData.nextRunAt)}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between gap-2">
+                    <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5">
                       <span className="text-[#6B7773]">Pengiriman Terakhir:</span>
                       {lastStatusMeta ? (
                         <span
@@ -403,7 +403,7 @@ function ModalContent({
                       )}
                     </div>
                     {serverData.lastDigestSentAt && (
-                      <div className="flex items-center justify-between gap-2">
+                      <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5">
                         <span className="text-[#6B7773]">Waktu Kirim Terakhir:</span>
                         <span className="text-[#1F2A27]">
                           {formatWibDateTime(serverData.lastDigestSentAt)}
@@ -423,7 +423,7 @@ function ModalContent({
           </div>
 
           {/* Footer */}
-          <div className="px-5 py-3.5 border-t border-[#E1E4E0] bg-[#F5F6F4] flex flex-wrap items-center justify-between gap-2 shrink-0">
+          <div className="px-4 sm:px-5 py-3.5 border-t border-[#E1E4E0] bg-[#F5F6F4] flex flex-col-reverse sm:flex-row sm:flex-wrap sm:items-center justify-between gap-2 shrink-0">
             {typeof onNotifyNow === "function" ? (
               <button
                 type="button"
@@ -431,7 +431,7 @@ function ModalContent({
                 onClick={async () => {
                   await onNotifyNow();
                 }}
-                className="min-h-[38px] px-3 border border-[#E1E4E0] bg-white hover:bg-[#E6F0ED] hover:border-[#2F6F5E] hover:text-[#2F6F5E] rounded-md text-xs font-semibold text-[#1F2A27] disabled:opacity-50 transition-colors cursor-pointer"
+                className="w-full sm:w-auto min-h-11 lg:min-h-[38px] px-3 border border-[#E1E4E0] bg-white hover:bg-[#E6F0ED] hover:border-[#2F6F5E] hover:text-[#2F6F5E] rounded-md text-xs font-semibold text-[#1F2A27] disabled:opacity-50 transition-colors cursor-pointer"
               >
                 {isNotifying
                   ? "Mengirim…"
@@ -446,14 +446,14 @@ function ModalContent({
                 type="button"
                 onClick={onClose}
                 disabled={isSaving}
-                className="min-h-[38px] px-3.5 border border-[#E1E4E0] bg-white hover:bg-[#F5F6F4] rounded-md text-xs font-semibold text-[#1F2A27] disabled:opacity-50 transition-colors cursor-pointer"
+                className="flex-1 sm:flex-none min-h-11 lg:min-h-[38px] px-3.5 border border-[#E1E4E0] bg-white hover:bg-[#F5F6F4] rounded-md text-xs font-semibold text-[#1F2A27] disabled:opacity-50 transition-colors cursor-pointer"
               >
                 Batal
               </button>
               <button
                 type="submit"
                 disabled={isLoading || isSaving || Boolean(loadError) || !hasChanges}
-                className="min-h-[38px] px-4 rounded-md bg-[#2F6F5E] hover:bg-[#255a4c] text-white text-xs font-semibold disabled:opacity-50 transition-colors cursor-pointer"
+                className="flex-1 sm:flex-none min-h-11 lg:min-h-[38px] px-4 rounded-md bg-[#2F6F5E] hover:bg-[#255a4c] text-white text-xs font-semibold disabled:opacity-50 transition-colors cursor-pointer"
               >
                 {isSaving ? "Menyimpan…" : "Simpan Jadwal"}
               </button>

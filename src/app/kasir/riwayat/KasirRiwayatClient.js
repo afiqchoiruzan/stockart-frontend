@@ -100,13 +100,13 @@ export default function KasirRiwayatClient() {
       {errorMsg && (
         <div
           role="alert"
-          className="px-4 py-3 border border-[#EBC5C1] rounded-lg bg-[#F8E8E6] text-xs font-medium text-[#C4574F] flex items-center justify-between"
+          className="px-3 sm:px-4 py-3 border border-[#EBC5C1] rounded-lg bg-[#F8E8E6] text-xs font-medium text-[#C4574F] flex items-center justify-between gap-3"
         >
-          <span>{errorMsg}</span>
+          <span className="min-w-0">{errorMsg}</span>
           <button
             type="button"
             onClick={refreshTransactions}
-            className="text-xs font-semibold underline cursor-pointer"
+            className="shrink-0 inline-flex items-center min-h-11 -my-3 lg:min-h-0 lg:my-0 text-xs font-semibold underline cursor-pointer"
           >
             Coba Lagi
           </button>
@@ -115,7 +115,7 @@ export default function KasirRiwayatClient() {
 
       {/* Search & Date Filter Toolbar */}
       <div className="flex flex-wrap items-center gap-2.5">
-        <div className="flex-1 min-w-[240px] relative">
+        <div className="relative basis-full sm:basis-auto sm:flex-1 sm:min-w-[240px]">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6B7773] pointer-events-none">
             <svg
               className="w-4 h-4"
@@ -135,14 +135,14 @@ export default function KasirRiwayatClient() {
             placeholder="Cari nomor invoice atau nama barang…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full h-9 pl-9 pr-3 border border-[#E1E4E0] rounded-lg text-[13px] text-[#1F2A27] bg-white placeholder:text-[#6B7773] focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15 transition-all"
+            className="w-full h-11 lg:h-9 pl-9 pr-3 border border-[#E1E4E0] rounded-lg text-[13px] text-[#1F2A27] bg-white placeholder:text-[#6B7773] focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15 transition-all"
           />
         </div>
 
         <select
           value={selectedMethod}
           onChange={(e) => setSelectedMethod(e.target.value)}
-          className="h-9 px-3 border border-[#E1E4E0] rounded-lg text-[13px] font-medium text-[#1F2A27] bg-white focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15 cursor-pointer"
+          className="flex-1 sm:flex-none min-w-0 max-w-full h-11 lg:h-9 px-3 border border-[#E1E4E0] rounded-lg text-[13px] font-medium text-[#1F2A27] bg-white focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15 cursor-pointer"
         >
           <option value="ALL">Semua metode</option>
           <option value="Tunai">Tunai</option>
@@ -152,7 +152,7 @@ export default function KasirRiwayatClient() {
         <select
           value={selectedDate}
           onChange={(e) => setSelectedDate(e.target.value)}
-          className="h-9 px-3 border border-[#E1E4E0] rounded-lg text-[13px] font-medium text-[#1F2A27] bg-white focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15 cursor-pointer"
+          className="flex-1 sm:flex-none min-w-0 max-w-full h-11 lg:h-9 px-3 border border-[#E1E4E0] rounded-lg text-[13px] font-medium text-[#1F2A27] bg-white focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15 cursor-pointer"
         >
           <option value="ALL">Semua tanggal</option>
           {availableDates.map((d) => (
@@ -164,23 +164,23 @@ export default function KasirRiwayatClient() {
       </div>
 
       {/* Split Layout: Table + Receipt Panel */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-4 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_300px] xl:grid-cols-[minmax(0,1fr)_340px] gap-4 items-start">
         {/* Left: Transaction Table */}
-        <div className="bg-white border border-[#E1E4E0] rounded-lg overflow-hidden">
+        <div className="min-w-0 bg-white border border-[#E1E4E0] rounded-lg overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-[13px] border-collapse">
               <thead>
                 <tr className="bg-[#FAFBF9] border-b border-[#E1E4E0]">
-                  <th className="text-left px-3.5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.04em] text-[#6B7773]">
+                  <th className="text-left px-3 sm:px-3.5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.04em] text-[#6B7773]">
                     Invoice
                   </th>
-                  <th className="text-left px-3.5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.04em] text-[#6B7773]">
+                  <th className="hidden sm:table-cell lg:hidden xl:table-cell text-left px-3.5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.04em] text-[#6B7773]">
                     Waktu
                   </th>
-                  <th className="text-left px-3.5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.04em] text-[#6B7773]">
+                  <th className="text-left px-3 sm:px-3.5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.04em] text-[#6B7773]">
                     Metode
                   </th>
-                  <th className="text-right px-3.5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.04em] text-[#6B7773]">
+                  <th className="text-right px-3 sm:px-3.5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.04em] text-[#6B7773]">
                     Total
                   </th>
                 </tr>
@@ -224,23 +224,26 @@ export default function KasirRiwayatClient() {
                         }`}
                       >
                         <td
-                          className={`px-3.5 py-2.5 ${
+                          className={`px-3 sm:px-3.5 py-2.5 ${
                             isSelected
                               ? "border-l-[3px] border-l-[#2F6F5E]"
                               : ""
                           }`}
                         >
-                          <div className="font-mono font-semibold text-[#1F2A27]">
+                          <div className="font-mono font-semibold whitespace-nowrap text-[#1F2A27]">
                             {trx.noInvoice}
                           </div>
                           <div className="text-[11px] text-[#6B7773]">
                             {itemCount} item
+                            <span className="sm:hidden lg:inline xl:hidden">
+                              {" "}&middot; {formatTanggalSingkat(trx.tanggal)}, {trx.waktu}
+                            </span>
                           </div>
                         </td>
-                        <td className="px-3.5 py-2.5 font-mono text-[#6B7773]">
+                        <td className="hidden sm:table-cell lg:hidden xl:table-cell px-3.5 py-2.5 font-mono whitespace-nowrap text-[#6B7773]">
                           {formatTanggalSingkat(trx.tanggal)}, {trx.waktu}
                         </td>
-                        <td className="px-3.5 py-2.5">
+                        <td className="px-3 sm:px-3.5 py-2.5">
                           <span
                             className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${
                               metode === "QRIS"
@@ -251,7 +254,7 @@ export default function KasirRiwayatClient() {
                             {metode}
                           </span>
                         </td>
-                        <td className="px-3.5 py-2.5 text-right font-mono font-semibold text-[#1F2A27]">
+                        <td className="px-3 sm:px-3.5 py-2.5 text-right font-mono font-semibold whitespace-nowrap text-[#1F2A27]">
                           <span
                             className={
                               trx.status === "batal"
@@ -271,7 +274,7 @@ export default function KasirRiwayatClient() {
           </div>
 
           {/* Table Summary Footer */}
-          <div className="px-3.5 py-2.5 border-t border-[#E1E4E0] bg-[#FAFBF9] flex items-center justify-between text-xs text-[#6B7773]">
+          <div className="px-3 sm:px-3.5 py-2.5 border-t border-[#E1E4E0] bg-[#FAFBF9] flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs text-[#6B7773]">
             <span>{filteredTransactions.length} transaksi</span>
             <span className="font-mono">
               Total:{" "}
@@ -285,7 +288,7 @@ export default function KasirRiwayatClient() {
         {/* Right: Receipt Detail Panel */}
         <div
           id="printable-receipt"
-          className="bg-white border border-[#E1E4E0] rounded-lg lg:sticky lg:top-4 overflow-hidden"
+          className="min-w-0 bg-white border border-[#E1E4E0] rounded-lg lg:sticky lg:top-4 overflow-hidden"
         >
           {activeSelection ? (
             <>
@@ -340,7 +343,7 @@ export default function KasirRiwayatClient() {
                       <div className="font-medium text-[#1F2A27]">
                         {item.namaProduk}
                       </div>
-                      <div className="flex justify-between text-[#6B7773] font-mono">
+                      <div className="flex justify-between gap-2 text-[#6B7773] font-mono">
                         <span>
                           {item.jumlah} × {formatRupiah(item.hargaSatuan)}
                         </span>
@@ -382,7 +385,7 @@ export default function KasirRiwayatClient() {
                 <button
                   type="button"
                   onClick={() => window.print()}
-                  className="w-full py-2 px-3 border border-[#E1E4E0] rounded-lg text-[13px] font-semibold text-[#1F2A27] bg-white hover:bg-[#FAFBF9] transition-colors inline-flex items-center justify-center gap-1.5 cursor-pointer"
+                  className="w-full min-h-11 lg:min-h-0 py-2 px-3 border border-[#E1E4E0] rounded-lg text-[13px] font-semibold text-[#1F2A27] bg-white hover:bg-[#FAFBF9] transition-colors inline-flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <svg
                     className="w-4 h-4"
@@ -401,7 +404,7 @@ export default function KasirRiwayatClient() {
                 </button>
                 <Link
                   href={`/kasir/transaksi/invoice/${activeSelection.id}`}
-                  className="w-full py-1.5 px-3 text-center text-xs font-medium text-[#2F6F5E] hover:underline"
+                  className="w-full min-h-11 lg:min-h-0 inline-flex items-center justify-center py-1.5 px-3 text-center text-xs font-medium text-[#2F6F5E] hover:underline"
                 >
                   Buka halaman struk penuh →
                 </Link>

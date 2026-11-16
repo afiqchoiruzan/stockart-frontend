@@ -356,9 +356,9 @@ export default function OwnerProdukPage() {
       {lowStockProducts.length > 0 && (
         <div
           role="status"
-          className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border border-[#D9A441] rounded-md bg-[#FBF1DC] text-sm text-[#1F2A27]"
+          className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-3 sm:px-4 py-3 border border-[#D9A441] rounded-md bg-[#FBF1DC] text-sm text-[#1F2A27]"
         >
-          <div className="flex items-start gap-2.5 flex-1 min-w-[260px]">
+          <div className="flex items-start gap-2.5 flex-1 min-w-0">
             <svg
               aria-hidden="true"
               className="w-4 h-4 stroke-current text-[#7a5612] shrink-0 mt-0.5"
@@ -372,7 +372,7 @@ export default function OwnerProdukPage() {
               <path d="M12 9v4" />
               <path d="M12 17h.01" />
             </svg>
-            <div>
+            <div className="min-w-0">
               <strong>Perlu restock:</strong>{" "}
               {[
                 ...outOfStockItems.map((p) => `${p.nama} (habis)`),
@@ -382,7 +382,7 @@ export default function OwnerProdukPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 w-full sm:w-auto sm:shrink-0">
             <LowStockDropdown
               items={lowStockProducts}
               onSelectProduct={handleOpenEdit}
@@ -397,17 +397,17 @@ export default function OwnerProdukPage() {
         <div
           role="status"
           aria-live="polite"
-          className={`px-4 py-2.5 border rounded-md flex items-center justify-between gap-3 text-sm ${
+          className={`px-3 sm:px-4 py-2.5 border rounded-md flex items-center justify-between gap-3 text-sm ${
             statusMessage.startsWith("!")
               ? "border-[#C4574F] bg-[#F8E8E6] text-[#8c322b]"
               : "border-[#3E8E6A] bg-[#E6F2EC] text-[#245942]"
           }`}
         >
-          <span>{statusMessage}</span>
+          <span className="min-w-0">{statusMessage}</span>
           <button
             type="button"
             onClick={() => setStatusMessage("")}
-            className="text-xs font-semibold hover:underline cursor-pointer"
+            className="shrink-0 inline-flex items-center min-h-11 -my-2.5 lg:min-h-0 lg:my-0 text-xs font-semibold hover:underline cursor-pointer"
             aria-label="Tutup pesan status"
           >
             Tutup
@@ -456,7 +456,7 @@ export default function OwnerProdukPage() {
                 setSearchQuery("");
                 setSelectedCategory("Semua Kategori");
               }}
-              className="mt-2 min-h-[40px] px-4 border border-[#E1E4E0] rounded-md text-xs font-semibold bg-white hover:bg-[#F5F6F4] text-[#1F2A27] transition-colors cursor-pointer"
+              className="mt-2 min-h-11 lg:min-h-[40px] px-4 border border-[#E1E4E0] rounded-md text-xs font-semibold bg-white hover:bg-[#F5F6F4] text-[#1F2A27] transition-colors cursor-pointer"
             >
               Hapus pencarian
             </button>
@@ -466,11 +466,11 @@ export default function OwnerProdukPage() {
             <table className="w-full border-collapse text-left text-sm">
               <thead>
                 <tr className="bg-[#F5F6F4] border-b border-[#E1E4E0] text-xs font-medium text-[#6B7773]">
-                  <th className="py-2.5 px-4">Produk</th>
-                  <th className="py-2.5 px-4 hidden sm:table-cell">Kategori</th>
-                  <th className="py-2.5 px-4 text-right">Harga</th>
-                  <th className="py-2.5 px-4 text-right">Stok</th>
-                  <th className="py-2.5 px-4 text-right">
+                  <th className="py-2.5 px-3 sm:px-4">Produk</th>
+                  <th className="py-2.5 px-3 sm:px-4 hidden md:table-cell">Kategori</th>
+                  <th className="py-2.5 px-3 sm:px-4 text-right hidden sm:table-cell">Harga</th>
+                  <th className="py-2.5 px-3 sm:px-4 text-right">Stok</th>
+                  <th className="py-2.5 px-3 sm:px-4 text-right">
                     <span className="sr-only">Aksi</span>
                   </th>
                 </tr>
@@ -497,9 +497,17 @@ export default function OwnerProdukPage() {
                           : "hover:bg-[#F5F6F4]/60"
                       }
                     >
-                      <td className="py-2.5 px-4">
-                        <div className="font-semibold text-[#1F2A27]">
+                      <td className="py-2.5 px-3 sm:px-4 min-w-0">
+                        <div className="font-semibold text-[#1F2A27] wrap-break-word">
                           {product.nama}
+                        </div>
+                        {/* Harga & kategori ditampilkan di sini pada layar kecil (kolomnya disembunyikan) */}
+                        <div className="sm:hidden text-xs text-[#1F2A27] tabular-nums">
+                          {formatRupiah(product.harga)}
+                          <span className="text-[#6B7773]"> &middot; {product.kategori}</span>
+                        </div>
+                        <div className="hidden sm:block md:hidden text-xs text-[#6B7773]">
+                          {product.kategori}
                         </div>
                         <div className="text-xs text-[#6B7773] font-mono">
                           {product.kodeProduk || "-"}
@@ -514,14 +522,14 @@ export default function OwnerProdukPage() {
                           </div>
                         )}
                       </td>
-                      <td className="py-2.5 px-4 hidden sm:table-cell text-[#1F2A27]">
+                      <td className="py-2.5 px-3 sm:px-4 hidden md:table-cell text-[#1F2A27]">
                         {product.kategori}
                       </td>
-                      <td className="py-2.5 px-4 text-right tabular-nums text-[#1F2A27]">
+                      <td className="py-2.5 px-3 sm:px-4 text-right tabular-nums whitespace-nowrap text-[#1F2A27] hidden sm:table-cell">
                         {formatRupiah(product.harga)}
                       </td>
-                      <td className="py-2.5 px-4 text-right tabular-nums whitespace-nowrap">
-                        <div className="inline-flex items-center justify-end gap-2">
+                      <td className="py-2.5 px-3 sm:px-4 text-right tabular-nums whitespace-nowrap">
+                        <div className="inline-flex flex-col-reverse sm:flex-row items-end sm:items-center justify-end gap-1 sm:gap-2">
                           {isInactive ? (
                             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#F5F6F4] text-[#6B7773]">
                               Nonaktif
@@ -540,11 +548,12 @@ export default function OwnerProdukPage() {
                           </strong>
                         </div>
                       </td>
-                      <td className="py-2.5 px-4 text-right whitespace-nowrap">
+                      <td className="py-2.5 px-3 sm:px-4 text-right whitespace-nowrap">
                         <button
                           type="button"
                           onClick={() => handleOpenEdit(product)}
-                          className="min-h-[38px] px-3.5 border border-[#E1E4E0] rounded-md bg-white hover:bg-[#F5F6F4] text-sm font-semibold text-[#1F2A27] inline-flex items-center gap-2 transition-colors cursor-pointer"
+                          aria-label={`Edit ${product.nama}`}
+                          className="min-h-11 min-w-11 justify-center lg:min-h-[38px] px-2.5 sm:px-3.5 border border-[#E1E4E0] rounded-md bg-white hover:bg-[#F5F6F4] text-sm font-semibold text-[#1F2A27] inline-flex items-center gap-2 transition-colors cursor-pointer"
                         >
                           <svg
                             aria-hidden="true"
@@ -558,7 +567,7 @@ export default function OwnerProdukPage() {
                             <path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" />
                             <path d="m15 5 4 4" />
                           </svg>
-                          <span>Edit</span>
+                          <span className="hidden sm:inline">Edit</span>
                         </button>
                       </td>
                     </tr>

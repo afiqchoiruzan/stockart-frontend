@@ -45,14 +45,14 @@ export default function SendReportDropdown({
   };
 
   return (
-    <div className="relative inline-block text-left" ref={containerRef}>
+    <div className="relative block w-full sm:inline-block sm:w-auto text-left" ref={containerRef}>
       <button
         type="button"
         onClick={() => setIsOpen((prev) => !prev)}
         disabled={disabled}
         aria-haspopup="true"
         aria-expanded={isOpen}
-        className="inline-flex items-center gap-2 min-h-[40px] px-3.5 bg-white border border-[#E1E4E0] rounded-lg text-[13px] font-semibold text-[#1F2A27] hover:border-[#2F6F5E] hover:text-[#2F6F5E] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full sm:w-auto justify-center inline-flex items-center gap-2 min-h-11 lg:min-h-[40px] px-3.5 bg-white border border-[#E1E4E0] rounded-lg text-[13px] font-semibold text-[#1F2A27] hover:border-[#2F6F5E] hover:text-[#2F6F5E] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <svg
           aria-hidden="true"
@@ -87,7 +87,7 @@ export default function SendReportDropdown({
         <div
           role="region"
           aria-label="Kirim laporan sekarang"
-          className="absolute right-0 top-full mt-2 w-72 bg-white border border-[#E1E4E0] rounded-lg shadow-lg z-40 overflow-hidden"
+          className="absolute left-0 right-0 sm:left-auto top-full mt-2 sm:w-72 max-w-[calc(100vw-2rem)] bg-white border border-[#E1E4E0] rounded-lg shadow-lg z-40 overflow-hidden"
         >
           <form onSubmit={handleSubmit} className="p-3.5 flex flex-col gap-2.5">
             <div>
@@ -107,12 +107,12 @@ export default function SendReportDropdown({
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Email owner default"
-              className="w-full min-h-[40px] px-3 bg-white border border-[#E1E4E0] rounded-lg text-[13px] text-[#1F2A27] placeholder:text-[#6B7773] focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15 transition-all"
+              className="w-full min-h-11 lg:min-h-[40px] px-3 bg-white border border-[#E1E4E0] rounded-lg text-[13px] text-[#1F2A27] placeholder:text-[#6B7773] focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15 transition-all"
             />
             <button
               type="submit"
               disabled={isSending}
-              className="inline-flex items-center justify-center min-h-[38px] px-3.5 rounded-lg bg-[#2F6F5E] hover:bg-[#255a4c] text-[13px] font-semibold text-white transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+              className="inline-flex items-center justify-center min-h-11 lg:min-h-[38px] px-3.5 rounded-lg bg-[#2F6F5E] hover:bg-[#255a4c] text-[13px] font-semibold text-white transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {isSending ? "Mengirim laporan…" : "Kirim Sekarang"}
             </button>

@@ -72,13 +72,13 @@ export default function TransactionDetailPanel({
           </div>
           <div className="flex justify-between gap-2">
             <span className="text-[#6B7773]">Waktu</span>
-            <span className="font-mono">
+            <span className="font-mono text-right">
               {formatTanggalSingkat(transaction.tanggal)}, {transaction.waktu}
             </span>
           </div>
           <div className="flex justify-between gap-2">
             <span className="text-[#6B7773]">Kasir</span>
-            <span>{transaction.namaKasir}</span>
+            <span className="text-right min-w-0 truncate">{transaction.namaKasir}</span>
           </div>
           <div className="flex justify-between gap-2">
             <span className="text-[#6B7773]">Metode</span>
@@ -95,7 +95,7 @@ export default function TransactionDetailPanel({
               <div className="font-medium text-[#1F2A27]">
                 {item.namaProduk}
               </div>
-              <div className="flex justify-between text-[#6B7773] font-mono">
+              <div className="flex justify-between gap-2 text-[#6B7773] font-mono">
                 <span>
                   {item.jumlah} &times; {formatRupiah(item.hargaSatuan)}
                 </span>
@@ -131,7 +131,7 @@ export default function TransactionDetailPanel({
         <button
           type="button"
           onClick={() => onPrintReceipt && onPrintReceipt(transaction)}
-          className="w-full py-2 px-3 border border-[#E1E4E0] rounded-lg bg-white hover:bg-[#FAFBF9] text-[13px] font-semibold text-[#1F2A27] inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+          className="w-full min-h-11 lg:min-h-0 py-2 px-3 border border-[#E1E4E0] rounded-lg bg-white hover:bg-[#FAFBF9] text-[13px] font-semibold text-[#1F2A27] inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
         >
           <svg
             aria-hidden="true"

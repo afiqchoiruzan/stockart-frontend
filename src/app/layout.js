@@ -18,6 +18,12 @@ export const metadata = {
   description: "Aplikasi manajemen stok dan kasir Toko Kelontong Berkah",
 };
 
+// <meta name="viewport" content="width=device-width, initial-scale=1">
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
+
 export default function RootLayout({ children }) {
   return (
     <html

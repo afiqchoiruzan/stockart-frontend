@@ -30,17 +30,17 @@ export default function KasirWindowBar() {
   return (
     <header
       aria-label="Header Halaman Kasir"
-      className="w-full border-b border-[#E1E4E0] bg-white px-6 py-4 flex items-center justify-between gap-4"
+      className="w-full border-b border-[#E1E4E0] bg-white px-4 sm:px-5 lg:px-6 py-3 sm:py-4 flex items-center justify-between gap-4"
     >
-      <div>
-        <h1 className="text-sm font-bold text-[#1F2A27] leading-tight">
+      <div className="min-w-0">
+        <h1 className="text-base lg:text-sm font-bold text-[#1F2A27] leading-tight">
           {title}
         </h1>
         <p className="text-xs text-[#6B7773] mt-0.5">{subtitle}</p>
       </div>
 
       {isPos ? (
-        <div className="hidden md:flex items-center gap-4 text-xs text-[#6B7773]">
+        <div className="hidden lg:flex shrink-0 items-center gap-4 text-xs text-[#6B7773]">
           <span className="inline-flex items-center gap-1.5">
             <kbd className="px-1.5 py-0.5 text-[11px] font-medium bg-white border border-[#E1E4E0] border-b-2 rounded">
               F2
@@ -61,7 +61,7 @@ export default function KasirWindowBar() {
           </span>
         </div>
       ) : (
-        <span className="hidden sm:inline-block text-xs text-[#6B7773]">
+        <span className="hidden sm:inline-block shrink-0 text-xs text-[#6B7773] text-right">
           {todayStr}
         </span>
       )}

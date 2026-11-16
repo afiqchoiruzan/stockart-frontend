@@ -40,7 +40,7 @@ export default function CashierSummaryCards({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3 sm:gap-3.5">
         {cashiers.map((kasir) => {
           const kasirTrx = transactions.filter(
             (t) =>
@@ -66,7 +66,7 @@ export default function CashierSummaryCards({
               }
               aria-pressed={isSelected}
               aria-label={`Filter transaksi kasir ${kasir.nama}`}
-              className={`text-left border rounded-lg p-4 flex flex-col justify-between gap-3 transition-all cursor-pointer ${
+              className={`min-w-0 text-left border rounded-lg p-4 flex flex-col justify-between gap-3 transition-all cursor-pointer ${
                 isSelected
                   ? "border-[#2F6F5E] bg-[#E6F0ED] ring-1 ring-[#2F6F5E]/30"
                   : "border-[#E1E4E0] bg-white hover:border-[#2F6F5E]"
@@ -74,11 +74,11 @@ export default function CashierSummaryCards({
             >
               {/* Header Kasir */}
               <div className="flex items-start justify-between gap-2 w-full">
-                <div>
-                  <h3 className="font-semibold text-sm text-[#1F2A27] leading-tight">
+                <div className="min-w-0">
+                  <h3 className="font-semibold text-sm text-[#1F2A27] leading-tight wrap-break-word">
                     {kasir.nama}
                   </h3>
-                  <p className="text-xs text-[#6B7773] font-mono mt-0.5">
+                  <p className="text-xs text-[#6B7773] font-mono mt-0.5 truncate">
                     @{kasir.username}
                   </p>
                   <p className="text-[11px] text-[#6B7773] mt-0.5">
@@ -86,7 +86,7 @@ export default function CashierSummaryCards({
                   </p>
                 </div>
                 <span
-                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${
+                  className={`shrink-0 whitespace-nowrap inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${
                     isSelected
                       ? "bg-[#2F6F5E] text-white"
                       : "bg-[#F5F6F4] text-[#1F2A27]"

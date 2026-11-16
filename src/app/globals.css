@@ -27,12 +27,47 @@
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
-  font-size: 14px;
-  line-height: 1.45;
+/*
+ * Breakpoint (default Tailwind, mobile-first):
+ *   mobile  : < 640px      (tanpa prefix)
+ *   tablet  : 640–1023px   (sm:, md:)
+ *   desktop : >= 1024px    (lg:, xl:, 2xl:)
+ * Di bawah lg sidebar diganti top bar + menu hamburger, dan target sentuh
+ * dibuat minimal 44px.
+ */
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
+    font-size: 0.875rem;
+    line-height: 1.45;
+    overflow-wrap: break-word;
+  }
+
+  img,
+  video,
+  canvas {
+    max-width: 100%;
+  }
+}
+
+/*
+ * iOS Safari memperbesar halaman jika font input < 16px saat difokuskan.
+ * Di layar mobile, paksa input/select/textarea 16px (di luar layer agar
+ * mengalahkan utilitas text-[13px] dsb.).
+ */
+@media (max-width: 639.98px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
 }
 
 @media print {

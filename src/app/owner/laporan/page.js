@@ -238,13 +238,13 @@ export default function OwnerLaporanPage() {
       {apiError && (
         <div
           role="alert"
-          className="px-4 py-3 border border-[#EBC5C1] rounded-lg bg-[#F8E8E6] text-xs font-medium text-[#C4574F] flex items-center justify-between"
+          className="px-3 sm:px-4 py-3 border border-[#EBC5C1] rounded-lg bg-[#F8E8E6] text-xs font-medium text-[#C4574F] flex items-center justify-between gap-3"
         >
-          <span>{apiError}</span>
+          <span className="min-w-0">{apiError}</span>
           <button
             type="button"
             onClick={handleRetry}
-            className="text-xs font-semibold underline cursor-pointer"
+            className="shrink-0 inline-flex items-center min-h-11 -my-3 lg:min-h-0 lg:my-0 text-xs font-semibold underline cursor-pointer"
           >
             Coba Lagi
           </button>
@@ -255,7 +255,7 @@ export default function OwnerLaporanPage() {
         <div
           role="status"
           aria-live="polite"
-          className={`px-4 py-2.5 border rounded-md text-sm ${
+          className={`px-3 sm:px-4 py-2.5 border rounded-md text-sm ${
             statusMessage.startsWith("!")
               ? "border-[#C4574F] bg-[#F8E8E6] text-[#8c322b]"
               : "border-[#3E8E6A] bg-[#E6F2EC] text-[#245942]"
@@ -299,7 +299,7 @@ export default function OwnerLaporanPage() {
           {/* Grafik Omzet + Kirim Otomatis di Kiri & Terlaris di Kanan */}
           <section
             aria-label="Grafik dan Produk Terlaris"
-            className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_360px] gap-4 items-start"
+            className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_300px] xl:grid-cols-[minmax(0,1fr)_340px] 2xl:grid-cols-[minmax(0,1fr)_360px] gap-4 items-start"
           >
             <div className="flex flex-col gap-4 min-w-0">
               <RevenueChart title={CHART_TITLES[period]} points={chartPoints} />

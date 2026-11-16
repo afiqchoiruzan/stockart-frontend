@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
 
 export default function KasirPage() {
-  redirect("/kasir/produk");
+  redirect("/kasir/transaksi");
 }
