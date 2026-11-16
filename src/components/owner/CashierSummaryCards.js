@@ -38,16 +38,6 @@ export default function CashierSummaryCards({
             {selectedDate ? `Tanggal: ${dateLabel}` : "Periode: Semua tanggal"}
           </span>
         </div>
-
-        {selectedKasirId !== "semua" && (
-          <button
-            type="button"
-            onClick={() => onSelectKasir("semua")}
-            className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-[#E6F0ED] text-[#2F6F5E] border border-[#2F6F5E]/30 hover:bg-[#2F6F5E] hover:text-white transition-colors cursor-pointer"
-          >
-            Tampilkan semua kasir
-          </button>
-        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5">
