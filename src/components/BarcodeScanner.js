@@ -66,15 +66,25 @@ async function openCameraStream(deviceId) {
  *  - onClose(): dipanggil saat pengguna menutup modal
  *  - feedback (opsional): { type: "success" | "error" | "info", message }
  *    pesan singkat hasil pemrosesan kode, ditampilkan di dalam modal
+ *  - continuous (default true): true = modal tetap terbuka untuk scan
+ *    berikutnya (halaman kasir). false = setelah satu kode (kamera atau
+ *    manual) dikirim ke onDetected, modal otomatis memanggil onClose().
  * Kamera dimatikan saat modal ditutup atau komponen di-unmount.
  */
-export default function BarcodeScanner({ open, onDetected, onClose, feedback }) {
+export default function BarcodeScanner({
+  open,
+  onDetected,
+  onClose,
+  feedback,
+  continuous = true,
+}) {
   if (!open) return null;
   return (
     <ScannerModal
       onDetected={onDetected}
       onClose={onClose}
       feedback={feedback}
+      continuous={continuous}
     />
   );
 }
@@ -85,8 +95,10 @@ const FEEDBACK_STYLES = {
   info: "border-[#E1E4E0] bg-[#F5F6F4] text-[#6B7773]",
 };
 
-function ScannerModal({ onDetected, onClose, feedback }) {
+function ScannerModal({ onDetected, onClose, feedback, continuous }) {
   const videoRef = useRef(null);
+  // Mode sekali-scan: cegah kode kedua terkirim sebelum modal benar-benar tertutup.
+  const finishedRef = useRef(false);
   const manualInputRef = useRef(null);
   const audioCtxRef = useRef(null);
   const lastSeenRef = useRef({ code: "", at: 0 });
@@ -124,6 +136,8 @@ function ScannerModal({ onDetected, onClose, feedback }) {
   };
 
   const emitCode = (code) => {
+    if (finishedRef.current) return;
+    if (!continuous) finishedRef.current = true;
     setLastCode(code);
     playBeep();
     try {
@@ -135,6 +149,7 @@ function ScannerModal({ onDetected, onClose, feedback }) {
       // Getar tidak didukung (mis. Safari iOS).
     }
     onDetected?.(code);
+    if (!continuous) onClose?.();
   };
 
   // Dipanggil dari loop zxing; useEffectEvent agar selalu memakai props terbaru
@@ -225,11 +240,13 @@ function ScannerModal({ onDetected, onClose, feedback }) {
     };
   }, [deviceId]);
 
-  // Tutup AudioContext saat modal hilang.
+  // Tutup AudioContext saat modal hilang. Ditunda sebentar agar bip terakhir
+  // (mode sekali-scan langsung menutup modal) tidak terpotong.
   useEffect(
     () => () => {
-      audioCtxRef.current?.close().catch(() => {});
+      const ctx = audioCtxRef.current;
       audioCtxRef.current = null;
+      if (ctx) setTimeout(() => ctx.close().catch(() => {}), 300);
     },
     []
   );
