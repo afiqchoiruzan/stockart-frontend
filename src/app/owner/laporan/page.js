@@ -60,16 +60,15 @@ function isWithinRange(dateKey, range) {
   return dateKey >= range.tanggalMulai && dateKey <= range.tanggalAkhir;
 }
 
-/** Omzet per jam dari daftar transaksi (backend belum punya agregasi per jam). */
-function buildHourlyPoints(transactions) {
+/** Omzet per jam WIB dari data /api/reports/revenue?interval=jam. */
+function buildHourlyPoints(revenue) {
   const byHour = new Map();
-  transactions.forEach((trx) => {
-    const hour = Number(String(trx.waktu || "").slice(0, 2));
-    if (Number.isNaN(hour)) return;
-    const prev = byHour.get(hour) || { omzet: 0, jumlahTransaksi: 0 };
+  revenue.forEach((item) => {
+    const hour = Number(item.jam);
+    if (item.jam === undefined || Number.isNaN(hour)) return;
     byHour.set(hour, {
-      omzet: prev.omzet + Number(trx.totalHarga || 0),
-      jumlahTransaksi: prev.jumlahTransaksi + 1,
+      omzet: Number(item.omzet || 0),
+      jumlahTransaksi: Number(item.jumlahTransaksi || 0),
     });
   });
 
@@ -164,7 +163,10 @@ export default function OwnerLaporanPage() {
     let ignore = false;
     Promise.all([
       apiGetReportSummary(range),
-      apiGetReportRevenue(range),
+      apiGetReportRevenue({
+        ...range,
+        interval: period === "harian" ? "jam" : undefined,
+      }),
       apiGetReportTopProducts(range),
       fetchTransactionsFromApi({
         status: "selesai",
@@ -208,10 +210,10 @@ export default function OwnerLaporanPage() {
   );
 
   const chartPoints = useMemo(() => {
-    if (period === "harian") return buildHourlyPoints(periodTransactions);
+    if (period === "harian") return buildHourlyPoints(revenue);
     if (period === "mingguan") return buildDailyPoints(revenue, range);
     return buildWeeklyPoints(revenue, range);
-  }, [period, periodTransactions, revenue, range]);
+  }, [period, revenue, range]);
 
   const handlePeriodChange = (nextPeriod) => {
     if (nextPeriod === period) return;
