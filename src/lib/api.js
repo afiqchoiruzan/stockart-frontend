@@ -450,6 +450,28 @@ export async function apiUpdateLowStockAlertSettings(payload) {
   return result.data;
 }
 
+/**
+ * Mengambil konfigurasi jadwal kirim laporan otomatis (GET /api/notifications/report/settings).
+ */
+export async function apiGetReportAutoSendSettings() {
+  const result = await apiRequest("/notifications/report/settings", {
+    method: "GET",
+  });
+  return result.data;
+}
+
+/**
+ * Memperbarui konfigurasi jadwal kirim laporan otomatis (PUT /api/notifications/report/settings).
+ * payload: { digestFrequency, digestTime, digestWeekday, digestDayOfMonth, saveToDrive }
+ */
+export async function apiUpdateReportAutoSendSettings(payload) {
+  const result = await apiRequest("/notifications/report/settings", {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+  return result.data;
+}
+
 export async function fetchTransactionsFromApi(filters = {}) {
   const params = new URLSearchParams();
   if (filters.kasir && filters.kasir !== "semua") {
