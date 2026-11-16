@@ -111,7 +111,7 @@ export default function LoginPage() {
               <path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4" />
               <path d="M2 7h20" />
             </svg>
-            <span>StockArt</span>
+            <span>Stockart</span>
           </div>
 
           <div>
@@ -228,7 +228,7 @@ export default function LoginPage() {
               <path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4" />
               <path d="M2 7h20" />
             </svg>
-            <span>StockArt</span>
+            <span>Stockart</span>
           </div>
 
           <div>

@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata = {
-  title: "StockArt — Kasir & Manajemen Stok",
+  title: "Stockart — Kasir & Manajemen Stok",
   description: "Aplikasi manajemen stok dan kasir Toko Kelontong Berkah",
 };
 
