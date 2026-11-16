@@ -6,18 +6,14 @@ import {
   apiGetReportRevenue,
   apiGetReportTopProducts,
   apiSendReportEmail,
-  fetchTransactionsFromApi,
 } from "@/lib/api";
-import {
-  formatTanggalSingkat,
-  getTotalItemCount,
-  toDateKey,
-} from "@/lib/mockTransactions";
+import { formatTanggalSingkat, toDateKey } from "@/lib/mockTransactions";
 import ReportToolbar from "@/components/owner/ReportToolbar";
 import ReportSummaryCards from "@/components/owner/ReportSummaryCards";
 import RevenueChart from "@/components/owner/RevenueChart";
 import TopProductsPanel from "@/components/owner/TopProductsPanel";
 import SendReportPanel from "@/components/owner/SendReportPanel";
+import ReportAutoSendPanel from "@/components/owner/ReportAutoSendPanel";
 
 const WEEKDAY_LABELS = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
 
@@ -27,7 +23,13 @@ const CHART_TITLES = {
   bulanan: "Omzet per Minggu",
 };
 
-const EMPTY_SUMMARY = { totalProduk: 0, totalTransaksi: 0, totalOmzet: 0 };
+const EMPTY_SUMMARY = {
+  totalProduk: 0,
+  totalTransaksi: 0,
+  totalOmzet: 0,
+  totalTerjual: 0,
+  totalMasuk: 0,
+};
 
 /** "YYYY-MM-DD" + n hari -> "YYYY-MM-DD" */
 function shiftDateKey(dateKey, days) {
@@ -139,7 +141,6 @@ export default function OwnerLaporanPage() {
   const [summary, setSummary] = useState(EMPTY_SUMMARY);
   const [revenue, setRevenue] = useState([]);
   const [topProducts, setTopProducts] = useState([]);
-  const [transactions, setTransactions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [apiError, setApiError] = useState("");
 
@@ -168,17 +169,12 @@ export default function OwnerLaporanPage() {
         interval: period === "harian" ? "jam" : undefined,
       }),
       apiGetReportTopProducts(range),
-      fetchTransactionsFromApi({
-        status: "selesai",
-        tanggal: period === "harian" ? range.tanggalAkhir : undefined,
-      }),
     ])
-      .then(([summaryRes, revenueRes, topRes, trxList]) => {
+      .then(([summaryRes, revenueRes, topRes]) => {
         if (ignore) return;
         setSummary({ ...EMPTY_SUMMARY, ...(summaryRes?.data || {}) });
         setRevenue(Array.isArray(revenueRes?.data) ? revenueRes.data : []);
         setTopProducts(Array.isArray(topRes?.data) ? topRes.data : []);
-        setTransactions(trxList);
       })
       .catch((err) => {
         if (ignore) return;
@@ -191,23 +187,6 @@ export default function OwnerLaporanPage() {
       ignore = true;
     };
   }, [period, range, reloadKey]);
-
-  const periodTransactions = useMemo(
-    () =>
-      transactions.filter(
-        (trx) => trx.status === "selesai" && isWithinRange(trx.tanggal, range)
-      ),
-    [transactions, range]
-  );
-
-  const totalTerjual = useMemo(
-    () =>
-      periodTransactions.reduce(
-        (sum, trx) => sum + getTotalItemCount(trx.detailBarang),
-        0
-      ),
-    [periodTransactions]
-  );
 
   const chartPoints = useMemo(() => {
     if (period === "harian") return buildHourlyPoints(revenue);
@@ -247,7 +226,8 @@ export default function OwnerLaporanPage() {
       ["Ringkasan"],
       ["Omzet", summary.totalOmzet],
       ["Transaksi selesai", summary.totalTransaksi],
-      ["Produk terjual (pcs)", totalTerjual],
+      ["Produk terjual (pcs)", summary.totalTerjual],
+      ["Produk masuk (pcs)", summary.totalMasuk],
       [],
       [CHART_TITLES[period]],
       ["Periode", "Omzet", "Jumlah Transaksi"],
@@ -329,7 +309,8 @@ export default function OwnerLaporanPage() {
           <ReportSummaryCards
             totalOmzet={summary.totalOmzet}
             totalTransaksi={summary.totalTransaksi}
-            totalTerjual={totalTerjual}
+            totalTerjual={summary.totalTerjual}
+            totalMasuk={summary.totalMasuk}
             periodLabel={periodLabel}
           />
 
@@ -342,6 +323,7 @@ export default function OwnerLaporanPage() {
 
             <div className="flex flex-col gap-4">
               <TopProductsPanel products={topProducts} />
+              <ReportAutoSendPanel onSaved={showFlashMessage} />
               <SendReportPanel
                 onSend={handleSendReport}
                 isSending={isSending}

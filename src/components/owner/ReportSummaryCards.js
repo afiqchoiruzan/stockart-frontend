@@ -6,6 +6,7 @@ export default function ReportSummaryCards({
   totalOmzet = 0,
   totalTransaksi = 0,
   totalTerjual = 0,
+  totalMasuk = 0,
   periodLabel = "",
 }) {
   const formatPcs = (value) =>
@@ -39,11 +40,13 @@ export default function ReportSummaryCards({
           </span>
         </div>
 
-        <div className="bg-white border border-dashed border-[#E1E4E0] rounded-lg p-4 flex flex-col gap-1">
+        <div className="bg-white border border-[#E1E4E0] rounded-lg p-4 flex flex-col gap-1">
           <span className="text-[11px] text-[#6B7773]">Produk Masuk</span>
-          <span className="font-bold text-xl text-[#6B7773] font-mono">—</span>
+          <span className="font-bold text-xl text-[#1F2A27] font-mono">
+            +{formatPcs(totalMasuk)}
+          </span>
           <span className="text-[11px] text-[#6B7773]">
-            Riwayat barang masuk belum dicatat oleh backend
+            Dari produk baru &amp; restock
           </span>
         </div>
       </div>
