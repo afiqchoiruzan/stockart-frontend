@@ -104,15 +104,18 @@ export default function OwnerProdukPage() {
     loadFromBackend(nextStatus, true);
   };
 
-  const handleNotifyLowStockEmail = async () => {
+  const handleNotifyLowStockEmail = async (email = "") => {
     setIsNotifyingEmail(true);
     try {
-      const result = await notifyLowStockInApi();
+      const targetEmail = String(email || "").trim() || undefined;
+      const result = await notifyLowStockInApi(targetEmail);
       showFlashMessage(
         result.message || "Notifikasi email low stock berhasil diproses."
       );
+      return true;
     } catch (err) {
       showFlashMessage(`! Gagal mengirim email low stock: ${err.message}`);
+      return false;
     } finally {
       setIsNotifyingEmail(false);
     }

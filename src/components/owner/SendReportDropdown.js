@@ -1,14 +1,17 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { validateOptionalEmailInput } from "@/lib/emailValidation";
 
 export default function SendReportDropdown({
   onSend,
   isSending = false,
   disabled = false,
+  defaultRecipient = "",
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [email, setEmail] = useState("");
+  const [emailError, setEmailError] = useState("");
   const containerRef = useRef(null);
 
   useEffect(() => {
@@ -37,7 +40,13 @@ export default function SendReportDropdown({
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    const sent = await onSend(email.trim());
+    const check = validateOptionalEmailInput(email);
+    if (!check.valid) {
+      setEmailError(check.error);
+      return;
+    }
+    setEmailError("");
+    const sent = await onSend(check.value);
     if (sent !== false) {
       setIsOpen(false);
       setEmail("");
@@ -95,7 +104,9 @@ export default function SendReportDropdown({
                 Kirim laporan periode ini
               </p>
               <p className="text-[11px] text-[#6B7773] mt-0.5">
-                Salinan disimpan ke Google Drive jika sudah diaktifkan di server.
+                {defaultRecipient
+                  ? `Kosongkan email untuk kirim ke default (${defaultRecipient}).`
+                  : "Salinan disimpan ke Google Drive jika sudah diaktifkan di server."}
               </p>
             </div>
             <label htmlFor="report-email" className="sr-only">
@@ -104,11 +115,28 @@ export default function SendReportDropdown({
             <input
               id="report-email"
               type="email"
+              multiple
+              autoComplete="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Email owner default"
-              className="w-full min-h-11 lg:min-h-[40px] px-3 bg-white border border-[#E1E4E0] rounded-lg text-[13px] text-[#1F2A27] placeholder:text-[#6B7773] focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15 transition-all"
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (emailError) setEmailError("");
+              }}
+              placeholder={
+                defaultRecipient
+                  ? `Default: ${defaultRecipient}`
+                  : "Email owner default"
+              }
+              aria-invalid={Boolean(emailError)}
+              className={`w-full min-h-11 lg:min-h-[40px] px-3 bg-white border rounded-lg text-[13px] text-[#1F2A27] placeholder:text-[#6B7773] focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15 transition-all ${
+                emailError ? "border-[#C4574F]" : "border-[#E1E4E0]"
+              }`}
             />
+            {emailError && (
+              <p role="alert" className="text-[11px] text-[#8c322b]">
+                {emailError}
+              </p>
+            )}
             <button
               type="submit"
               disabled={isSending}

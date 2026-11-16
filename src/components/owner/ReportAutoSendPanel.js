@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useEffectEvent } from "react";
 import {
   apiGetReportAutoSendSettings,
   apiUpdateReportAutoSendSettings,
@@ -76,7 +76,7 @@ function InlineSwitch({ id, label, checked, onChange, disabled = false, title })
   );
 }
 
-export default function ReportAutoSendPanel({ onSaved }) {
+export default function ReportAutoSendPanel({ onSaved, onSettingsLoaded }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [loadError, setLoadError] = useState("");
@@ -104,12 +104,17 @@ export default function ReportAutoSendPanel({ onSaved }) {
     setSaveToDrive(data.saveToDrive !== false);
   };
 
+  const notifySettingsLoaded = useEffectEvent((data) => {
+    onSettingsLoaded?.(data);
+  });
+
   useEffect(() => {
     let cancelled = false;
     apiGetReportAutoSendSettings()
       .then((data) => {
         if (cancelled || !data) return;
         applyServerData(data);
+        notifySettingsLoaded(data);
       })
       .catch((err) => {
         if (cancelled) return;
@@ -178,9 +183,19 @@ export default function ReportAutoSendPanel({ onSaved }) {
       className="bg-white border border-[#E1E4E0] rounded-lg px-4 py-3 flex flex-col gap-2.5"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-sm font-semibold text-[#1F2A27]">
-          Kirim Laporan Otomatis
-        </h2>
+        <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-0.5 min-w-0">
+          <h2 className="text-sm font-semibold text-[#1F2A27]">
+            Kirim Laporan Otomatis
+          </h2>
+          {serverData && (
+            <span className="text-[11px] text-[#6B7773] break-all">
+              Tujuan:{" "}
+              <strong className="font-medium text-[#1F2A27]">
+                {serverData.defaultRecipient || "Belum diatur (OWNER_EMAIL)"}
+              </strong>
+            </span>
+          )}
+        </div>
         {serverData && (
           <span className="text-[11px] text-[#6B7773]">
             {serverData.digestFrequency === "off" ? (
