@@ -692,3 +692,21 @@ export async function apiGetReportRevenue(params = {}) {
 export async function apiGetReportTopProducts(params = {}) {
   return apiFetch(`/api/reports/top-products${buildQuery(params)}`);
 }
+
+/**
+ * Mengirim laporan ke email owner (POST /api/reports/send-email).
+ * Backend juga menyimpan salinan ke Google Drive jika GDRIVE_WEBHOOK_URL diatur.
+ * payload: { tanggalMulai, tanggalAkhir, email } — semua opsional
+ */
+export async function apiSendReportEmail(payload = {}) {
+  const body = {};
+  Object.entries(payload).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") {
+      body[key] = value;
+    }
+  });
+  return apiFetch("/api/reports/send-email", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
