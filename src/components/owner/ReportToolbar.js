@@ -10,8 +10,9 @@ export default function ReportToolbar({
   period,
   onPeriodChange,
   periodLabel,
-  onExportCsv,
-  isExportDisabled = false,
+  onDownloadPdf,
+  isDownloadDisabled = false,
+  isDownloading = false,
   actions = null,
 }) {
   return (
@@ -48,14 +49,14 @@ export default function ReportToolbar({
         </span>
       </div>
 
-      {/* Aksi: Kirim Laporan & Unduh CSV */}
+      {/* Aksi: Kirim Laporan & Unduh PDF */}
       <div className="flex flex-wrap items-center gap-2.5">
         {actions}
 
         <button
           type="button"
-          onClick={onExportCsv}
-          disabled={isExportDisabled}
+          onClick={onDownloadPdf}
+          disabled={isDownloadDisabled || isDownloading}
           className="inline-flex items-center gap-2 min-h-[40px] px-3.5 bg-white border border-[#E1E4E0] rounded-lg text-[13px] font-semibold text-[#1F2A27] hover:border-[#2F6F5E] hover:text-[#2F6F5E] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <svg
@@ -71,7 +72,7 @@ export default function ReportToolbar({
             <path d="m7 10 5 5 5-5" />
             <path d="M12 15V3" />
           </svg>
-          Unduh CSV
+          {isDownloading ? "Menyiapkan PDF…" : "Unduh PDF"}
         </button>
       </div>
     </div>

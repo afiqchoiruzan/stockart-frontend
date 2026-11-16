@@ -6,6 +6,7 @@ import {
   apiGetReportRevenue,
   apiGetReportTopProducts,
   apiSendReportEmail,
+  apiDownloadReportPdf,
 } from "@/lib/api";
 import { formatTanggalSingkat, toDateKey } from "@/lib/mockTransactions";
 import ReportToolbar from "@/components/owner/ReportToolbar";
@@ -125,14 +126,6 @@ function buildWeeklyPoints(revenue, range) {
   return points;
 }
 
-// Excel dengan regional Indonesia memakai titik koma sebagai pemisah kolom
-const CSV_SEPARATOR = ";";
-
-function toCsvCell(value) {
-  const text = String(value ?? "");
-  return /[",\n;]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
-}
-
 export default function OwnerLaporanPage() {
   const [todayKey] = useState(() => toDateKey(new Date()));
   const [period, setPeriod] = useState("harian");
@@ -145,6 +138,7 @@ export default function OwnerLaporanPage() {
   const [apiError, setApiError] = useState("");
 
   const [isSending, setIsSending] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
 
   const range = useMemo(
@@ -221,44 +215,22 @@ export default function OwnerLaporanPage() {
     }
   };
 
-  const handleExportCsv = () => {
-    const rows = [
-      ["Laporan Stockart", periodLabel],
-      [],
-      ["Ringkasan"],
-      ["Omzet", summary.totalOmzet],
-      ["Transaksi selesai", summary.totalTransaksi],
-      ["Produk terjual (pcs)", summary.totalTerjual],
-      ["Produk masuk (pcs)", summary.totalMasuk],
-      [],
-      [CHART_TITLES[period]],
-      ["Periode", "Omzet", "Jumlah Transaksi"],
-      ...chartPoints.map((p) => [
-        p.tanggal ? `${p.label} (${p.tanggal})` : p.label,
-        p.omzet,
-        p.jumlahTransaksi,
-      ]),
-      [],
-      ["Produk Terlaris"],
-      ["Peringkat", "Nama Produk", "Terjual (pcs)", "Pendapatan"],
-      ...topProducts.map((p, idx) => [
-        idx + 1,
-        p.namaProduk,
-        p.totalTerjual,
-        p.totalPendapatan,
-      ]),
-    ];
-    const csv = rows.map((row) => row.map(toCsvCell).join(CSV_SEPARATOR)).join("\n");
-    const blob = new Blob([`﻿${csv}`], {
-      type: "text/csv;charset=utf-8",
-    });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `laporan-${period}-${range.tanggalMulai}_${range.tanggalAkhir}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
-    showFlashMessage("Laporan CSV berhasil diunduh.");
+  const handleDownloadPdf = async () => {
+    setIsDownloading(true);
+    try {
+      const blob = await apiDownloadReportPdf(range);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `Laporan_Stockart_${range.tanggalMulai}_${range.tanggalAkhir}.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+      showFlashMessage("Laporan PDF berhasil diunduh.");
+    } catch (err) {
+      showFlashMessage(`! Gagal mengunduh PDF laporan: ${err.message}`);
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   return (
@@ -293,13 +265,14 @@ export default function OwnerLaporanPage() {
         </div>
       )}
 
-      {/* Toolbar Periode, Kirim Laporan & Unduh CSV */}
+      {/* Toolbar Periode, Kirim Laporan & Unduh PDF */}
       <ReportToolbar
         period={period}
         onPeriodChange={handlePeriodChange}
         periodLabel={periodLabel}
-        onExportCsv={handleExportCsv}
-        isExportDisabled={isLoading || Boolean(apiError)}
+        onDownloadPdf={handleDownloadPdf}
+        isDownloadDisabled={isLoading || Boolean(apiError)}
+        isDownloading={isDownloading}
         actions={
           <SendReportDropdown
             onSend={handleSendReport}
