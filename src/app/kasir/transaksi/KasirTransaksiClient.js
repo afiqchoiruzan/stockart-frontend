@@ -143,7 +143,7 @@ export default function KasirTransaksiClient() {
   // Kategori unik dari produk aktif
   const categoryList = useMemo(() => buildCategoryList(products), [products]);
 
-  // Filter products based on search (nama / kode barcode / kategori) & category chip
+  // Filter products based on search (nama / kodeProduk / barcode / kategori) & category chip
   const filteredProducts = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return products.filter((p) => {
@@ -178,6 +178,21 @@ export default function KasirTransaksiClient() {
     !isSubmitting &&
     (paymentMethod === "QRIS" || paidNum >= totalHarga);
 
+  const focusSearchInput = useCallback(() => {
+    // Jaga kursor di kotak scan/cari saat tidak ada modal terbuka agar kasir
+    // langsung siap untuk scan barcode berikutnya.
+    if (scannerOpen || qrisOpen || showInvoice) return;
+    requestAnimationFrame(() => {
+      searchRef.current?.focus({ preventScroll: true });
+    });
+  }, [scannerOpen, qrisOpen, showInvoice]);
+
+  useEffect(() => {
+    if (!loadingProducts) {
+      focusSearchInput();
+    }
+  }, [loadingProducts, focusSearchInput]);
+
   // Add item to cart
   const handleAddToCart = useCallback(
     (product) => {
@@ -187,6 +202,7 @@ export default function KasirTransaksiClient() {
 
       if (maxStock < 1) {
         setErrorMessage(`Stok "${product.nama}" habis`);
+        focusSearchInput();
         return;
       }
 
@@ -213,8 +229,9 @@ export default function KasirTransaksiClient() {
           },
         ];
       });
+      focusSearchInput();
     },
-    []
+    [focusSearchInput]
   );
 
   // Kode dari scanner kamera: cari di daftar produk lokal dulu, jika tidak ada
@@ -263,6 +280,7 @@ export default function KasirTransaksiClient() {
   // Remove item from cart
   const handleRemoveFromCart = (productId) => {
     setCart((prev) => prev.filter((item) => item.id !== productId));
+    focusSearchInput();
   };
 
   // Update quantity
@@ -275,6 +293,7 @@ export default function KasirTransaksiClient() {
     const target = cart.find((item) => item.id === productId);
     if (target && newQty > target.stok) {
       setErrorMessage(`Stok maksimal "${target.nama}" hanya ${target.stok}`);
+      focusSearchInput();
       return;
     }
     setCart((prev) =>
@@ -282,6 +301,7 @@ export default function KasirTransaksiClient() {
         item.id === productId ? { ...item, qty: newQty } : item
       )
     );
+    focusSearchInput();
   };
 
   // Clear cart
@@ -289,6 +309,7 @@ export default function KasirTransaksiClient() {
     setCart([]);
     setPaymentAmount("");
     setErrorMessage("");
+    focusSearchInput();
   };
 
   // Handle payment & checkout to backend
@@ -546,16 +567,41 @@ export default function KasirTransaksiClient() {
 
   const handleSearchKeyDown = (e) => {
     if (e.key !== "Enter") return;
-    const q = searchQuery.trim().toLowerCase();
-    if (!q) return;
+    const rawCode = searchQuery.trim();
+    if (!rawCode) return;
+
     // Scanner USB mengetik kode lalu Enter: cocokkan barcode atau kodeProduk.
-    const exact = findProductByCode(products, q);
+    const exact = findProductByCode(products, rawCode);
     const target =
       exact || (filteredProducts.length === 1 ? filteredProducts[0] : null);
-    if (target && target.stok > 0) {
+    if (target) {
       e.preventDefault();
       handleAddToCart(target);
       setSearchQuery("");
+      focusSearchInput();
+      return;
+    }
+
+    // Jika tidak cocok sama sekali di cache lokal, cek ke backend (mis. produk baru).
+    if (filteredProducts.length === 0) {
+      e.preventDefault();
+      setSearchQuery("");
+      setErrorMessage("");
+      getProductByBarcode(rawCode)
+        .then((product) => {
+          handleAddToCart(product);
+          loadProducts();
+        })
+        .catch((err) => {
+          const message =
+            err.status === 404
+              ? `Barcode tidak terdaftar: ${rawCode}`
+              : err.message || "Gagal mencari produk berdasarkan barcode.";
+          setErrorMessage(message);
+        })
+        .finally(() => {
+          focusSearchInput();
+        });
     }
   };
 

@@ -197,7 +197,12 @@ function DrawerFormInner({
     const submittedProduct = {
       ...(initialData || {}),
       nama: formData.nama.trim(),
-      kodeProduk: formData.kodeProduk.trim().toUpperCase(),
+      kodeProduk: (isEdit ? initialData.kodeProduk || "" : formData.kodeProduk)
+        .trim()
+        .toUpperCase(),
+      // String (bukan Number). "" = tanpa barcode; toBackendProductPayload
+      // mengirimnya sebagai "hapus" bila produk sebelumnya punya barcode.
+      barcode: formData.barcode.trim(),
       kategori: formData.kategori.trim(),
       satuan: formData.satuan.trim() || "pcs",
       hargaBeli: Math.round(Number(formData.hargaBeli)),
@@ -327,12 +332,10 @@ function DrawerFormInner({
               htmlFor="field-kodeProduk"
               className="text-sm font-medium text-[#1F2A27]"
             >
-              Kode produk / barcode{" "}
-              {!isEdit && (
-                <span className="font-normal text-xs text-[#6B7773]">
-                  {" "}(tidak dapat diubah)
-                </span>
-              )}
+              Kode produk (SKU){" "}
+              <span className="font-normal text-xs text-[#6B7773]">
+                {isEdit ? "(tidak dapat diubah)" : "(tidak dapat diubah setelah dibuat)"}
+              </span>
             </label>
             <input
               id="field-kodeProduk"
@@ -357,18 +360,22 @@ function DrawerFormInner({
                   : "bg-white focus:outline-2 focus:outline-[#2F6F5E] focus:border-[#2F6F5E]"
               }`}
             />
-            {errors.kodeProduk && (
+            {errors.kodeProduk ? (
               <span className="text-xs text-[#C4574F]">{errors.kodeProduk}</span>
+            ) : (
+              <span className="text-xs text-[#6B7773]">
+                Kode internal toko untuk identifikasi &amp; pencarian cepat.
+              </span>
             )}
           </div>
 
-          {/* Barcode (opsional) + Scan kamera */}
+          {/* Barcode kemasan (opsional) + Scan kamera */}
           <div className="flex flex-col gap-1">
             <label
               htmlFor="field-barcode"
               className="text-sm font-medium text-[#1F2A27]"
             >
-              Barcode{" "}
+              Barcode kemasan{" "}
               <span className="font-normal text-xs text-[#6B7773]">
                 (opsional)
               </span>

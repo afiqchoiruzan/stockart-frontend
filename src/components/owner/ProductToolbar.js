@@ -11,6 +11,7 @@ const STATUS_OPTIONS = [
 export default function ProductToolbar({
   searchQuery,
   onSearchChange,
+  onScanBarcode,
   selectedCategory,
   onCategoryChange,
   statusFilter = "true",
@@ -21,33 +22,57 @@ export default function ProductToolbar({
 }) {
   return (
     <div className="w-full flex flex-wrap items-center gap-2.5">
-      {/* Search Input Bar */}
-      <div className="relative basis-full sm:basis-auto sm:flex-1 sm:min-w-[240px]">
-        <label htmlFor="product-search" className="sr-only">
-          Cari produk, kode, atau kategori
-        </label>
-        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#6B7773]">
-          <svg
-            aria-hidden="true"
-            className="w-4 h-4 stroke-current"
-            fill="none"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            viewBox="0 0 24 24"
-          >
-            <circle cx="11" cy="11" r="8" />
-            <path d="m21 21-4.3-4.3" />
-          </svg>
+      {/* Search Input Bar + Optional Scan */}
+      <div className="flex gap-2 basis-full sm:basis-auto sm:flex-1 sm:min-w-[240px]">
+        <div className="relative flex-1 min-w-0">
+          <label htmlFor="product-search" className="sr-only">
+            Cari produk, kode, atau barcode
+          </label>
+          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#6B7773]">
+            <svg
+              aria-hidden="true"
+              className="w-4 h-4 stroke-current"
+              fill="none"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              viewBox="0 0 24 24"
+            >
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.3-4.3" />
+            </svg>
+          </div>
+          <input
+            id="product-search"
+            type="search"
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            placeholder="Cari nama, kode produk, atau barcode…"
+            className="w-full min-h-11 lg:min-h-[40px] pl-9 pr-4 bg-white border border-[#E1E4E0] rounded-lg text-[13px] text-[#1F2A27] placeholder:text-[#6B7773] focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15 transition-all"
+          />
         </div>
-        <input
-          id="product-search"
-          type="search"
-          value={searchQuery}
-          onChange={(e) => onSearchChange(e.target.value)}
-          placeholder="Cari nama, kode produk, atau barcode…"
-          className="w-full min-h-11 lg:min-h-[40px] pl-9 pr-4 bg-white border border-[#E1E4E0] rounded-lg text-[13px] text-[#1F2A27] placeholder:text-[#6B7773] focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15 transition-all"
-        />
+        {typeof onScanBarcode === "function" && (
+          <button
+            type="button"
+            onClick={onScanBarcode}
+            aria-label="Scan barcode untuk cek atau restock produk"
+            className="shrink-0 min-h-11 lg:min-h-[40px] min-w-11 justify-center px-3 rounded-lg border border-[#E1E4E0] bg-white hover:bg-[#F5F6F4] hover:border-[#2F6F5E] text-[#1F2A27] text-[13px] font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+          >
+            <svg
+              aria-hidden="true"
+              className="w-4 h-4 stroke-current text-[#2F6F5E]"
+              fill="none"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              viewBox="0 0 24 24"
+            >
+              <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2" />
+              <path d="M7 8v8M10 8v8M13 8v8M17 8v8" />
+            </svg>
+            <span>Scan</span>
+          </button>
+        )}
       </div>
 
       {/* Filter Kategori */}

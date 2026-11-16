@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useCallback } from "react";
+import dynamic from "next/dynamic";
 import {
   ALL_CATEGORIES,
   buildCategoryList,
@@ -8,7 +9,11 @@ import {
   isLowStock,
   normalizeProduct,
 } from "@/lib/mockProducts";
-import { apiGetProducts } from "@/lib/api";
+import { apiGetProducts, getProductByBarcode } from "@/lib/api";
+
+const BarcodeScanner = dynamic(() => import("@/components/BarcodeScanner"), {
+  ssr: false,
+});
 
 export default function KasirProdukClient() {
   const [products, setProducts] = useState([]);
@@ -16,6 +21,7 @@ export default function KasirProdukClient() {
   const [selectedCategory, setSelectedCategory] = useState(ALL_CATEGORIES);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   // Kasir hanya melihat produk aktif (default backend)
   const loadProducts = useCallback(() => {
@@ -39,6 +45,24 @@ export default function KasirProdukClient() {
   const refreshProducts = () => {
     setLoading(true);
     loadProducts();
+  };
+
+  const handleScanDetected = (rawCode) => {
+    const code = String(rawCode || "").trim();
+    if (!code) return;
+    setSelectedCategory(ALL_CATEGORIES);
+    setSearchQuery(code);
+
+    const existsLocally = products.some(
+      (p) =>
+        (p.barcode || "").toLowerCase() === code.toLowerCase() ||
+        (p.kodeProduk || "").toLowerCase() === code.toLowerCase()
+    );
+    if (!existsLocally) {
+      getProductByBarcode(code)
+        .then(() => loadProducts())
+        .catch(() => {});
+    }
   };
 
   // Kategori diambil dari data produk backend
@@ -80,11 +104,40 @@ export default function KasirProdukClient() {
 
       {/* Search & Filter Toolbar */}
       <div className="flex flex-wrap items-center gap-2.5">
-        {/* Search Bar */}
-        <div className="relative basis-full sm:basis-auto sm:flex-1 sm:min-w-[240px]">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6B7773] pointer-events-none">
+        {/* Search Bar + Optional Scan */}
+        <div className="flex gap-2 basis-full sm:basis-auto sm:flex-1 sm:min-w-[240px]">
+          <div className="relative flex-1 min-w-0">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6B7773] pointer-events-none">
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                viewBox="0 0 24 24"
+              >
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+            </span>
+            <input
+              type="search"
+              placeholder="Cari nama, kode produk, atau barcode…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full h-11 lg:h-9 pl-9 pr-3 border border-[#E1E4E0] rounded-lg text-[13px] text-[#1F2A27] bg-white placeholder:text-[#6B7773] focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15 transition-all"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => setScannerOpen(true)}
+            aria-label="Scan barcode untuk cek produk"
+            className="shrink-0 h-11 lg:h-9 min-w-11 justify-center px-3 inline-flex items-center gap-1.5 border border-[#E1E4E0] rounded-lg bg-white hover:bg-[#F5F6F4] hover:border-[#2F6F5E] text-[13px] font-semibold text-[#1F2A27] transition-colors cursor-pointer"
+          >
             <svg
-              className="w-4 h-4"
+              aria-hidden="true"
+              className="w-4 h-4 text-[#2F6F5E]"
               fill="none"
               stroke="currentColor"
               strokeWidth="2"
@@ -92,17 +145,11 @@ export default function KasirProdukClient() {
               strokeLinejoin="round"
               viewBox="0 0 24 24"
             >
-              <circle cx="11" cy="11" r="8" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2" />
+              <path d="M7 8v8M10 8v8M13 8v8M17 8v8" />
             </svg>
-          </span>
-          <input
-            type="text"
-            placeholder="Cari nama, kode produk, atau barcode…"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full h-11 lg:h-9 pl-9 pr-3 border border-[#E1E4E0] rounded-lg text-[13px] text-[#1F2A27] bg-white placeholder:text-[#6B7773] focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15 transition-all"
-          />
+            <span>Scan</span>
+          </button>
         </div>
 
         {/* Category Filter */}
@@ -236,6 +283,13 @@ export default function KasirProdukClient() {
           </table>
         </div>
       </section>
+
+      <BarcodeScanner
+        open={scannerOpen}
+        continuous={false}
+        onDetected={handleScanDetected}
+        onClose={() => setScannerOpen(false)}
+      />
     </div>
   );
 }
