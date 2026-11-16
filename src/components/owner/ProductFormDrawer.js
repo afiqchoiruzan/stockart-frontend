@@ -197,12 +197,7 @@ function DrawerFormInner({
     const submittedProduct = {
       ...(initialData || {}),
       nama: formData.nama.trim(),
-      kodeProduk: (isEdit ? initialData.kodeProduk || "" : formData.kodeProduk)
-        .trim()
-        .toUpperCase(),
-      // String (bukan Number). "" = tanpa barcode; toBackendProductPayload
-      // mengirimnya sebagai "hapus" bila produk sebelumnya punya barcode.
-      barcode: formData.barcode.trim(),
+      kodeProduk: formData.kodeProduk.trim().toUpperCase(),
       kategori: formData.kategori.trim(),
       satuan: formData.satuan.trim() || "pcs",
       hargaBeli: Math.round(Number(formData.hargaBeli)),
@@ -319,7 +314,7 @@ function DrawerFormInner({
                 setFormData((prev) => ({ ...prev, nama: e.target.value }))
               }
               placeholder="Contoh: Minyak Goreng 1 L"
-              className="w-full min-h-[44px] px-4 border border-[#E1E4E0] rounded-md text-sm bg-white focus:outline-2 focus:outline-[#2F6F5E] focus:border-[#2F6F5E]"
+              className="w-full min-h-11 px-4 border border-[#E1E4E0] rounded-md text-sm bg-white focus:outline-2 focus:outline-[#2F6F5E] focus:border-[#2F6F5E]"
             />
             {errors.nama && (
               <span className="text-xs text-[#C4574F]">{errors.nama}</span>
@@ -332,8 +327,8 @@ function DrawerFormInner({
               htmlFor="field-kodeProduk"
               className="text-sm font-medium text-[#1F2A27]"
             >
-              Kode produk
-              {isEdit && (
+              Kode produk / barcode{" "}
+              {!isEdit && (
                 <span className="font-normal text-xs text-[#6B7773]">
                   {" "}(tidak dapat diubah)
                 </span>
@@ -356,7 +351,7 @@ function DrawerFormInner({
                 }
               }}
               placeholder="Contoh: SM001"
-              className={`w-full min-h-[44px] px-4 border border-[#E1E4E0] rounded-md text-sm font-mono ${
+              className={`w-full min-h-11 px-4 border border-[#E1E4E0] rounded-md text-sm font-mono ${
                 isEdit
                   ? "bg-[#F5F6F4] text-[#6B7773] cursor-not-allowed"
                   : "bg-white focus:outline-2 focus:outline-[#2F6F5E] focus:border-[#2F6F5E]"
@@ -392,7 +387,7 @@ function DrawerFormInner({
                 placeholder="Scan atau ketik barcode kemasan"
                 aria-invalid={Boolean(errors.barcode)}
                 aria-describedby={errors.barcode ? "field-barcode-error" : undefined}
-                className={`flex-1 min-w-0 min-h-[44px] px-4 border rounded-md text-sm font-mono bg-white focus:outline-2 focus:outline-[#2F6F5E] focus:border-[#2F6F5E] ${
+                className={`flex-1 min-w-0 min-h-11 px-4 border rounded-md text-sm font-mono bg-white focus:outline-2 focus:outline-[#2F6F5E] focus:border-[#2F6F5E] ${
                   errors.barcode ? "border-[#C4574F]" : "border-[#E1E4E0]"
                 }`}
               />
@@ -401,7 +396,7 @@ function DrawerFormInner({
                 onClick={() => setScannerOpen(true)}
                 disabled={isSubmitting}
                 aria-label="Scan barcode dengan kamera"
-                className="shrink-0 min-h-[44px] px-3 inline-flex items-center gap-1.5 border border-[#2F6F5E] rounded-md bg-[#E6F0ED] text-[#2F6F5E] text-sm font-semibold hover:bg-[#d5e6e1] transition-colors cursor-pointer disabled:opacity-50"
+                className="shrink-0 min-h-11 px-3 inline-flex items-center gap-1.5 border border-[#2F6F5E] rounded-md bg-[#E6F0ED] text-[#2F6F5E] text-sm font-semibold hover:bg-[#d5e6e1] transition-colors cursor-pointer disabled:opacity-50"
               >
                 <svg
                   aria-hidden="true"
@@ -434,7 +429,7 @@ function DrawerFormInner({
                   <button
                     type="button"
                     onClick={() => setPendingBarcode(null)}
-                    className="min-h-[32px] px-3 border border-[#E1E4E0] rounded-md bg-white text-[#1F2A27] font-semibold text-xs hover:bg-[#F5F6F4] transition-colors cursor-pointer"
+                    className="min-h-8 px-3 border border-[#E1E4E0] rounded-md bg-white text-[#1F2A27] font-semibold text-xs hover:bg-[#F5F6F4] transition-colors cursor-pointer"
                   >
                     Batal
                   </button>
@@ -444,7 +439,7 @@ function DrawerFormInner({
                       setBarcodeValue(pendingBarcode);
                       setPendingBarcode(null);
                     }}
-                    className="min-h-[32px] px-3 border border-[#2F6F5E] rounded-md bg-[#2F6F5E] text-white font-semibold text-xs hover:bg-[#255a4c] transition-colors cursor-pointer"
+                    className="min-h-8 px-3 border border-[#2F6F5E] rounded-md bg-[#2F6F5E] text-white font-semibold text-xs hover:bg-[#255a4c] transition-colors cursor-pointer"
                   >
                     Ganti barcode
                   </button>
@@ -477,7 +472,7 @@ function DrawerFormInner({
                 onChange={(e) =>
                   setFormData((prev) => ({ ...prev, kategori: e.target.value }))
                 }
-                className="w-full min-h-[44px] px-4 border border-[#E1E4E0] rounded-md text-sm bg-white text-[#1F2A27] focus:outline-2 focus:outline-[#2F6F5E] focus:border-[#2F6F5E] cursor-pointer"
+                className="w-full min-h-11 px-4 border border-[#E1E4E0] rounded-md text-sm bg-white text-[#1F2A27] focus:outline-2 focus:outline-[#2F6F5E] focus:border-[#2F6F5E] cursor-pointer"
               >
                 {availableCategories.map((c) => (
                   <option key={c} value={c}>
@@ -506,7 +501,7 @@ function DrawerFormInner({
                   setFormData((prev) => ({ ...prev, satuan: e.target.value }))
                 }
                 placeholder="pcs"
-                className="w-full min-h-[44px] px-4 border border-[#E1E4E0] rounded-md text-sm bg-white focus:outline-2 focus:outline-[#2F6F5E] focus:border-[#2F6F5E]"
+                className="w-full min-h-11 px-4 border border-[#E1E4E0] rounded-md text-sm bg-white focus:outline-2 focus:outline-[#2F6F5E] focus:border-[#2F6F5E]"
               />
               <datalist id="satuan-presets">
                 {SATUAN_PRESETS.map((unit) => (
@@ -538,7 +533,7 @@ function DrawerFormInner({
                   setFormData((prev) => ({ ...prev, hargaBeli: e.target.value }))
                 }
                 placeholder="15000"
-                className="w-full min-h-[44px] px-4 border border-[#E1E4E0] rounded-md text-sm text-right font-semibold tabular-nums bg-white focus:outline-2 focus:outline-[#2F6F5E] focus:border-[#2F6F5E]"
+                className="w-full min-h-11 px-4 border border-[#E1E4E0] rounded-md text-sm text-right font-semibold tabular-nums bg-white focus:outline-2 focus:outline-[#2F6F5E] focus:border-[#2F6F5E]"
               />
               {errors.hargaBeli && (
                 <span className="text-xs text-[#C4574F]">{errors.hargaBeli}</span>
@@ -562,7 +557,7 @@ function DrawerFormInner({
                   setFormData((prev) => ({ ...prev, hargaJual: e.target.value }))
                 }
                 placeholder="18000"
-                className="w-full min-h-[44px] px-4 border border-[#E1E4E0] rounded-md text-sm text-right font-semibold tabular-nums bg-white focus:outline-2 focus:outline-[#2F6F5E] focus:border-[#2F6F5E]"
+                className="w-full min-h-11 px-4 border border-[#E1E4E0] rounded-md text-sm text-right font-semibold tabular-nums bg-white focus:outline-2 focus:outline-[#2F6F5E] focus:border-[#2F6F5E]"
               />
               {errors.hargaJual && (
                 <span className="text-xs text-[#C4574F]">{errors.hargaJual}</span>
@@ -593,7 +588,7 @@ function DrawerFormInner({
                   setFormData((prev) => ({ ...prev, stok: val }));
                 }}
                 placeholder="10"
-                className="w-full min-h-[44px] px-4 border border-[#E1E4E0] rounded-md text-sm text-right font-semibold tabular-nums bg-white focus:outline-2 focus:outline-[#2F6F5E] focus:border-[#2F6F5E]"
+                className="w-full min-h-11 px-4 border border-[#E1E4E0] rounded-md text-sm text-right font-semibold tabular-nums bg-white focus:outline-2 focus:outline-[#2F6F5E] focus:border-[#2F6F5E]"
               />
               <div className="flex items-center gap-1.5 flex-wrap pt-1">
                 {[5, 10, 20].map((preset) => (
@@ -660,7 +655,7 @@ function DrawerFormInner({
                   }));
                 }}
                 placeholder="5"
-                className="w-full min-h-[44px] px-4 border border-[#E1E4E0] rounded-md text-sm text-right font-semibold tabular-nums bg-white focus:outline-2 focus:outline-[#2F6F5E] focus:border-[#2F6F5E]"
+                className="w-full min-h-11 px-4 border border-[#E1E4E0] rounded-md text-sm text-right font-semibold tabular-nums bg-white focus:outline-2 focus:outline-[#2F6F5E] focus:border-[#2F6F5E]"
               />
               <span className="text-xs text-[#6B7773]">
                 Pengingat dikirim ke email saat stok sama atau di bawah angka ini.
@@ -713,7 +708,7 @@ function DrawerFormInner({
                     type="button"
                     onClick={() => onDeactivate?.(initialData.id)}
                     disabled={isSubmitting}
-                    className="min-h-[40px] px-3 py-2 border border-[#E1E4E0] rounded-md bg-white text-[#1F2A27] font-semibold text-xs hover:bg-[#F5F6F4] transition-colors cursor-pointer disabled:opacity-50"
+                    className="min-h-10 px-3 py-2 border border-[#E1E4E0] rounded-md bg-white text-[#1F2A27] font-semibold text-xs hover:bg-[#F5F6F4] transition-colors cursor-pointer disabled:opacity-50"
                   >
                     Nonaktifkan
                   </button>
@@ -722,7 +717,7 @@ function DrawerFormInner({
                     type="button"
                     onClick={() => onRestore?.(initialData.id)}
                     disabled={isSubmitting}
-                    className="min-h-[40px] px-3 py-2 border border-[#2F6F5E] rounded-md bg-[#E6F0ED] text-[#2F6F5E] font-semibold text-xs hover:bg-[#d5e6e1] transition-colors cursor-pointer disabled:opacity-50"
+                    className="min-h-10 px-3 py-2 border border-[#2F6F5E] rounded-md bg-[#E6F0ED] text-[#2F6F5E] font-semibold text-xs hover:bg-[#d5e6e1] transition-colors cursor-pointer disabled:opacity-50"
                   >
                     Aktifkan kembali
                   </button>
@@ -732,7 +727,7 @@ function DrawerFormInner({
                   type="button"
                   onClick={() => setConfirmPermanentDelete(true)}
                   disabled={isSubmitting}
-                  className="min-h-[40px] px-3 py-2 border border-[#C4574F] rounded-md bg-white text-[#C4574F] font-semibold text-xs hover:bg-[#F8E8E6] transition-colors cursor-pointer disabled:opacity-50"
+                  className="min-h-10 px-3 py-2 border border-[#C4574F] rounded-md bg-white text-[#C4574F] font-semibold text-xs hover:bg-[#F8E8E6] transition-colors cursor-pointer disabled:opacity-50"
                 >
                   Hapus produk
                 </button>
@@ -748,7 +743,7 @@ function DrawerFormInner({
                     type="button"
                     onClick={() => setConfirmPermanentDelete(false)}
                     disabled={isSubmitting}
-                    className="min-h-[36px] px-3 py-1.5 border border-[#E1E4E0] rounded-md bg-white text-[#1F2A27] font-semibold text-xs hover:bg-[#F5F6F4] transition-colors cursor-pointer"
+                    className="min-h-9 px-3 py-1.5 border border-[#E1E4E0] rounded-md bg-white text-[#1F2A27] font-semibold text-xs hover:bg-[#F5F6F4] transition-colors cursor-pointer"
                   >
                     Batal
                   </button>
@@ -756,7 +751,7 @@ function DrawerFormInner({
                     type="button"
                     onClick={() => onPermanentDelete?.(initialData.id)}
                     disabled={isSubmitting}
-                    className="min-h-[36px] px-3 py-1.5 border border-[#C4574F] rounded-md bg-[#C4574F] text-white font-semibold text-xs hover:bg-[#a9453e] transition-colors cursor-pointer"
+                    className="min-h-9 px-3 py-1.5 border border-[#C4574F] rounded-md bg-[#C4574F] text-white font-semibold text-xs hover:bg-[#a9453e] transition-colors cursor-pointer"
                   >
                     Ya, hapus produk
                   </button>
@@ -773,7 +768,7 @@ function DrawerFormInner({
           type="button"
           onClick={onClose}
           disabled={isSubmitting}
-          className="min-h-[44px] px-4 border border-[#E1E4E0] rounded-md bg-white hover:bg-[#F5F6F4] text-sm font-semibold text-[#1F2A27] transition-colors cursor-pointer"
+          className="min-h-11 px-4 border border-[#E1E4E0] rounded-md bg-white hover:bg-[#F5F6F4] text-sm font-semibold text-[#1F2A27] transition-colors cursor-pointer"
         >
           Batal
         </button>
@@ -781,7 +776,7 @@ function DrawerFormInner({
           type="submit"
           form="product-drawer-form"
           disabled={isSaveDisabled}
-          className="min-h-[44px] px-5 rounded-md bg-[#2F6F5E] hover:bg-[#255a4c] text-white text-sm font-semibold flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+          className="min-h-11 px-5 rounded-md bg-[#2F6F5E] hover:bg-[#255a4c] text-white text-sm font-semibold flex items-center gap-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         >
           <svg
             aria-hidden="true"
@@ -864,7 +859,7 @@ export default function ProductFormDrawer({
       />
 
       {/* Modal / Drawer Panel (Sesuai Hi-Fi stockart-pos.html) */}
-      <div className="relative w-full max-w-[480px] max-h-[calc(100vh-32px)] bg-white border border-[#E1E4E0] rounded-lg flex flex-col justify-between shadow-xl z-10 overflow-hidden">
+      <div className="relative w-full max-w-120 max-h-[calc(100vh-32px)] bg-white border border-[#E1E4E0] rounded-lg flex flex-col justify-between shadow-xl z-10 overflow-hidden">
         <div className="p-4 border-b border-[#E1E4E0] flex items-center justify-between bg-white shrink-0">
           <h2 id="drawer-title" className="font-semibold text-sm text-[#1F2A27]">
             {title}
