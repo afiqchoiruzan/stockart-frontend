@@ -559,6 +559,21 @@ export default function KasirTransaksiClient() {
     }
   };
 
+  // Tampilan saja: di mobile/tablet bar ringkasan melayang hanya muncul saat
+  // panel Pesanan sudah keluar dari layar, agar tidak menutupi form pembayaran.
+  const cartPanelRef = useRef(null);
+  const [isCartPanelVisible, setIsCartPanelVisible] = useState(true);
+  useEffect(() => {
+    const el = cartPanelRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return undefined;
+    const observer = new IntersectionObserver(([entry]) =>
+      setIsCartPanelVisible(entry.isIntersecting)
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+  const showFloatingCartBar = cart.length > 0 && !isCartPanelVisible;
+
   // Close invoice and go back to POS
   const handleCloseInvoice = () => {
     setShowInvoice(false);
@@ -590,10 +605,12 @@ export default function KasirTransaksiClient() {
 
       {/* Split POS Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_360px] gap-4 items-start">
-        {/* Left: Product Search & Catalog */}
-        <div className="flex flex-col gap-3 min-w-0">
+        {/* Left: Product Search & Catalog.
+            Di < 1024px wrapper ini "contents" agar anak-anaknya bisa diurutkan
+            bersama panel Pesanan: cari/scan -> Pesanan & bayar -> kategori -> produk. */}
+        <div className="contents lg:flex lg:flex-col lg:gap-3 lg:min-w-0">
           {/* Search Bar + tombol Scan kamera */}
-          <div className="flex gap-2 w-full">
+          <div className="order-1 lg:order-none flex gap-2 w-full">
             <div className="relative flex-1 min-w-0">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6B7773] pointer-events-none">
                 <svg
@@ -646,7 +663,7 @@ export default function KasirTransaksiClient() {
           </div>
 
           {/* Category Filter Chips: scroll horizontal di mobile, wrap di layar lebih besar */}
-          <div className="flex gap-1.5 overflow-x-auto pb-1 -mb-1 sm:flex-wrap sm:overflow-visible sm:pb-0 sm:mb-0">
+          <div className="order-3 lg:order-none min-w-0 flex gap-1.5 overflow-x-auto pb-1 -mb-1 sm:flex-wrap sm:overflow-visible sm:pb-0 sm:mb-0">
             {categoryList.map((cat) => {
               const active = selectedCategory === cat;
               return (
@@ -667,17 +684,17 @@ export default function KasirTransaksiClient() {
 
           {/* Product Grid */}
           {loadingProducts && products.length === 0 ? (
-            <div className="p-8 bg-white border border-[#E1E4E0] rounded-lg text-center text-[13px] text-[#6B7773]">
+            <div className="order-4 lg:order-none p-8 bg-white border border-[#E1E4E0] rounded-lg text-center text-[13px] text-[#6B7773]">
               Memuat produk dari server…
             </div>
           ) : filteredProducts.length === 0 ? (
-            <div className="p-8 bg-white border border-[#E1E4E0] rounded-lg text-center text-[13px] text-[#6B7773]">
+            <div className="order-4 lg:order-none p-8 bg-white border border-[#E1E4E0] rounded-lg text-center text-[13px] text-[#6B7773]">
               {products.length === 0
                 ? "Belum ada produk aktif di database."
                 : "Produk tidak ditemukan."}
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-2 sm:gap-2.5">
+            <div className="order-4 lg:order-none grid grid-cols-2 md:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-2 sm:gap-2.5">
               {filteredProducts.map((product) => {
                 const prodId = product.id;
                 const price = product.hargaJual;
@@ -734,7 +751,8 @@ export default function KasirTransaksiClient() {
         {/* Right: Cart & Payment Panel */}
         <div
           id="pesanan"
-          className="scroll-mt-20 bg-white border border-[#E1E4E0] rounded-lg flex flex-col lg:sticky lg:top-4 lg:max-h-[calc(100vh-88px)] overflow-hidden"
+          ref={cartPanelRef}
+          className="order-2 lg:order-none scroll-mt-20 bg-white border border-[#E1E4E0] rounded-lg flex flex-col lg:sticky lg:top-4 lg:max-h-[calc(100vh-88px)] overflow-hidden"
         >
           {/* Cart Header */}
           <div className="px-4 py-3 border-b border-[#E1E4E0] flex items-center justify-between">
@@ -758,9 +776,9 @@ export default function KasirTransaksiClient() {
           </div>
 
           {/* Cart Items */}
-          <div className="flex-1 overflow-y-auto px-3.5 py-2 divide-y divide-[#EEF0EC] min-h-[120px] lg:min-h-[160px]">
+          <div className="flex-1 overflow-y-auto px-3.5 py-2 divide-y divide-[#EEF0EC] max-h-[35dvh] lg:max-h-none lg:min-h-[160px]">
             {cart.length === 0 ? (
-              <div className="py-10 text-center text-xs text-[#6B7773]">
+              <div className="py-4 lg:py-10 text-center text-xs text-[#6B7773]">
                 Klik produk atau scan barcode untuk menambahkan ke pesanan.
               </div>
             ) : (
@@ -920,9 +938,9 @@ export default function KasirTransaksiClient() {
         </div>
       </div>
 
-      {/* Ringkasan pesanan melayang (mobile & tablet): keranjang berada di bawah
-          katalog, jadi tampilkan total dan pintasan ke panel Pesanan. */}
-      {cart.length > 0 && (
+      {/* Ringkasan pesanan melayang (mobile & tablet): saat kasir sudah scroll ke
+          daftar produk, tampilkan total dan pintasan kembali ke panel pembayaran. */}
+      {showFloatingCartBar && (
         <a
           href="#pesanan"
           className="lg:hidden fixed inset-x-3 bottom-3 z-30 min-h-14 px-4 py-2.5 rounded-xl bg-[#2F6F5E] text-white shadow-lg flex items-center justify-between gap-3"
@@ -934,7 +952,7 @@ export default function KasirTransaksiClient() {
             </span>
           </span>
           <span className="shrink-0 inline-flex items-center gap-1 text-[13px] font-semibold">
-            Lihat pesanan
+            Ke pembayaran
             <svg
               aria-hidden="true"
               className="w-4 h-4"
@@ -945,7 +963,7 @@ export default function KasirTransaksiClient() {
               strokeLinejoin="round"
               viewBox="0 0 24 24"
             >
-              <path d="m6 9 6 6 6-6" />
+              <path d="m18 15-6-6-6 6" />
             </svg>
           </span>
         </a>
