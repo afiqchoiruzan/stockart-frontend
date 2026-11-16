@@ -240,7 +240,7 @@ export default function OwnerLaporanPage() {
 
   const handleExportCsv = () => {
     const rows = [
-      ["Laporan StockArt", periodLabel],
+      ["Laporan Stockart", periodLabel],
       [],
       ["Ringkasan"],
       ["Omzet", summary.totalOmzet],
