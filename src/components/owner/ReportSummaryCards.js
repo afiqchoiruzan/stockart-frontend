@@ -93,18 +93,23 @@ export default function ReportSummaryCards({
         </div>
 
         <div className={CARD_CLASS}>
-          <span className="text-[11px] text-[#6B7773]">Laba Kotor</span>
+          <span className="flex items-center gap-1.5 text-[11px] text-[#6B7773]">
+            Laba Kotor
+            {summary.labaEstimasi && (
+              <span
+                title="Sebagian transaksi lama belum menyimpan harga beli, jadi labanya dihitung dengan harga beli saat ini."
+                className="inline-flex items-center px-1.5 py-0.5 rounded bg-[#FBF1DC] text-[10px] font-semibold text-[#7a5612] cursor-help"
+              >
+                Estimasi
+              </span>
+            )}
+          </span>
           <span
             className={`${VALUE_CLASS} ${
               Number(summary.totalLaba || 0) < 0 ? "text-[#C4574F]" : "text-[#1F2A27]"
             }`}
           >
             {formatRupiah(summary.totalLaba)}
-          </span>
-          <span className="text-[11px] text-[#6B7773]">
-            {summary.labaEstimasi
-              ? "Estimasi: sebagian transaksi lama memakai harga beli saat ini"
-              : "Omzet dikurangi harga beli barang terjual"}
           </span>
           <ChangeBadge
             current={summary.totalLaba}
@@ -118,9 +123,6 @@ export default function ReportSummaryCards({
           <span className={`${VALUE_CLASS} text-[#1F2A27]`}>
             {formatPcs(summary.totalTerjual)}
           </span>
-          <span className="text-[11px] text-[#6B7773]">
-            Dihitung dari transaksi selesai
-          </span>
           <ChangeBadge
             current={summary.totalTerjual}
             previous={hasPrev ? prev.totalTerjual : null}
@@ -133,14 +135,7 @@ export default function ReportSummaryCards({
           <span className={`${VALUE_CLASS} text-[#1F2A27]`}>
             +{formatPcs(summary.totalMasuk)}
           </span>
-          <span className="text-[11px] text-[#6B7773]">
-            Dari produk baru &amp; restock
-          </span>
-          <ChangeBadge
-            current={summary.totalMasuk}
-            previous={hasPrev ? prev.totalMasuk : null}
-            compareLabel={compareLabel}
-          />
+          {/* Tanpa pembanding: barang masuk mengikuti kebutuhan restock, bukan ukuran kinerja */}
         </div>
       </div>
     </section>
