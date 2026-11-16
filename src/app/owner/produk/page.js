@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useCallback } from "react";
+import dynamic from "next/dynamic";
 import { CATEGORIES, LOW_STOCK_THRESHOLD, formatRupiah } from "@/lib/mockProducts";
 import {
   fetchProductsFromApi,
@@ -17,6 +18,10 @@ import LowStockDropdown from "@/components/owner/LowStockDropdown";
 import LowStockAlertSettingsModal from "@/components/owner/LowStockAlertSettingsModal";
 import ProductToolbar from "@/components/owner/ProductToolbar";
 import ProductFormDrawer from "@/components/owner/ProductFormDrawer";
+
+const BarcodeScanner = dynamic(() => import("@/components/BarcodeScanner"), {
+  ssr: false,
+});
 
 function matchesStatusFilter(product, filter) {
   if (filter === "all") return true;
@@ -56,6 +61,7 @@ export default function OwnerProdukPage() {
   const [drawerMode, setDrawerMode] = useState("add"); // 'add' | 'edit'
   const [activeProduct, setActiveProduct] = useState(null);
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   const [statusMessage, setStatusMessage] = useState("");
 
@@ -140,14 +146,14 @@ export default function OwnerProdukPage() {
   // Shortcut F2 untuk fokus ke kotak pencarian
   useEffect(() => {
     function handleKeyDown(e) {
-      if (e.key === "F2" && !isDrawerOpen) {
+      if (e.key === "F2" && !isDrawerOpen && !isScheduleModalOpen && !scannerOpen) {
         e.preventDefault();
         document.getElementById("product-search")?.focus();
       }
     }
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isDrawerOpen]);
+  }, [isDrawerOpen, isScheduleModalOpen, scannerOpen]);
 
   const lowStockProducts = useMemo(() => {
     if (lowStockProductsApi.length > 0) {
@@ -419,6 +425,7 @@ export default function OwnerProdukPage() {
       <ProductToolbar
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
+        onScanBarcode={() => setScannerOpen(true)}
         selectedCategory={selectedCategory}
         onCategoryChange={setSelectedCategory}
         statusFilter={statusFilter}
@@ -603,6 +610,19 @@ export default function OwnerProdukPage() {
         onSaved={() => {
           showFlashMessage("Jadwal alert low stock berhasil diperbarui.");
         }}
+      />
+
+      {/* Scanner Barcode opsional untuk cari / cek stok / restock produk */}
+      <BarcodeScanner
+        open={scannerOpen}
+        continuous={false}
+        onDetected={(code) => {
+          const scanned = String(code || "").trim();
+          if (!scanned) return;
+          setSelectedCategory("Semua Kategori");
+          setSearchQuery(scanned);
+        }}
+        onClose={() => setScannerOpen(false)}
       />
     </div>
   );
