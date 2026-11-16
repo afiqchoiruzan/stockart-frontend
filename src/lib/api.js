@@ -304,7 +304,16 @@ export async function apiRequest(path, options = {}) {
           )
           .filter(Boolean)
       : [];
-    const baseMessage = payload.message || `Permintaan API gagal (${response.status})`;
+    const rawErrorDetail =
+      typeof payload.error === "string" ? payload.error.trim() : "";
+    const isDupKodeError =
+      /E11000|duplicate key/i.test(rawErrorDetail) &&
+      !/sudah digunakan/i.test(payload.message || "");
+    const baseMessage = isDupKodeError
+      ? "Kode produk sudah digunakan oleh produk lain"
+      : payload.message ||
+        (rawErrorDetail && detailErrors.length === 0 ? rawErrorDetail : "") ||
+        `Permintaan API gagal (${response.status})`;
     const fullMessage =
       detailErrors.length > 0 ? `${baseMessage}: ${detailErrors.join(", ")}` : baseMessage;
     const err = new Error(fullMessage);

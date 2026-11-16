@@ -177,7 +177,7 @@ function DrawerFormInner({
       hargaJual: hargaJualRounded,
       harga: hargaJualRounded,
       stok: Math.max(0, Math.round(Number(formData.stok))),
-      stokMinimum: Math.round(Number(formData.stokMinimum)),
+      stokMinimum: Math.max(0, Math.round(Number(formData.stokMinimum))),
       deskripsi: formData.deskripsi.trim(),
       aktif: isEdit ? initialData.aktif !== false : true,
     };
@@ -413,9 +413,16 @@ function DrawerFormInner({
                 min="0"
                 step="1"
                 value={formData.stok}
-                onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, stok: e.target.value }))
-                }
+                onKeyDown={(e) => {
+                  if (e.key === "-" || e.key === "e" || e.key === "E") {
+                    e.preventDefault();
+                  }
+                }}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val !== "" && Number(val) < 0) return;
+                  setFormData((prev) => ({ ...prev, stok: val }));
+                }}
                 placeholder="10"
                 className="w-full min-h-[44px] px-4 border border-[#E1E4E0] rounded-md text-sm text-right font-semibold tabular-nums bg-white focus:outline-2 focus:outline-[#2F6F5E] focus:border-[#2F6F5E]"
               />
@@ -470,12 +477,19 @@ function DrawerFormInner({
                 min="0"
                 step="1"
                 value={formData.stokMinimum}
-                onChange={(e) =>
+                onKeyDown={(e) => {
+                  if (e.key === "-" || e.key === "e" || e.key === "E") {
+                    e.preventDefault();
+                  }
+                }}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val !== "" && Number(val) < 0) return;
                   setFormData((prev) => ({
                     ...prev,
-                    stokMinimum: e.target.value,
-                  }))
-                }
+                    stokMinimum: val,
+                  }));
+                }}
                 placeholder="5"
                 className="w-full min-h-[44px] px-4 border border-[#E1E4E0] rounded-md text-sm text-right font-semibold tabular-nums bg-white focus:outline-2 focus:outline-[#2F6F5E] focus:border-[#2F6F5E]"
               />
