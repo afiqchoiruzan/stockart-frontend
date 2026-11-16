@@ -118,7 +118,9 @@ function ScannerModal({ onDetected, onClose, feedback, continuous }) {
       if (!AudioCtx) return;
       if (!audioCtxRef.current) audioCtxRef.current = new AudioCtx();
       const ctx = audioCtxRef.current;
-      if (ctx.state === "suspended") ctx.resume();
+      // resume() bisa ditolak (mis. modal ditutup sebelum audio diizinkan);
+      // tangkap agar tidak menjadi unhandled rejection.
+      if (ctx.state === "suspended") ctx.resume().catch(() => {});
 
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
