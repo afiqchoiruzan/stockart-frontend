@@ -64,6 +64,17 @@ export default function TransactionToolbar({
         />
       </div>
 
+      {/* Reset Filter Button */}
+      {hasActiveFilter && (
+        <button
+          type="button"
+          onClick={handleResetAll}
+          className="min-h-[40px] px-3.5 bg-[#FEF2F2] hover:bg-[#FEE2E2] border border-[#FECACA] rounded-lg text-xs font-semibold text-[#B91C1C] transition-colors cursor-pointer shrink-0"
+        >
+          Reset filter
+        </button>
+      )}
+
       {/* Dropdown Pilih Kasir */}
       {showKasirFilter && (
         <div>
@@ -120,17 +131,6 @@ export default function TransactionToolbar({
           className="min-h-[40px] px-3.5 bg-white border border-[#E1E4E0] rounded-lg text-[13px] text-[#1F2A27] focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15"
         />
       </div>
-
-      {/* Reset Filter Button */}
-      {hasActiveFilter && (
-        <button
-          type="button"
-          onClick={handleResetAll}
-          className="min-h-[40px] px-3.5 bg-white hover:bg-[#F5F6F4] border border-[#E1E4E0] rounded-lg text-xs font-semibold text-[#1F2A27] transition-colors cursor-pointer"
-        >
-          Reset filter
-        </button>
-      )}
     </div>
   );
 }
