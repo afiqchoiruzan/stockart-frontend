@@ -151,9 +151,15 @@ function ModalContent({
     }
   };
 
-  const lastStatusMeta = serverData?.lastDigestStatus
-    ? STATUS_META[serverData.lastDigestStatus] || {
-        label: serverData.lastDigestStatus,
+  const effectiveLastStatus =
+    serverData?.emailConfigured &&
+    serverData?.lastDigestStatus === "email_not_configured"
+      ? null
+      : serverData?.lastDigestStatus;
+
+  const lastStatusMeta = effectiveLastStatus
+    ? STATUS_META[effectiveLastStatus] || {
+        label: effectiveLastStatus,
         badgeClass: "bg-[#F5F6F4] text-[#6B7773]",
       }
     : null;
