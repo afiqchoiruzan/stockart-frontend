@@ -151,10 +151,7 @@ export default function LowStockDropdown({
           </div>
 
           {typeof onOpenScheduleSettings === "function" && (
-            <div className="p-3.5 border-t border-[#E1E4E0] bg-[#F5F6F4] flex items-center justify-between gap-2">
-              <span className="text-xs text-[#6B7773] leading-tight">
-                Atur jadwal &amp; kirim rekap email
-              </span>
+            <div className="p-3.5 border-t border-[#E1E4E0] bg-[#F5F6F4] flex items-center justify-start">
               <button
                 type="button"
                 onClick={() => {
