@@ -3,7 +3,7 @@
 import { formatRupiah } from "@/lib/mockProducts";
 
 /**
- * products: [{ produkId, namaProduk, totalTerjual, totalPendapatan }]
+ * products: [{ produkId, namaProduk, totalTerjual, totalPendapatan, totalLaba }]
  */
 export default function TopProductsPanel({ products = [] }) {
   return (
@@ -37,6 +37,12 @@ export default function TopProductsPanel({ products = [] }) {
                   </p>
                   <p className="text-[11px] text-[#6B7773] font-mono">
                     {formatRupiah(item.totalPendapatan)}
+                    {item.totalLaba !== undefined && (
+                      <>
+                        {" "}
+                        &middot; laba {formatRupiah(item.totalLaba)}
+                      </>
+                    )}
                   </p>
                 </div>
               </div>

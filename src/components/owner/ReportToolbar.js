@@ -4,12 +4,19 @@ export const REPORT_PERIODS = [
   { value: "harian", label: "Harian" },
   { value: "mingguan", label: "Mingguan" },
   { value: "bulanan", label: "Bulanan" },
+  { value: "kustom", label: "Kustom" },
 ];
+
+const DATE_INPUT_CLASS =
+  "min-h-10 lg:min-h-[34px] px-2.5 bg-white border border-[#E1E4E0] rounded-lg text-[13px] text-[#1F2A27] focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15";
 
 export default function ReportToolbar({
   period,
   onPeriodChange,
   periodLabel,
+  customRange = null,
+  onCustomRangeChange,
+  maxDate,
   onDownloadPdf,
   isDownloadDisabled = false,
   isDownloading = false,
@@ -43,6 +50,38 @@ export default function ReportToolbar({
             );
           })}
         </div>
+
+        {/* Rentang tanggal kustom */}
+        {period === "kustom" && customRange && (
+          <div className="flex w-full sm:w-auto items-center gap-2">
+            <label htmlFor="report-date-start" className="sr-only">
+              Tanggal mulai
+            </label>
+            <input
+              id="report-date-start"
+              type="date"
+              value={customRange.tanggalMulai}
+              max={customRange.tanggalAkhir || maxDate}
+              onChange={(e) => onCustomRangeChange("tanggalMulai", e.target.value)}
+              className={`flex-1 sm:flex-none ${DATE_INPUT_CLASS}`}
+            />
+            <span aria-hidden="true" className="text-[13px] text-[#6B7773]">
+              –
+            </span>
+            <label htmlFor="report-date-end" className="sr-only">
+              Tanggal akhir
+            </label>
+            <input
+              id="report-date-end"
+              type="date"
+              value={customRange.tanggalAkhir}
+              min={customRange.tanggalMulai}
+              max={maxDate}
+              onChange={(e) => onCustomRangeChange("tanggalAkhir", e.target.value)}
+              className={`flex-1 sm:flex-none ${DATE_INPUT_CLASS}`}
+            />
+          </div>
+        )}
 
         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-[#E6F0ED] text-[#2F6F5E] border border-[#2F6F5E]/25">
           Periode: {periodLabel}
