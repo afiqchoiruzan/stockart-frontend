@@ -715,6 +715,29 @@ export async function apiCheckout(detailBarang) {
   });
 }
 
+// ========== PAYMENTS API (QRIS Midtrans sandbox) ==========
+
+/**
+ * Membuat transaksi QRIS berstatus pending + QR dinamis (POST /api/payments/qris).
+ * Body sama dengan checkout. Stok BELUM dipotong; status paid hanya diubah webhook.
+ * Respons `data`: transaksi + `qrString`, `expiresAt`, `gatewayRef`, `qrImageUrl`.
+ */
+export async function apiCreateQrisPayment(detailBarang) {
+  return apiFetch("/api/payments/qris", {
+    method: "POST",
+    body: JSON.stringify({ detailBarang }),
+  });
+}
+
+/**
+ * Status pembayaran untuk polling (GET /api/transactions/:id/status).
+ * `data.paymentStatus`: 'pending' | 'paid' | 'expired' | 'failed'.
+ * Endpoint ini hanya membaca; tidak pernah mengubah status menjadi paid.
+ */
+export async function apiGetTransactionStatus(id) {
+  return apiFetch(`/api/transactions/${id}/status`);
+}
+
 export async function apiVoidTransaction(id) {
   return apiFetch(`/api/transactions/${id}/void`, {
     method: "PATCH",

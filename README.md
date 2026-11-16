@@ -100,6 +100,65 @@ src/components/owner/ProductFormDrawer.js   # field Barcode + Scan + konfirmasi 
 src/lib/api.js                              # getProductByBarcode, barcode di normalisasi & payload
 ```
 
+## Pembayaran QRIS (Midtrans Sandbox)
+
+Kasir bisa menerima pembayaran **QRIS dinamis** di halaman Transaksi (`/kasir/transaksi`).
+Saat ini **hanya sandbox**: tidak ada uang asli, pembayaran dilakukan lewat simulator Midtrans.
+Detail backend (endpoint, webhook, idempotensi) ada di `../stockart-backend/QRIS_PAYMENT.md`.
+
+### Alur di kasir
+
+1. Isi keranjang, pilih **QRIS**, klik **Bayar** (atau `F9`).
+2. Backend menyimpan transaksi **pending** (stok belum dipotong) dan membuat QR di Midtrans.
+   Modal menampilkan QR, total, nomor invoice, dan hitung mundur masa berlaku (15 menit).
+3. Pelanggan memindai QR. Frontend mengecek `GET /api/transactions/:id/status` setiap **2,5 detik**.
+4. Midtrans mengirim webhook ke backend → backend memverifikasi signature, menandai **paid**, dan memotong stok.
+   Status *paid* **tidak pernah** di-set dari frontend.
+5. Begitu polling melihat *paid*: modal tertutup, keranjang dikosongkan, struk (metode QRIS) tampil.
+
+| Kondisi | Tampilan di modal |
+|---|---|
+| Membuat QR gagal (mis. key Midtrans belum diatur) | Pesan error + **Coba lagi** |
+| Waktu habis (`expired`) atau ditolak (`failed`) | Pesan + **Buat QR ulang** (membuat transaksi & QR baru) |
+| Backend sementara tidak terjangkau | "Gagal memeriksa status, mencoba lagi…" — QR tetap tampil, polling lanjut |
+| Uang masuk tapi transaksi bermasalah (`paymentNote`) | Peringatan bahwa uang pelanggan perlu dikembalikan — **bukan** struk sukses |
+
+Polling hanya berjalan selama modal terbuka dan status masih *pending*; berhenti saat modal
+ditutup, status final, QR dibuat ulang, atau pindah halaman. Alur **Tunai** tidak berubah.
+
+### Menjalankan untuk uji
+
+1. **Backend** — isi `stockart-backend/.env` (server key dari https://dashboard.sandbox.midtrans.com →
+   *Settings → Access Keys*, diawali `SB-Mid-server-`). Jangan commit file ini.
+   ```env
+   MIDTRANS_SERVER_KEY=SB-Mid-server-xxxxxxxx
+   MIDTRANS_BASE_URL=https://api.sandbox.midtrans.com
+   ```
+   Jalankan `npm run dev`, lalu cek key dengan `npm run qris:try`.
+2. **Tunnel** — Midtrans butuh URL publik HTTPS untuk webhook:
+   ```bash
+   ngrok config add-authtoken <token>   # sekali saja
+   ngrok http 5000                      # salin URL Forwarding https://....ngrok-free.app
+   ```
+3. **Notification URL** — dashboard sandbox → *Settings → Payment → Notification URL*:
+   `https://<url-ngrok>/api/payments/webhook`. URL ngrok gratis berubah setiap ngrok dijalankan ulang.
+4. **Frontend** — `npm run dev`, login sebagai kasir, buat pembayaran QRIS.
+5. **Bayar** — di modal klik *URL gambar QR (untuk simulator sandbox)*, salin URL-nya, tempel di
+   https://simulator.sandbox.midtrans.com/v2/qris/index, lalu bayar. Struk tampil otomatis dalam ±3 detik.
+
+### Struktur kode terkait
+
+- `src/components/kasir/QrisPaymentModal.js` — modal QR (presentasional): QR (`qrcode.react`), total, hitung mundur, status akhir.
+- `src/app/kasir/transaksi/KasirTransaksiClient.js` — membuat QR, polling status, menyelesaikan transaksi.
+- `src/lib/api.js` — `apiCreateQrisPayment`, `apiGetTransactionStatus`.
+
+### Keterbatasan
+
+- **Batal** hanya menutup modal; QR di Midtrans tetap bisa dibayar sampai kedaluwarsa. Jika dibayar,
+  backend tetap mencatatnya lunas dan memotong stok, tetapi POS tidak lagi menampilkannya.
+- Hitung mundur memakai jam perangkat kasir; status kedaluwarsa resmi tetap ditentukan backend.
+- Uang bayar/kembalian disimpan di `localStorage` (sama seperti tunai), jadi di perangkat lain tampil "-".
+
 ## Referensi Next.js
 
 - [Dokumentasi Next.js](https://nextjs.org/docs)
