@@ -140,7 +140,9 @@ function ScannerModal({ onDetected, onClose, feedback }) {
   // Dipanggil dari loop zxing; useEffectEvent agar selalu memakai props terbaru
   // tanpa memulai ulang kamera.
   const handleScanResult = useEffectEvent((rawText) => {
-    const code = String(rawText || "").trim();
+    // Selalu string (jangan Number): barcode bisa berawalan 0 dan lebih
+    // panjang dari batas presisi angka JavaScript.
+    const code = String(rawText ?? "").trim();
     if (!code) return;
     const now = Date.now();
     const last = lastSeenRef.current;
@@ -183,20 +185,14 @@ function ScannerModal({ onDetected, onClose, feedback }) {
           await Promise.all([import("@zxing/browser"), import("@zxing/library")]);
         if (cancelled) return stopStream(stream);
 
-        // Hanya barcode 1D (kemasan EAN/UPC + Code 128/39 untuk label kodeProduk).
-        // Sengaja tidak memakai BrowserMultiFormatReader: di @zxing/library 0.23
-        // ia mencetak console.warn di setiap frame yang tidak berisi barcode.
+        // Hanya EAN-13 (kemasan; UPC-A ikut terbaca sebagai EAN-13 berawalan 0)
+        // dan Code 128 (label kodeProduk). Sengaja tidak memakai
+        // BrowserMultiFormatReader: di @zxing/library 0.23 ia mencetak
+        // console.warn di setiap frame yang tidak berisi barcode.
         const hints = new Map([
           [
             DecodeHintType.POSSIBLE_FORMATS,
-            [
-              BarcodeFormat.EAN_13,
-              BarcodeFormat.EAN_8,
-              BarcodeFormat.UPC_A,
-              BarcodeFormat.UPC_E,
-              BarcodeFormat.CODE_128,
-              BarcodeFormat.CODE_39,
-            ],
+            [BarcodeFormat.EAN_13, BarcodeFormat.CODE_128],
           ],
         ]);
         const reader = new BrowserMultiFormatOneDReader(hints, {
