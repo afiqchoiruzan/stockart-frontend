@@ -123,6 +123,9 @@ function DrawerFormInner({
     if (!formData.nama.trim()) {
       newErrors.nama = "Nama produk wajib diisi.";
     }
+    if (!isEdit && !formData.kodeProduk.trim()) {
+      newErrors.kodeProduk = "Kode produk wajib diisi.";
+    }
     if (!formData.kategori.trim()) {
       newErrors.kategori = "Kategori wajib dipilih.";
     }
@@ -170,7 +173,9 @@ function DrawerFormInner({
     const submittedProduct = {
       ...(initialData || {}),
       nama: formData.nama.trim(),
-      kodeProduk: formData.kodeProduk.trim().toUpperCase(),
+      kodeProduk: (isEdit ? initialData.kodeProduk || "" : formData.kodeProduk)
+        .trim()
+        .toUpperCase(),
       kategori: formData.kategori.trim(),
       satuan: formData.satuan.trim() || "pcs",
       hargaBeli: Math.round(Number(formData.hargaBeli)),
@@ -271,10 +276,10 @@ function DrawerFormInner({
               htmlFor="field-kodeProduk"
               className="text-sm font-medium text-[#1F2A27]"
             >
-              Kode produk / barcode{" "}
-              {!isEdit && (
+              Kode produk
+              {isEdit && (
                 <span className="font-normal text-xs text-[#6B7773]">
-                  (opsional)
+                  {" "}(tidak dapat diubah)
                 </span>
               )}
             </label>
@@ -282,15 +287,28 @@ function DrawerFormInner({
               id="field-kodeProduk"
               type="text"
               value={formData.kodeProduk}
-              onChange={(e) =>
+              readOnly={isEdit}
+              disabled={isEdit}
+              onChange={(e) => {
+                if (isEdit) return;
                 setFormData((prev) => ({
                   ...prev,
                   kodeProduk: e.target.value.toUpperCase(),
-                }))
-              }
-              placeholder="Otomatis (PRD-...) jika kosong"
-              className="w-full min-h-[44px] px-4 border border-[#E1E4E0] rounded-md text-sm font-mono bg-white focus:outline-2 focus:outline-[#2F6F5E] focus:border-[#2F6F5E]"
+                }));
+                if (errors.kodeProduk) {
+                  setErrors((prev) => ({ ...prev, kodeProduk: undefined }));
+                }
+              }}
+              placeholder="Contoh: SM001"
+              className={`w-full min-h-[44px] px-4 border border-[#E1E4E0] rounded-md text-sm font-mono ${
+                isEdit
+                  ? "bg-[#F5F6F4] text-[#6B7773] cursor-not-allowed"
+                  : "bg-white focus:outline-2 focus:outline-[#2F6F5E] focus:border-[#2F6F5E]"
+              }`}
             />
+            {errors.kodeProduk && (
+              <span className="text-xs text-[#C4574F]">{errors.kodeProduk}</span>
+            )}
           </div>
 
           {/* Kategori & Satuan */}

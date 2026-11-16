@@ -86,11 +86,11 @@ export function toBackendProductPayload(formData, initialData = null) {
     payload.stok = Math.max(0, Math.round(Number(stokRaw || 0)));
   }
 
-  const kodeProduk = String(
-    formData.kodeProduk ?? initialData?.kodeProduk ?? ""
-  ).trim();
-  if (kodeProduk) {
-    payload.kodeProduk = kodeProduk.toUpperCase();
+  if (!initialData) {
+    const kodeProduk = String(formData.kodeProduk ?? "").trim();
+    if (kodeProduk) {
+      payload.kodeProduk = kodeProduk.toUpperCase();
+    }
   }
 
   const rawDeskripsi =
