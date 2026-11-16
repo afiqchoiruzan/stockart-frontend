@@ -434,7 +434,7 @@ export default function OwnerLaporanPage() {
               <ReportAutoSendPanel
                 onSaved={showFlashMessage}
                 onSettingsLoaded={(data) =>
-                  setDefaultRecipient(data?.defaultRecipient || "")
+                  setDefaultRecipient(data?.maskedRecipient || "")
                 }
               />
             </div>

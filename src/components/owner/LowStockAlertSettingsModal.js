@@ -5,7 +5,7 @@ import {
   apiGetLowStockAlertSettings,
   apiUpdateLowStockAlertSettings,
 } from "@/lib/api";
-import { validateOptionalEmailInput } from "@/lib/emailValidation";
+import RecipientEmailRow from "@/components/owner/RecipientEmailRow";
 
 const FREQUENCY_OPTIONS = [
   { value: "off", label: "Mati", desc: "Hanya manual & kritis" },
@@ -79,8 +79,6 @@ function ModalContent({
   const [digestWeekday, setDigestWeekday] = useState(1);
   const [digestDayOfMonth, setDigestDayOfMonth] = useState(1);
   const [criticalAlertEnabled, setCriticalAlertEnabled] = useState(true);
-  const [manualEmail, setManualEmail] = useState("");
-  const [manualEmailError, setManualEmailError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -380,22 +378,21 @@ function ModalContent({
                   />
                 </label>
 
-                {/* Info Jadwal, Penerima Default & Status Terakhir */}
+                {/* Info Jadwal, Penerima & Status Terakhir */}
                 {serverData && (
                   <div className="p-3.5 border border-[#E1E4E0] rounded-md bg-white flex flex-col gap-2 text-xs">
-                    <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5">
-                      <span className="text-[#6B7773]">Email Tujuan Otomatis:</span>
-                      <span
-                        className={`font-medium text-right break-all ${
-                          serverData.defaultRecipient
-                            ? "text-[#1F2A27]"
-                            : "text-[#8c322b]"
-                        }`}
-                      >
-                        {serverData.defaultRecipient ||
-                          "Belum diatur (OWNER_EMAIL di server)"}
-                      </span>
-                    </div>
+                    <RecipientEmailRow
+                      label="Email Tujuan"
+                      maskedRecipient={serverData.maskedRecipient}
+                      isCustomRecipient={Boolean(serverData.isCustomRecipient)}
+                      disabled={isSaving || isNotifying}
+                      onSave={async (nextEmail) => {
+                        const updated = await apiUpdateLowStockAlertSettings({
+                          recipientEmail: nextEmail,
+                        });
+                        setServerData(updated);
+                      }}
+                    />
                     <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5">
                       <span className="text-[#6B7773]">Jadwal Berikutnya:</span>
                       <span className="font-semibold text-[#1F2A27] text-right">
@@ -434,93 +431,46 @@ function ModalContent({
                       )}
                   </div>
                 )}
-                {typeof onNotifyNow === "function" && (
-                  <div className="p-3.5 border border-[#E1E4E0] rounded-md bg-[#FAFBF9] flex flex-col gap-2">
-                    <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
-                      <label
-                        htmlFor="low-stock-manual-email"
-                        className="text-xs font-semibold text-[#1F2A27]"
-                      >
-                        Kirim Rekap Manual Sekarang{" "}
-                        <span className="font-normal text-[#6B7773]">(opsional)</span>
-                      </label>
-                      {serverData?.defaultRecipient && (
-                        <span className="text-[11px] text-[#6B7773]">
-                          Default: {serverData.defaultRecipient}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex flex-col sm:flex-row gap-2">
-                      <input
-                        id="low-stock-manual-email"
-                        type="email"
-                        multiple
-                        autoComplete="email"
-                        value={manualEmail}
-                        onChange={(e) => {
-                          setManualEmail(e.target.value);
-                          if (manualEmailError) setManualEmailError("");
-                        }}
-                        placeholder={
-                          serverData?.defaultRecipient
-                            ? `Kosongkan = ${serverData.defaultRecipient}`
-                            : "Email tujuan (kosongkan = email owner default)"
-                        }
-                        aria-invalid={Boolean(manualEmailError)}
-                        className={`flex-1 min-w-0 min-h-11 lg:min-h-[38px] px-3 bg-white border rounded-md text-xs text-[#1F2A27] placeholder:text-[#6B7773] focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15 ${
-                          manualEmailError ? "border-[#C4574F]" : "border-[#E1E4E0]"
-                        }`}
-                      />
-                      <button
-                        type="button"
-                        disabled={isNotifying || isSaving || isLoading}
-                        onClick={async () => {
-                          const check = validateOptionalEmailInput(manualEmail);
-                          if (!check.valid) {
-                            setManualEmailError(check.error);
-                            return;
-                          }
-                          setManualEmailError("");
-                          const ok = await onNotifyNow(check.value);
-                          if (ok !== false) {
-                            setManualEmail("");
-                          }
-                        }}
-                        className="shrink-0 w-full sm:w-auto min-h-11 lg:min-h-[38px] px-3 border border-[#E1E4E0] bg-white hover:bg-[#E6F0ED] hover:border-[#2F6F5E] hover:text-[#2F6F5E] rounded-md text-xs font-semibold text-[#1F2A27] disabled:opacity-50 transition-colors cursor-pointer"
-                      >
-                        {isNotifying
-                          ? "Mengirim…"
-                          : `Kirim Rekap Sekarang${lowStockCount > 0 ? ` (${lowStockCount})` : ""}`}
-                      </button>
-                    </div>
-                    {manualEmailError && (
-                      <p role="alert" className="text-[11px] text-[#8c322b]">
-                        {manualEmailError}
-                      </p>
-                    )}
-                  </div>
-                )}
               </>
             )}
           </div>
 
-          {/* Footer */}
-          <div className="px-4 sm:px-5 py-3.5 border-t border-[#E1E4E0] bg-[#F5F6F4] flex items-center justify-end gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={isSaving}
-              className="flex-1 sm:flex-none min-h-11 lg:min-h-[38px] px-3.5 border border-[#E1E4E0] bg-white hover:bg-[#F5F6F4] rounded-md text-xs font-semibold text-[#1F2A27] disabled:opacity-50 transition-colors cursor-pointer"
-            >
-              Batal
-            </button>
-            <button
-              type="submit"
-              disabled={isLoading || isSaving || Boolean(loadError) || !hasChanges}
-              className="flex-1 sm:flex-none min-h-11 lg:min-h-[38px] px-4 rounded-md bg-[#2F6F5E] hover:bg-[#255a4c] text-white text-xs font-semibold disabled:opacity-50 transition-colors cursor-pointer"
-            >
-              {isSaving ? "Menyimpan…" : "Simpan Jadwal"}
-            </button>
+          {/* Footer (UI lama: Kirim Rekap Sekarang di kiri sejajar dengan Batal & Simpan Jadwal) */}
+          <div className="px-4 sm:px-5 py-3.5 border-t border-[#E1E4E0] bg-[#F5F6F4] flex flex-col-reverse sm:flex-row sm:flex-wrap sm:items-center justify-between gap-2 shrink-0">
+            {typeof onNotifyNow === "function" ? (
+              <button
+                type="button"
+                disabled={isNotifying || isSaving || isLoading}
+                onClick={async () => {
+                  await onNotifyNow();
+                }}
+                className="w-full sm:w-auto min-h-11 lg:min-h-[38px] px-3 border border-[#E1E4E0] bg-white hover:bg-[#E6F0ED] hover:border-[#2F6F5E] hover:text-[#2F6F5E] rounded-md text-xs font-semibold text-[#1F2A27] disabled:opacity-50 transition-colors cursor-pointer"
+              >
+                {isNotifying
+                  ? "Mengirim…"
+                  : `Kirim Rekap Sekarang${lowStockCount > 0 ? ` (${lowStockCount})` : ""}`}
+              </button>
+            ) : (
+              <span />
+            )}
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={isSaving}
+                className="flex-1 sm:flex-none min-h-11 lg:min-h-[38px] px-3.5 border border-[#E1E4E0] bg-white hover:bg-[#F5F6F4] rounded-md text-xs font-semibold text-[#1F2A27] disabled:opacity-50 transition-colors cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="submit"
+                disabled={isLoading || isSaving || Boolean(loadError) || !hasChanges}
+                className="flex-1 sm:flex-none min-h-11 lg:min-h-[38px] px-4 rounded-md bg-[#2F6F5E] hover:bg-[#255a4c] text-white text-xs font-semibold disabled:opacity-50 transition-colors cursor-pointer"
+              >
+                {isSaving ? "Menyimpan…" : "Simpan Jadwal"}
+              </button>
+            </div>
           </div>
         </form>
       </div>

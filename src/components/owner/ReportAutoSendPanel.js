@@ -5,6 +5,7 @@ import {
   apiGetReportAutoSendSettings,
   apiUpdateReportAutoSendSettings,
 } from "@/lib/api";
+import RecipientEmailRow from "@/components/owner/RecipientEmailRow";
 
 const FREQUENCY_OPTIONS = [
   { value: "daily", label: "Harian", desc: "Laporan kemarin" },
@@ -183,19 +184,9 @@ export default function ReportAutoSendPanel({ onSaved, onSettingsLoaded }) {
       className="bg-white border border-[#E1E4E0] rounded-lg px-4 py-3 flex flex-col gap-2.5"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-0.5 min-w-0">
-          <h2 className="text-sm font-semibold text-[#1F2A27]">
-            Kirim Laporan Otomatis
-          </h2>
-          {serverData && (
-            <span className="text-[11px] text-[#6B7773] break-all">
-              Tujuan:{" "}
-              <strong className="font-medium text-[#1F2A27]">
-                {serverData.defaultRecipient || "Belum diatur (OWNER_EMAIL)"}
-              </strong>
-            </span>
-          )}
-        </div>
+        <h2 className="text-sm font-semibold text-[#1F2A27]">
+          Kirim Laporan Otomatis
+        </h2>
         {serverData && (
           <span className="text-[11px] text-[#6B7773]">
             {serverData.digestFrequency === "off" ? (
@@ -211,6 +202,22 @@ export default function ReportAutoSendPanel({ onSaved, onSettingsLoaded }) {
           </span>
         )}
       </div>
+
+      {serverData && (
+        <RecipientEmailRow
+          label="Email Tujuan"
+          maskedRecipient={serverData.maskedRecipient}
+          isCustomRecipient={Boolean(serverData.isCustomRecipient)}
+          disabled={isSaving}
+          onSave={async (nextEmail) => {
+            const updated = await apiUpdateReportAutoSendSettings({
+              recipientEmail: nextEmail,
+            });
+            applyServerData(updated);
+            onSettingsLoaded?.(updated);
+          }}
+        />
+      )}
 
       {isLoading ? (
         <p className="text-xs text-[#6B7773]">Memuat pengaturan jadwal…</p>
