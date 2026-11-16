@@ -64,14 +64,28 @@ async function openCameraStream(deviceId) {
  *  - open: tampilkan modal & nyalakan kamera
  *  - onDetected(code): dipanggil setiap kode berhasil terbaca / diinput manual
  *  - onClose(): dipanggil saat pengguna menutup modal
+ *  - feedback (opsional): { type: "success" | "error" | "info", message }
+ *    pesan singkat hasil pemrosesan kode, ditampilkan di dalam modal
  * Kamera dimatikan saat modal ditutup atau komponen di-unmount.
  */
-export default function BarcodeScanner({ open, onDetected, onClose }) {
+export default function BarcodeScanner({ open, onDetected, onClose, feedback }) {
   if (!open) return null;
-  return <ScannerModal onDetected={onDetected} onClose={onClose} />;
+  return (
+    <ScannerModal
+      onDetected={onDetected}
+      onClose={onClose}
+      feedback={feedback}
+    />
+  );
 }
 
-function ScannerModal({ onDetected, onClose }) {
+const FEEDBACK_STYLES = {
+  success: "border-[#3E8E6A]/30 bg-[#E6F2EC] text-[#3E8E6A]",
+  error: "border-[#C4574F]/30 bg-[#F8E8E6] text-[#C4574F]",
+  info: "border-[#E1E4E0] bg-[#F5F6F4] text-[#6B7773]",
+};
+
+function ScannerModal({ onDetected, onClose, feedback }) {
   const videoRef = useRef(null);
   const manualInputRef = useRef(null);
   const audioCtxRef = useRef(null);
@@ -341,6 +355,19 @@ function ScannerModal({ onDetected, onClose }) {
               </button>
             )}
           </div>
+
+          {/* Hasil pemrosesan kode dari halaman (mis. "<nama> ditambahkan") */}
+          {feedback?.message && (
+            <div
+              data-testid="scanner-feedback"
+              aria-live="polite"
+              className={`rounded-lg border px-3 py-2 text-xs font-medium ${
+                FEEDBACK_STYLES[feedback.type] || FEEDBACK_STYLES.info
+              }`}
+            >
+              {feedback.message}
+            </div>
+          )}
 
           {/* Input manual sebagai cadangan */}
           <form onSubmit={handleManualSubmit} className="flex gap-2">
