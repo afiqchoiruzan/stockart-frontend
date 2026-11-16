@@ -379,9 +379,7 @@ export default function OwnerProdukPage() {
             <LowStockDropdown
               items={lowStockProducts}
               onSelectProduct={handleOpenEdit}
-              onNotifyEmail={handleNotifyLowStockEmail}
               onOpenScheduleSettings={() => setIsScheduleModalOpen(true)}
-              isNotifying={isNotifyingEmail}
             />
           </div>
         </div>
