@@ -170,7 +170,9 @@ function DrawerFormInner({
     const submittedProduct = {
       ...(initialData || {}),
       nama: formData.nama.trim(),
-      kodeProduk: formData.kodeProduk.trim().toUpperCase(),
+      kodeProduk: (isEdit ? initialData.kodeProduk || "" : formData.kodeProduk)
+        .trim()
+        .toUpperCase(),
       kategori: formData.kategori.trim(),
       satuan: formData.satuan.trim() || "pcs",
       hargaBeli: Math.round(Number(formData.hargaBeli)),
@@ -272,24 +274,29 @@ function DrawerFormInner({
               className="text-sm font-medium text-[#1F2A27]"
             >
               Kode produk / barcode{" "}
-              {!isEdit && (
-                <span className="font-normal text-xs text-[#6B7773]">
-                  (opsional)
-                </span>
-              )}
+              <span className="font-normal text-xs text-[#6B7773]">
+                {isEdit ? "(tidak dapat diubah)" : "(opsional)"}
+              </span>
             </label>
             <input
               id="field-kodeProduk"
               type="text"
               value={formData.kodeProduk}
-              onChange={(e) =>
+              readOnly={isEdit}
+              disabled={isEdit}
+              onChange={(e) => {
+                if (isEdit) return;
                 setFormData((prev) => ({
                   ...prev,
                   kodeProduk: e.target.value.toUpperCase(),
-                }))
-              }
+                }));
+              }}
               placeholder="Otomatis (PRD-...) jika kosong"
-              className="w-full min-h-[44px] px-4 border border-[#E1E4E0] rounded-md text-sm font-mono bg-white focus:outline-2 focus:outline-[#2F6F5E] focus:border-[#2F6F5E]"
+              className={`w-full min-h-[44px] px-4 border border-[#E1E4E0] rounded-md text-sm font-mono ${
+                isEdit
+                  ? "bg-[#F5F6F4] text-[#6B7773] cursor-not-allowed"
+                  : "bg-white focus:outline-2 focus:outline-[#2F6F5E] focus:border-[#2F6F5E]"
+              }`}
             />
           </div>
 
