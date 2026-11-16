@@ -1,6 +1,13 @@
 "use client";
 
-import { useState, useMemo, useEffect, useCallback, useRef } from "react";
+import {
+  useState,
+  useMemo,
+  useEffect,
+  useEffectEvent,
+  useCallback,
+  useRef,
+} from "react";
 import {
   ALL_CATEGORIES,
   buildCategoryList,
@@ -15,8 +22,60 @@ import {
   toDateKey,
   toTimeLabel,
 } from "@/lib/mockTransactions";
-import { apiGetProducts, apiCheckout } from "@/lib/api";
+import {
+  apiGetProducts,
+  apiCheckout,
+  apiCreateQrisPayment,
+  apiGetTransactionStatus,
+  getProductByBarcode,
+} from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import dynamic from "next/dynamic";
+import QrisPaymentModal from "@/components/kasir/QrisPaymentModal";
+
+// Scanner kamera hanya berjalan di browser; dimuat terpisah saat dibutuhkan.
+const BarcodeScanner = dynamic(() => import("@/components/BarcodeScanner"), {
+  ssr: false,
+});
+
+// Jeda antar pengecekan status QRIS. Pengecekan berikutnya baru dijadwalkan
+// setelah respons sebelumnya diterima, jadi request tidak pernah menumpuk.
+const QRIS_POLL_MS = 2500;
+
+/** Cocokkan kode hasil scan dengan barcode atau kodeProduk (tanpa beda huruf). */
+function findProductByCode(products, code) {
+  const q = String(code || "").trim().toLowerCase();
+  if (!q) return null;
+  return (
+    products.find(
+      (p) =>
+        (p.barcode || "").toLowerCase() === q ||
+        (p.kodeProduk || "").toLowerCase() === q
+    ) || null
+  );
+}
+
+/**
+ * Perkirakan hasil handleAddToCart (aturan stok yang sama) untuk pesan
+ * konfirmasi di modal scanner. Tidak mengubah keranjang.
+ */
+function getScanAddFeedback(product, cartItems) {
+  if (product.stok < 1) {
+    return { type: "error", message: `Stok "${product.nama}" habis` };
+  }
+  const existing = cartItems.find((item) => item.id === product.id);
+  if (existing && existing.qty + 1 > product.stok) {
+    return {
+      type: "error",
+      message: `Stok "${product.nama}" hanya tersisa ${product.stok}`,
+    };
+  }
+  const qty = (existing?.qty || 0) + 1;
+  return {
+    type: "success",
+    message: `${product.nama} ditambahkan${qty > 1 ? ` (×${qty})` : ""}`,
+  };
+}
 
 export default function KasirTransaksiClient() {
   const { user } = useAuth();
@@ -32,6 +91,22 @@ export default function KasirTransaksiClient() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const searchRef = useRef(null);
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [scanFeedback, setScanFeedback] = useState(null);
+  // Pembayaran QRIS: modal QR, status pembuatan QR, dan data QR dari backend
+  const [qrisOpen, setQrisOpen] = useState(false);
+  const [qrisLoading, setQrisLoading] = useState(false);
+  const [qrisError, setQrisError] = useState("");
+  const [qrisPayment, setQrisPayment] = useState(null);
+  // Status dari backend: pending | paid (dengan catatan) | expired | failed
+  const [qrisStatus, setQrisStatus] = useState("pending");
+  const [qrisNote, setQrisNote] = useState("");
+  const [qrisPollWarning, setQrisPollWarning] = useState("");
+  // Salinan keranjang terbaru untuk handler scan (dipanggil dari luar render).
+  const cartRef = useRef(cart);
+  useEffect(() => {
+    cartRef.current = cart;
+  }, [cart]);
 
   // Load products from backend (hanya produk aktif)
   const loadProducts = useCallback(() => {
@@ -78,6 +153,7 @@ export default function KasirTransaksiClient() {
         q === "" ||
         p.nama.toLowerCase().includes(q) ||
         p.kodeProduk.toLowerCase().includes(q) ||
+        (p.barcode || "").toLowerCase().includes(q) ||
         p.kategori.toLowerCase().includes(q);
       return matchCat && matchQ;
     });
@@ -140,6 +216,49 @@ export default function KasirTransaksiClient() {
     },
     []
   );
+
+  // Kode dari scanner kamera: cari di daftar produk lokal dulu, jika tidak ada
+  // tanyakan ke backend. Modal tetap terbuka untuk scan berikutnya.
+  const handleScanDetected = useCallback(
+    (rawCode) => {
+      const code = String(rawCode || "").trim();
+      if (!code) return;
+
+      const addScanned = (product) => {
+        setScanFeedback(getScanAddFeedback(product, cartRef.current));
+        handleAddToCart(product);
+      };
+
+      const local = findProductByCode(products, code);
+      if (local) {
+        addScanned(local);
+        return;
+      }
+
+      setScanFeedback({ type: "info", message: `Mencari kode ${code}…` });
+      getProductByBarcode(code)
+        .then((product) => {
+          addScanned(product);
+          // Daftar lokal belum memuat produk ini; segarkan agar scan
+          // berikutnya tidak perlu ke server.
+          loadProducts();
+        })
+        .catch((err) => {
+          const message =
+            err.status === 404
+              ? `Barcode tidak terdaftar: ${code}`
+              : err.message || "Gagal mencari produk berdasarkan barcode.";
+          setErrorMessage(message);
+          setScanFeedback({ type: "error", message });
+        });
+    },
+    [products, handleAddToCart, loadProducts]
+  );
+
+  const handleOpenScanner = () => {
+    setScanFeedback(null);
+    setScannerOpen(true);
+  };
 
   // Remove item from cart
   const handleRemoveFromCart = (productId) => {
@@ -244,9 +363,172 @@ export default function KasirTransaksiClient() {
     }
   }, [canPay, cart, paymentMethod, paidNum, user, loadProducts]);
 
+  // QRIS: backend menyimpan transaksi pending (stok belum dipotong) dan membuat
+  // QR di Midtrans sandbox. Keranjang dipertahankan sampai pembayaran
+  // terkonfirmasi; status lunas hanya diubah webhook di backend.
+  const handleStartQris = useCallback(async () => {
+    if (cart.length === 0) return;
+    setErrorMessage("");
+    setQrisError("");
+    setQrisPayment(null);
+    setQrisStatus("pending");
+    setQrisNote("");
+    setQrisPollWarning("");
+    setQrisOpen(true);
+    setQrisLoading(true);
+
+    try {
+      const payload = cart.map((item) => ({
+        produk: item.id,
+        jumlah: item.qty,
+      }));
+      const res = await apiCreateQrisPayment(payload);
+      const trx = res.data;
+      setQrisPayment({
+        transactionId: trx._id,
+        noInvoice: makeInvoiceNo(trx._id),
+        qrString: trx.qrString,
+        expiresAt: trx.expiresAt,
+        totalHarga: Number(trx.totalHarga || 0),
+        qrImageUrl: trx.qrImageUrl || null,
+        // Disimpan untuk struk setelah lunas (endpoint status tidak memuat item)
+        items: (trx.detailBarang || []).map((item) => ({
+          nama: item.namaProduk,
+          qty: item.jumlah,
+          harga: item.hargaSatuan,
+          subtotal: item.subtotal,
+        })),
+      });
+    } catch (err) {
+      console.error("Create QRIS failed:", err);
+      setQrisError(err.message || "Gagal membuat kode QR.");
+      if (err.status === 409 || err.status === 404) loadProducts();
+    } finally {
+      setQrisLoading(false);
+    }
+  }, [cart, loadProducts]);
+
+  // Batal hanya menutup modal. Transaksi pending di backend akan kedaluwarsa
+  // sendiri; stok tidak pernah dipotong untuk QRIS yang belum dibayar.
+  const handleCancelQris = () => {
+    setQrisOpen(false);
+    setQrisPayment(null);
+    setQrisError("");
+    setQrisStatus("pending");
+    setQrisNote("");
+    setQrisPollWarning("");
+  };
+
+  // Lunas (diputuskan webhook di backend): tutup modal, kosongkan keranjang,
+  // tampilkan struk dengan modal yang sama seperti tunai.
+  const completeQrisPayment = (payment, statusData) => {
+    const total = Number(statusData.totalHarga ?? payment.totalHarga) || 0;
+    const paidAt = statusData.paidAt ? new Date(statusData.paidAt) : new Date();
+
+    savePaymentInfo(payment.transactionId, {
+      metodePembayaran: "QRIS",
+      uangBayar: total,
+      kembalian: 0,
+    });
+
+    setLastInvoice({
+      noInvoice: payment.noInvoice,
+      backendId: payment.transactionId,
+      namaKasir: user?.nama || "Kasir",
+      namaToko: "Toko Kelontong Berkah",
+      tanggal: formatTanggalSingkat(toDateKey(paidAt)),
+      waktu: toTimeLabel(paidAt),
+      metode: "QRIS",
+      items: payment.items || [],
+      total,
+      bayar: total,
+      kembalian: 0,
+    });
+    setShowInvoice(true);
+    handleCancelQris();
+    setCart([]);
+    setPaymentAmount("");
+    setSearchQuery("");
+    // Stok dipotong oleh webhook; muat ulang daftar produk
+    loadProducts();
+  };
+
+  // Hasil satu kali pengecekan status. Mengembalikan true jika polling selesai.
+  const handleQrisStatus = useEffectEvent((statusData) => {
+    const status = statusData?.paymentStatus;
+    setQrisPollWarning("");
+    if (status === "paid") {
+      if (statusData.paymentNote) {
+        // Uang masuk tapi transaksi tidak bisa diselesaikan normal: bukan sukses.
+        setQrisStatus("paid");
+        setQrisNote(statusData.paymentNote);
+        loadProducts();
+      } else if (qrisPayment) {
+        completeQrisPayment(qrisPayment, statusData);
+      }
+      return true;
+    }
+    if (status === "expired" || status === "failed") {
+      setQrisStatus(status);
+      return true;
+    }
+    return false;
+  });
+
+  // Error pengecekan status. Jaringan / 5xx: coba lagi. 4xx: hentikan.
+  const handleQrisPollError = useEffectEvent((err) => {
+    if (err.status === 0 || err.status >= 500 || !err.status) {
+      setQrisPollWarning("Gagal memeriksa status, mencoba lagi…");
+      return false;
+    }
+    setQrisError(err.message || "Status pembayaran tidak dapat diperiksa.");
+    return true;
+  });
+
+  // Polling status QRIS: hanya selama modal terbuka dan status masih pending.
+  // Menutup modal, status final, QR baru, atau unmount -> cleanup mematikan timer.
+  const pollTransactionId =
+    qrisOpen && !qrisError && qrisStatus === "pending"
+      ? qrisPayment?.transactionId || null
+      : null;
+
+  useEffect(() => {
+    if (!pollTransactionId) return undefined;
+    let stopped = false;
+    let timer = null;
+
+    const tick = () => {
+      apiGetTransactionStatus(pollTransactionId)
+        .then((res) => (stopped ? true : handleQrisStatus(res?.data)))
+        .catch((err) => (stopped ? true : handleQrisPollError(err)))
+        .then((done) => {
+          if (!stopped && !done) timer = setTimeout(tick, QRIS_POLL_MS);
+        });
+    };
+
+    timer = setTimeout(tick, QRIS_POLL_MS);
+    return () => {
+      stopped = true;
+      clearTimeout(timer);
+    };
+  }, [pollTransactionId]);
+
+  // Tombol Bayar / F9: tunai memakai alur checkout lama, QRIS membuka modal QR.
+  const handlePay = useCallback(() => {
+    if (!canPay) return;
+    if (paymentMethod === "QRIS") {
+      handleStartQris();
+    } else {
+      handleBayar();
+    }
+  }, [canPay, paymentMethod, handleStartQris, handleBayar]);
+
   // Keyboard shortcuts: F2 focus search, F4 uang pas, F9 bayar
   useEffect(() => {
     const onKey = (e) => {
+      // Saat modal scanner terbuka, pintasan halaman dinonaktifkan agar
+      // tidak ada pembayaran tak sengaja di balik modal.
+      if (scannerOpen || qrisOpen) return;
       if (e.key === "F2") {
         e.preventDefault();
         searchRef.current?.focus();
@@ -255,18 +537,19 @@ export default function KasirTransaksiClient() {
         if (totalHarga > 0) setPaymentAmount(String(totalHarga));
       } else if (e.key === "F9") {
         e.preventDefault();
-        if (canPay) handleBayar();
+        handlePay();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [totalHarga, canPay, handleBayar]);
+  }, [totalHarga, handlePay, scannerOpen, qrisOpen]);
 
   const handleSearchKeyDown = (e) => {
     if (e.key !== "Enter") return;
     const q = searchQuery.trim().toLowerCase();
     if (!q) return;
-    const exact = products.find((p) => p.kodeProduk.toLowerCase() === q);
+    // Scanner USB mengetik kode lalu Enter: cocokkan barcode atau kodeProduk.
+    const exact = findProductByCode(products, q);
     const target =
       exact || (filteredProducts.length === 1 ? filteredProducts[0] : null);
     if (target && target.stok > 0) {
@@ -305,9 +588,42 @@ export default function KasirTransaksiClient() {
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-4 items-start">
         {/* Left: Product Search & Catalog */}
         <div className="flex flex-col gap-3 min-w-0">
-          {/* Search Bar */}
-          <div className="relative w-full">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6B7773] pointer-events-none">
+          {/* Search Bar + tombol Scan kamera */}
+          <div className="flex gap-2 w-full">
+            <div className="relative flex-1 min-w-0">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6B7773] pointer-events-none">
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  viewBox="0 0 24 24"
+                >
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+              </span>
+              <input
+                ref={searchRef}
+                type="text"
+                placeholder="Scan barcode atau cari barang, lalu Enter"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={handleSearchKeyDown}
+                className="w-full h-9 pl-9 pr-12 border border-[#E1E4E0] rounded-lg text-[13px] text-[#1F2A27] bg-white placeholder:text-[#6B7773] focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15 transition-all"
+              />
+              <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 font-mono text-[11px] px-1.5 py-0.5 rounded border border-[#E1E4E0] bg-white text-[#6B7773] pointer-events-none">
+                F2
+              </kbd>
+            </div>
+            <button
+              type="button"
+              onClick={handleOpenScanner}
+              aria-label="Scan barcode dengan kamera"
+              className="shrink-0 h-9 px-3 inline-flex items-center gap-1.5 rounded-lg bg-[#2F6F5E] text-[13px] font-semibold text-white hover:bg-[#255a4c] transition-colors cursor-pointer"
+            >
               <svg
                 className="w-4 h-4"
                 fill="none"
@@ -316,23 +632,13 @@ export default function KasirTransaksiClient() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 viewBox="0 0 24 24"
+                aria-hidden="true"
               >
-                <circle cx="11" cy="11" r="8" />
-                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2" />
+                <path d="M7 8v8M10 8v8M13 8v8M17 8v8" />
               </svg>
-            </span>
-            <input
-              ref={searchRef}
-              type="text"
-              placeholder="Scan barcode atau cari barang, lalu Enter"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={handleSearchKeyDown}
-              className="w-full h-9 pl-9 pr-12 border border-[#E1E4E0] rounded-lg text-[13px] text-[#1F2A27] bg-white placeholder:text-[#6B7773] focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15 transition-all"
-            />
-            <kbd className="absolute right-2.5 top-1/2 -translate-y-1/2 font-mono text-[11px] px-1.5 py-0.5 rounded border border-[#E1E4E0] bg-white text-[#6B7773] pointer-events-none">
-              F2
-            </kbd>
+              Scan
+            </button>
           </div>
 
           {/* Category Filter Chips */}
@@ -596,8 +902,8 @@ export default function KasirTransaksiClient() {
             {/* Pay Button */}
             <button
               type="button"
-              disabled={!canPay}
-              onClick={handleBayar}
+              disabled={!canPay || qrisOpen}
+              onClick={handlePay}
               className="w-full py-2.5 px-4 rounded-lg bg-[#2F6F5E] hover:bg-[#255a4c] text-white font-semibold text-[13px] disabled:opacity-45 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
             >
               {isSubmitting ? "Memproses…" : "Bayar (F9)"}
@@ -732,6 +1038,27 @@ export default function KasirTransaksiClient() {
           </div>
         </div>
       )}
+
+      {/* Modal pembayaran QRIS */}
+      <QrisPaymentModal
+        open={qrisOpen}
+        loading={qrisLoading}
+        error={qrisError}
+        payment={qrisPayment}
+        status={qrisStatus}
+        note={qrisNote}
+        pollWarning={qrisPollWarning}
+        onCancel={handleCancelQris}
+        onRetry={handleStartQris}
+      />
+
+      {/* Modal scanner kamera: tetap terbuka untuk scan berturut-turut */}
+      <BarcodeScanner
+        open={scannerOpen}
+        onDetected={handleScanDetected}
+        onClose={() => setScannerOpen(false)}
+        feedback={scanFeedback}
+      />
     </div>
   );
 }

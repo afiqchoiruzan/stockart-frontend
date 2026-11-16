@@ -30,6 +30,7 @@ function hasProductDetailChanged(nextData, prevData) {
     String(nextData.nama || "").trim() !== String(prevData.nama || "").trim() ||
     String(nextData.kodeProduk || "").trim().toUpperCase() !==
       String(prevData.kodeProduk || "").trim().toUpperCase() ||
+    String(nextData.barcode || "").trim() !== String(prevData.barcode || "").trim() ||
     String(nextData.kategori || "").trim() !== String(prevData.kategori || "").trim() ||
     String(nextData.satuan || "pcs").trim() !== String(prevData.satuan || "pcs").trim() ||
     Number(nextData.hargaBeli) !== Number(prevData.hargaBeli) ||
@@ -176,7 +177,8 @@ export default function OwnerProdukPage() {
         q === "" ||
         p.nama.toLowerCase().includes(q) ||
         p.kategori.toLowerCase().includes(q) ||
-        (p.kodeProduk && p.kodeProduk.toLowerCase().includes(q));
+        (p.kodeProduk && p.kodeProduk.toLowerCase().includes(q)) ||
+        (p.barcode && p.barcode.toLowerCase().includes(q));
       return matchCategory && matchSearch;
     });
   }, [products, searchQuery, selectedCategory]);
@@ -277,6 +279,11 @@ export default function OwnerProdukPage() {
       refreshLowStock();
       handleCloseDrawer();
     } catch (err) {
+      // Error barcode (duplikat / format) dilempar ke drawer agar tampil di
+      // bawah field Barcode; drawer tetap terbuka.
+      if (err?.status === 400 && /barcode/i.test(err?.message || "")) {
+        throw err;
+      }
       showFlashMessage(`! Gagal menyimpan produk: ${err.message}`);
     } finally {
       setIsSubmittingAction(false);
@@ -497,6 +504,15 @@ export default function OwnerProdukPage() {
                         <div className="text-xs text-[#6B7773] font-mono">
                           {product.kodeProduk || "-"}
                         </div>
+                        {product.barcode && (
+                          <div
+                            className="text-[11px] text-[#6B7773] font-mono"
+                            title={`Barcode ${product.barcode}`}
+                          >
+                            <svg aria-hidden="true" className="inline-block w-3 h-3 mr-1 -mt-px" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" viewBox="0 0 24 24"><path d="M4 6v12M8 6v12M12 6v12M15 6v12M20 6v12" /></svg>
+                            {product.barcode}
+                          </div>
+                        )}
                       </td>
                       <td className="py-2.5 px-4 hidden sm:table-cell text-[#1F2A27]">
                         {product.kategori}

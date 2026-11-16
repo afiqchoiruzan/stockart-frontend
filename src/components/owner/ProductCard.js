@@ -24,12 +24,23 @@ export default function ProductCard({ product, onEdit }) {
     >
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center justify-between gap-2">
-          <span
-            className="text-xs font-mono text-[#6B7773] truncate"
-            title={product.kodeProduk}
-          >
-            {product.kodeProduk || "-"}
-          </span>
+          <div className="flex flex-col min-w-0">
+            <span
+              className="text-xs font-mono text-[#6B7773] truncate"
+              title={product.kodeProduk}
+            >
+              {product.kodeProduk || "-"}
+            </span>
+            {product.barcode && (
+              <span
+                className="text-[11px] font-mono text-[#6B7773] truncate"
+                title={`Barcode ${product.barcode}`}
+              >
+                <svg aria-hidden="true" className="inline-block w-3 h-3 mr-1 -mt-px" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" viewBox="0 0 24 24"><path d="M4 6v12M8 6v12M12 6v12M15 6v12M20 6v12" /></svg>
+                {product.barcode}
+              </span>
+            )}
+          </div>
           {isInactive ? (
             <span className="inline-flex items-center gap-1 min-h-[22px] px-2 rounded-md text-xs font-semibold bg-[#F5F6F4] text-[#6B7773]">
               <span className="w-1.5 h-1.5 rounded-full bg-[#6B7773]" />

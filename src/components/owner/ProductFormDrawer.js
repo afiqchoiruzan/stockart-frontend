@@ -1,7 +1,21 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from "react";
+import dynamic from "next/dynamic";
 import { CATEGORIES } from "@/lib/mockProducts";
+
+// Scanner kamera hanya berjalan di browser; dimuat saat tombol Scan dipakai.
+const BarcodeScanner = dynamic(() => import("@/components/BarcodeScanner"), {
+  ssr: false,
+});
+
+// Sama dengan aturan backend (middleware/validate.js): 4–48 karakter tanpa spasi.
+const BARCODE_PATTERN = /^\S{4,48}$/;
+
+/** Error dari server yang menyangkut barcode (duplikat atau validasi). */
+function isBarcodeServerError(err) {
+  return err?.status === 400 && /barcode/i.test(err?.message || "");
+}
 
 const SATUAN_PRESETS = [
   "pcs",
@@ -21,6 +35,7 @@ function buildInitialFormState(isEdit, initialData, availableCategories) {
     return {
       nama: "",
       kodeProduk: "",
+      barcode: "",
       kategori: availableCategories[0] || "Sembako",
       satuan: "pcs",
       hargaBeli: "",
@@ -43,6 +58,7 @@ function buildInitialFormState(isEdit, initialData, availableCategories) {
   return {
     nama: initialData.nama || "",
     kodeProduk: initialData.kodeProduk || "",
+    barcode: initialData.barcode || "",
     kategori: initialData.kategori || availableCategories[0] || "Sembako",
     satuan: initialData.satuan || "pcs",
     hargaBeli: hargaBeliStr,
@@ -66,6 +82,7 @@ function hasFormChanged(current, baseline) {
   return (
     current.nama.trim() !== baseline.nama.trim() ||
     current.kodeProduk.trim().toUpperCase() !== baseline.kodeProduk.trim().toUpperCase() ||
+    current.barcode.trim() !== baseline.barcode.trim() ||
     current.kategori.trim() !== baseline.kategori.trim() ||
     current.satuan.trim() !== baseline.satuan.trim() ||
     normalizeNumField(current.hargaBeli) !== normalizeNumField(baseline.hargaBeli) ||
@@ -96,6 +113,9 @@ function DrawerFormInner({
   const [formData, setFormData] = useState(initialFormSnapshot);
   const [errors, setErrors] = useState({});
   const [confirmPermanentDelete, setConfirmPermanentDelete] = useState(false);
+  const [scannerOpen, setScannerOpen] = useState(false);
+  // Kode hasil scan yang menunggu konfirmasi karena akan menimpa barcode lama.
+  const [pendingBarcode, setPendingBarcode] = useState(null);
 
   const firstInputRef = useRef(null);
 
@@ -152,6 +172,10 @@ function DrawerFormInner({
     if (formData.stok === "" || Number.isNaN(stokNum) || stokNum < 0) {
       newErrors.stok = "Isi jumlah stok, boleh 0.";
     }
+    const barcode = formData.barcode.trim();
+    if (barcode && !BARCODE_PATTERN.test(barcode)) {
+      newErrors.barcode = "Barcode harus 4–48 karakter tanpa spasi.";
+    }
     const stokMinNum = Number(formData.stokMinimum);
     if (
       formData.stokMinimum === "" ||
@@ -176,6 +200,9 @@ function DrawerFormInner({
       kodeProduk: (isEdit ? initialData.kodeProduk || "" : formData.kodeProduk)
         .trim()
         .toUpperCase(),
+      // String (bukan Number). "" = tanpa barcode; toBackendProductPayload
+      // mengirimnya sebagai "hapus" bila produk sebelumnya punya barcode.
+      barcode: formData.barcode.trim(),
       kategori: formData.kategori.trim(),
       satuan: formData.satuan.trim() || "pcs",
       hargaBeli: Math.round(Number(formData.hargaBeli)),
@@ -187,7 +214,36 @@ function DrawerFormInner({
       aktif: isEdit ? initialData.aktif !== false : true,
     };
 
-    onSubmit(submittedProduct, mode, initialData);
+    // Halaman melempar ulang error barcode (duplikat/validasi) agar tampil di
+    // bawah field; drawer tetap terbuka.
+    Promise.resolve(onSubmit(submittedProduct, mode, initialData)).catch(
+      (err) => {
+        if (isBarcodeServerError(err)) {
+          setErrors((prev) => ({ ...prev, barcode: err.message }));
+        }
+      }
+    );
+  };
+
+  const setBarcodeValue = (value) => {
+    setFormData((prev) => ({ ...prev, barcode: value }));
+    if (errors.barcode) {
+      setErrors((prev) => ({ ...prev, barcode: undefined }));
+    }
+  };
+
+  // Hasil scan (selalu string). Jika field sudah berisi barcode lain, minta
+  // konfirmasi dulu sebelum menimpa.
+  const handleBarcodeScanned = (code) => {
+    const scanned = String(code ?? "").trim();
+    if (!scanned) return;
+    const current = formData.barcode.trim();
+    if (current && current !== scanned) {
+      setPendingBarcode(scanned);
+      return;
+    }
+    setPendingBarcode(null);
+    setBarcodeValue(scanned);
   };
 
   const handleAddStockChip = (delta) => {
@@ -308,6 +364,101 @@ function DrawerFormInner({
             />
             {errors.kodeProduk && (
               <span className="text-xs text-[#C4574F]">{errors.kodeProduk}</span>
+            )}
+          </div>
+
+          {/* Barcode (opsional) + Scan kamera */}
+          <div className="flex flex-col gap-1">
+            <label
+              htmlFor="field-barcode"
+              className="text-sm font-medium text-[#1F2A27]"
+            >
+              Barcode{" "}
+              <span className="font-normal text-xs text-[#6B7773]">
+                (opsional)
+              </span>
+            </label>
+            <div className="flex gap-2">
+              <input
+                id="field-barcode"
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                value={formData.barcode}
+                onChange={(e) => {
+                  setPendingBarcode(null);
+                  setBarcodeValue(e.target.value);
+                }}
+                placeholder="Scan atau ketik barcode kemasan"
+                aria-invalid={Boolean(errors.barcode)}
+                aria-describedby={errors.barcode ? "field-barcode-error" : undefined}
+                className={`flex-1 min-w-0 min-h-[44px] px-4 border rounded-md text-sm font-mono bg-white focus:outline-2 focus:outline-[#2F6F5E] focus:border-[#2F6F5E] ${
+                  errors.barcode ? "border-[#C4574F]" : "border-[#E1E4E0]"
+                }`}
+              />
+              <button
+                type="button"
+                onClick={() => setScannerOpen(true)}
+                disabled={isSubmitting}
+                aria-label="Scan barcode dengan kamera"
+                className="shrink-0 min-h-[44px] px-3 inline-flex items-center gap-1.5 border border-[#2F6F5E] rounded-md bg-[#E6F0ED] text-[#2F6F5E] text-sm font-semibold hover:bg-[#d5e6e1] transition-colors cursor-pointer disabled:opacity-50"
+              >
+                <svg
+                  aria-hidden="true"
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2" />
+                  <path d="M7 8v8M10 8v8M13 8v8M17 8v8" />
+                </svg>
+                Scan
+              </button>
+            </div>
+            {pendingBarcode && (
+              <div
+                role="alertdialog"
+                aria-label="Konfirmasi ganti barcode"
+                className="mt-1 p-3 border border-[#D9A441] rounded-md bg-[#FBF1DC] flex flex-col gap-2"
+              >
+                <p className="text-xs font-medium text-[#1F2A27] leading-snug">
+                  Ganti barcode lama (
+                  <span className="font-mono">{formData.barcode.trim()}</span>)
+                  dengan <span className="font-mono">{pendingBarcode}</span>?
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPendingBarcode(null)}
+                    className="min-h-[32px] px-3 border border-[#E1E4E0] rounded-md bg-white text-[#1F2A27] font-semibold text-xs hover:bg-[#F5F6F4] transition-colors cursor-pointer"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBarcodeValue(pendingBarcode);
+                      setPendingBarcode(null);
+                    }}
+                    className="min-h-[32px] px-3 border border-[#2F6F5E] rounded-md bg-[#2F6F5E] text-white font-semibold text-xs hover:bg-[#255a4c] transition-colors cursor-pointer"
+                  >
+                    Ganti barcode
+                  </button>
+                </div>
+              </div>
+            )}
+            {errors.barcode ? (
+              <span id="field-barcode-error" className="text-xs text-[#C4574F]">
+                {errors.barcode}
+              </span>
+            ) : (
+              <span className="text-xs text-[#6B7773]">
+                Kosongkan jika produk tidak punya barcode.
+              </span>
             )}
           </div>
 
@@ -543,6 +694,14 @@ function DrawerFormInner({
             />
           </div>
         </form>
+
+        {/* Di luar <form> agar form input manual scanner tidak bersarang */}
+        <BarcodeScanner
+          open={scannerOpen}
+          continuous={false}
+          onDetected={handleBarcodeScanned}
+          onClose={() => setScannerOpen(false)}
+        />
 
         {/* Nonaktifkan / Aktifkan & Hapus Produk in Edit Mode */}
         {isEdit && (

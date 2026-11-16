@@ -45,7 +45,7 @@ export default function ProductToolbar({
           type="search"
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
-          placeholder="Cari nama produk atau kode barcode…"
+          placeholder="Cari nama, kode produk, atau barcode…"
           className="w-full min-h-[40px] pl-9 pr-4 bg-white border border-[#E1E4E0] rounded-lg text-[13px] text-[#1F2A27] placeholder:text-[#6B7773] focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15 transition-all"
         />
       </div>

@@ -1,5 +1,6 @@
 import { API_BASE_URL, getAuthToken } from "./auth";
 import { CASHIERS, formatTanggalSingkat } from "./mockTransactions";
+import { normalizeProduct } from "./mockProducts";
 
 /**
  * Task 5: Normalisasi dokumen Produk dari MongoDB Backend ke format prop yang kompatibel dengan UI.
@@ -17,6 +18,8 @@ export function normalizeBackendProduct(raw) {
     _id: rawId,
     nama: raw.nama || "",
     kodeProduk: raw.kodeProduk || "",
+    // Barcode opsional; produk lama tanpa barcode → "".
+    barcode: raw.barcode || "",
     kategori: raw.kategori || "Umum",
     harga: hargaJual, // Format harga untuk UI
     hargaJual,
@@ -90,6 +93,18 @@ export function toBackendProductPayload(formData, initialData = null) {
     const kodeProduk = String(formData.kodeProduk ?? "").trim();
     if (kodeProduk) {
       payload.kodeProduk = kodeProduk.toUpperCase();
+    }
+  }
+
+  // Barcode opsional: dikirim hanya bila terisi. Jika saat edit barcode yang
+  // sebelumnya ada dikosongkan, kirim "" agar backend menghapus field-nya ($unset).
+  // Jika form tidak membawa field barcode sama sekali, barcode tidak disentuh.
+  if (formData.barcode !== undefined) {
+    const barcode = String(formData.barcode ?? "").trim();
+    if (barcode) {
+      payload.barcode = barcode;
+    } else if (initialData?.barcode) {
+      payload.barcode = "";
     }
   }
 
@@ -626,6 +641,36 @@ export async function apiGetProducts(params = {}) {
   );
 }
 
+/**
+ * Cari satu produk dari hasil scan (GET /api/products/barcode/:code).
+ * Backend mencocokkan `barcode` ATAU `kodeProduk`; untuk kasir hanya produk aktif
+ * dan tanpa hargaBeli. Mengembalikan produk ternormalisasi (normalizeProduct).
+ * 404 dilempar ulang sebagai error "tidak terdaftar" dengan err.status = 404.
+ */
+export async function getProductByBarcode(code) {
+  const trimmed = String(code ?? "").trim();
+  if (!trimmed) {
+    const error = new Error("Kode barcode kosong");
+    error.status = 400;
+    throw error;
+  }
+
+  try {
+    const res = await apiFetch(
+      `/api/products/barcode/${encodeURIComponent(trimmed)}`
+    );
+    return normalizeProduct(res?.data);
+  } catch (err) {
+    if (err.status === 404) {
+      const error = new Error(`Barcode "${trimmed}" tidak terdaftar`);
+      error.status = 404;
+      error.data = err.data;
+      throw error;
+    }
+    throw err;
+  }
+}
+
 export async function apiGetLowStockProducts() {
   return apiFetch("/api/products/low-stock");
 }
@@ -699,6 +744,29 @@ export async function apiCheckout(detailBarang) {
     method: "POST",
     body: JSON.stringify({ detailBarang }),
   });
+}
+
+// ========== PAYMENTS API (QRIS Midtrans sandbox) ==========
+
+/**
+ * Membuat transaksi QRIS berstatus pending + QR dinamis (POST /api/payments/qris).
+ * Body sama dengan checkout. Stok BELUM dipotong; status paid hanya diubah webhook.
+ * Respons `data`: transaksi + `qrString`, `expiresAt`, `gatewayRef`, `qrImageUrl`.
+ */
+export async function apiCreateQrisPayment(detailBarang) {
+  return apiFetch("/api/payments/qris", {
+    method: "POST",
+    body: JSON.stringify({ detailBarang }),
+  });
+}
+
+/**
+ * Status pembayaran untuk polling (GET /api/transactions/:id/status).
+ * `data.paymentStatus`: 'pending' | 'paid' | 'expired' | 'failed'.
+ * Endpoint ini hanya membaca; tidak pernah mengubah status menjadi paid.
+ */
+export async function apiGetTransactionStatus(id) {
+  return apiFetch(`/api/transactions/${id}/status`);
 }
 
 export async function apiVoidTransaction(id) {

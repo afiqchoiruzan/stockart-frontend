@@ -30,7 +30,7 @@ export const LOW_STOCK_THRESHOLD = 5;
 
 /**
  * Samakan bentuk produk dari backend agar mudah dipakai komponen UI.
- * Backend: { _id, nama, kodeProduk, kategori, hargaBeli, hargaJual, stok, satuan, stokMinimum, aktif }
+ * Backend: { _id, nama, kodeProduk, barcode?, kategori, hargaBeli, hargaJual, stok, satuan, stokMinimum, aktif }
  */
 export function normalizeProduct(p = {}) {
   const rawMin = p.stokMinimum;
@@ -46,6 +46,8 @@ export function normalizeProduct(p = {}) {
     nama: p.nama || "",
     kategori: p.kategori || "Tanpa Kategori",
     kodeProduk: p.kodeProduk || "",
+    // Barcode opsional (bisa kosong untuk produk lama)
+    barcode: p.barcode || "",
     harga: Number(p.hargaJual ?? p.harga ?? 0),
     hargaJual: Number(p.hargaJual ?? p.harga ?? 0),
     hargaBeli: Number(p.hargaBeli ?? 0),

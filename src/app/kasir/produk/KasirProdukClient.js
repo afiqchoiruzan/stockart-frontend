@@ -53,6 +53,7 @@ export default function KasirProdukClient() {
         q === "" ||
         (p.nama && p.nama.toLowerCase().includes(q)) ||
         (p.kodeProduk && p.kodeProduk.toLowerCase().includes(q)) ||
+        (p.barcode && p.barcode.toLowerCase().includes(q)) ||
         (p.kategori && p.kategori.toLowerCase().includes(q));
       return matchCategory && matchSearch;
     });
@@ -97,7 +98,7 @@ export default function KasirProdukClient() {
           </span>
           <input
             type="text"
-            placeholder="Cari nama produk atau kode barcode…"
+            placeholder="Cari nama, kode produk, atau barcode…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full h-9 pl-9 pr-3 border border-[#E1E4E0] rounded-lg text-[13px] text-[#1F2A27] bg-white placeholder:text-[#6B7773] focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15 transition-all"
@@ -193,6 +194,15 @@ export default function KasirProdukClient() {
                           {product.kodeProduk}
                           {product.satuan ? ` · ${product.satuan}` : ""}
                         </div>
+                        {product.barcode && (
+                          <div
+                            className="text-[11px] text-[#6B7773] font-mono"
+                            title={`Barcode ${product.barcode}`}
+                          >
+                            <svg aria-hidden="true" className="inline-block w-3 h-3 mr-1 -mt-px" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" viewBox="0 0 24 24"><path d="M4 6v12M8 6v12M12 6v12M15 6v12M20 6v12" /></svg>
+                            {product.barcode}
+                          </div>
+                        )}
                       </td>
                       <td className="px-3.5 py-2.5 text-[#6B7773]">
                         {product.kategori || "Umum"}
