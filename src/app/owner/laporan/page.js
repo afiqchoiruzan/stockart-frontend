@@ -12,7 +12,7 @@ import ReportToolbar from "@/components/owner/ReportToolbar";
 import ReportSummaryCards from "@/components/owner/ReportSummaryCards";
 import RevenueChart from "@/components/owner/RevenueChart";
 import TopProductsPanel from "@/components/owner/TopProductsPanel";
-import SendReportPanel from "@/components/owner/SendReportPanel";
+import SendReportDropdown from "@/components/owner/SendReportDropdown";
 import ReportAutoSendPanel from "@/components/owner/ReportAutoSendPanel";
 
 const WEEKDAY_LABELS = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
@@ -212,8 +212,10 @@ export default function OwnerLaporanPage() {
     try {
       const result = await apiSendReportEmail({ ...range, email });
       showFlashMessage(result?.message || "Laporan berhasil dikirim.");
+      return true;
     } catch (err) {
       showFlashMessage(`! Gagal mengirim laporan: ${err.message}`);
+      return false;
     } finally {
       setIsSending(false);
     }
@@ -291,13 +293,20 @@ export default function OwnerLaporanPage() {
         </div>
       )}
 
-      {/* Toolbar Periode & Unduh CSV */}
+      {/* Toolbar Periode, Kirim Laporan & Unduh CSV */}
       <ReportToolbar
         period={period}
         onPeriodChange={handlePeriodChange}
         periodLabel={periodLabel}
         onExportCsv={handleExportCsv}
         isExportDisabled={isLoading || Boolean(apiError)}
+        actions={
+          <SendReportDropdown
+            onSend={handleSendReport}
+            isSending={isSending}
+            disabled={isLoading || Boolean(apiError)}
+          />
+        }
       />
 
       {isLoading ? (
@@ -314,21 +323,17 @@ export default function OwnerLaporanPage() {
             periodLabel={periodLabel}
           />
 
-          {/* Grafik Omzet di Kiri & Terlaris + Kirim Laporan di Kanan */}
+          {/* Grafik Omzet + Kirim Otomatis di Kiri & Terlaris di Kanan */}
           <section
             aria-label="Grafik dan Produk Terlaris"
             className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_360px] gap-4 items-start"
           >
-            <RevenueChart title={CHART_TITLES[period]} points={chartPoints} />
-
-            <div className="flex flex-col gap-4">
-              <TopProductsPanel products={topProducts} />
+            <div className="flex flex-col gap-4 min-w-0">
+              <RevenueChart title={CHART_TITLES[period]} points={chartPoints} />
               <ReportAutoSendPanel onSaved={showFlashMessage} />
-              <SendReportPanel
-                onSend={handleSendReport}
-                isSending={isSending}
-              />
             </div>
+
+            <TopProductsPanel products={topProducts} />
           </section>
         </>
       )}

@@ -12,6 +12,7 @@ export default function ReportToolbar({
   periodLabel,
   onExportCsv,
   isExportDisabled = false,
+  actions = null,
 }) {
   return (
     <div className="w-full flex flex-wrap items-center justify-between gap-2.5">
@@ -47,27 +48,32 @@ export default function ReportToolbar({
         </span>
       </div>
 
-      <button
-        type="button"
-        onClick={onExportCsv}
-        disabled={isExportDisabled}
-        className="inline-flex items-center gap-2 min-h-[40px] px-3.5 bg-white border border-[#E1E4E0] rounded-lg text-[13px] font-semibold text-[#1F2A27] hover:border-[#2F6F5E] hover:text-[#2F6F5E] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        <svg
-          aria-hidden="true"
-          className="w-4 h-4 stroke-current"
-          fill="none"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          viewBox="0 0 24 24"
+      {/* Aksi: Kirim Laporan & Unduh CSV */}
+      <div className="flex flex-wrap items-center gap-2.5">
+        {actions}
+
+        <button
+          type="button"
+          onClick={onExportCsv}
+          disabled={isExportDisabled}
+          className="inline-flex items-center gap-2 min-h-[40px] px-3.5 bg-white border border-[#E1E4E0] rounded-lg text-[13px] font-semibold text-[#1F2A27] hover:border-[#2F6F5E] hover:text-[#2F6F5E] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-          <path d="m7 10 5 5 5-5" />
-          <path d="M12 15V3" />
-        </svg>
-        Unduh CSV
-      </button>
+          <svg
+            aria-hidden="true"
+            className="w-4 h-4 stroke-current"
+            fill="none"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            viewBox="0 0 24 24"
+          >
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <path d="m7 10 5 5 5-5" />
+            <path d="M12 15V3" />
+          </svg>
+          Unduh CSV
+        </button>
+      </div>
     </div>
   );
 }
