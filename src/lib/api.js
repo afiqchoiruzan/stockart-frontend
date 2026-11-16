@@ -741,3 +741,49 @@ export async function apiSendReportEmail(payload = {}) {
     body: JSON.stringify(body),
   });
 }
+
+/**
+ * Mengunduh PDF laporan (GET /api/reports/pdf), sama dengan lampiran email laporan.
+ * params: { tanggalMulai, tanggalAkhir } — format YYYY-MM-DD
+ * Mengembalikan Blob PDF; pemanggil yang menyimpan file ke perangkat.
+ */
+export async function apiDownloadReportPdf(params = {}) {
+  const token =
+    typeof window !== "undefined" ? localStorage.getItem(TOKEN_KEY) : null;
+
+  let res;
+  try {
+    res = await fetch(`${API_BASE}/api/reports/pdf${buildQuery(params)}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+  } catch {
+    const error = new Error(
+      `Tidak dapat terhubung ke server backend (${API_BASE}). Pastikan backend sudah berjalan.`
+    );
+    error.status = 0;
+    throw error;
+  }
+
+  if (!res.ok) {
+    if (res.status === 401 && token && typeof window !== "undefined") {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(USER_KEY);
+      if (!window.location.pathname.startsWith("/login")) {
+        // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+        window.location.href = "/login";
+      }
+    }
+
+    const data = await res.json().catch(() => null);
+    const error = new Error(
+      data?.message ||
+        (res.status === 404
+          ? "Endpoint unduh PDF belum tersedia di server backend yang terhubung (404)."
+          : "Gagal mengunduh PDF laporan")
+    );
+    error.status = res.status;
+    throw error;
+  }
+
+  return res.blob();
+}
