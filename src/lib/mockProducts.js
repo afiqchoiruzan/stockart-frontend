@@ -33,6 +33,13 @@ export const LOW_STOCK_THRESHOLD = 5;
  * Backend: { _id, nama, kodeProduk, kategori, hargaBeli, hargaJual, stok, satuan, stokMinimum, aktif }
  */
 export function normalizeProduct(p = {}) {
+  const rawMin = p.stokMinimum;
+  const parsedMin =
+    rawMin === undefined || rawMin === null || rawMin === ""
+      ? LOW_STOCK_THRESHOLD
+      : Number(rawMin);
+  const safeMin = Number.isNaN(parsedMin) ? LOW_STOCK_THRESHOLD : Math.max(0, parsedMin);
+
   return {
     ...p,
     id: p._id || p.id,
@@ -42,18 +49,25 @@ export function normalizeProduct(p = {}) {
     harga: Number(p.hargaJual ?? p.harga ?? 0),
     hargaJual: Number(p.hargaJual ?? p.harga ?? 0),
     hargaBeli: Number(p.hargaBeli ?? 0),
-    stok: Number(p.stok ?? 0),
-    stokMinimum: Number(p.stokMinimum ?? 0),
+    stok: Math.max(0, Number(p.stok ?? 0)),
+    stokMinimum: safeMin,
     satuan: p.satuan || "pcs",
     aktif: p.aktif !== false,
   };
 }
 
-/** Sama dengan definisi backend /low-stock: stok <= stokMinimum. */
+/** Sama dengan definisi backend /low-stock & owner: stok <= stokMinimum (fallback 5 hanya jika null/undefined). */
 export function isLowStock(product) {
   const stok = Number(product?.stok ?? 0);
-  const minimum = Number(product?.stokMinimum ?? 0);
-  return stok <= (minimum > 0 ? minimum : LOW_STOCK_THRESHOLD);
+  const rawMinimum = product?.stokMinimum;
+  const parsedMinimum =
+    rawMinimum === undefined || rawMinimum === null || rawMinimum === ""
+      ? LOW_STOCK_THRESHOLD
+      : Number(rawMinimum);
+  const minimum = Number.isNaN(parsedMinimum)
+    ? LOW_STOCK_THRESHOLD
+    : Math.max(0, parsedMinimum);
+  return stok <= minimum;
 }
 
 /** Daftar kategori untuk dropdown filter (selalu diawali "Semua Kategori"). */
