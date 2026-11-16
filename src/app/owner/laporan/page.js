@@ -18,10 +18,20 @@ import ReportAutoSendPanel from "@/components/owner/ReportAutoSendPanel";
 
 const WEEKDAY_LABELS = ["Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"];
 
+// Rentang kustom > 31 hari ditampilkan per minggu agar grafik tetap terbaca
+const MAX_DAILY_CHART_DAYS = 31;
+
 const CHART_TITLES = {
-  harian: "Omzet per Jam",
-  mingguan: "Omzet per Hari",
-  bulanan: "Omzet per Minggu",
+  jam: "Omzet per Jam",
+  hari: "Omzet per Hari",
+  minggu: "Omzet per Minggu",
+};
+
+const COMPARE_LABELS = {
+  harian: "kemarin",
+  mingguan: "7 hari sebelumnya",
+  bulanan: "bulan lalu",
+  kustom: "periode sebelumnya",
 };
 
 const EMPTY_SUMMARY = {
@@ -30,6 +40,9 @@ const EMPTY_SUMMARY = {
   totalOmzet: 0,
   totalTerjual: 0,
   totalMasuk: 0,
+  totalModal: 0,
+  totalLaba: 0,
+  labaEstimasi: false,
 };
 
 /** "YYYY-MM-DD" + n hari -> "YYYY-MM-DD" */
@@ -39,8 +52,22 @@ function shiftDateKey(dateKey, days) {
   return date.toISOString().slice(0, 10);
 }
 
+/** Jumlah hari dalam rentang, termasuk tanggal awal dan akhir. */
+function countDays(range) {
+  return (
+    Math.round(
+      (new Date(`${range.tanggalAkhir}T00:00:00Z`) -
+        new Date(`${range.tanggalMulai}T00:00:00Z`)) /
+        86400000
+    ) + 1
+  );
+}
+
 /** Rentang tanggal (WIB) untuk periode laporan yang dipilih. */
-function getPeriodRange(period, todayKey) {
+function getPeriodRange(period, todayKey, customRange) {
+  if (period === "kustom" && customRange) {
+    return customRange;
+  }
   if (period === "mingguan") {
     return { tanggalMulai: shiftDateKey(todayKey, -6), tanggalAkhir: todayKey };
   }
@@ -50,9 +77,45 @@ function getPeriodRange(period, todayKey) {
   return { tanggalMulai: todayKey, tanggalAkhir: todayKey };
 }
 
+/**
+ * Rentang pembanding dengan panjang yang sama tepat sebelum periode aktif.
+ * Bulanan: tanggal 1 s/d tanggal yang sama di bulan lalu (dibatasi akhir bulan).
+ */
+function getPreviousRange(period, range) {
+  if (period === "bulanan") {
+    const [year, month] = range.tanggalMulai.split("-").map(Number);
+    const prevMonthStart = new Date(Date.UTC(year, month - 2, 1));
+    const prevMonthLastDay = new Date(Date.UTC(year, month - 1, 0)).getUTCDate();
+    const endDay = Math.min(Number(range.tanggalAkhir.slice(8, 10)), prevMonthLastDay);
+    const prefix = prevMonthStart.toISOString().slice(0, 8);
+    return {
+      tanggalMulai: `${prefix}01`,
+      tanggalAkhir: `${prefix}${String(endDay).padStart(2, "0")}`,
+    };
+  }
+  const days = countDays(range);
+  return {
+    tanggalMulai: shiftDateKey(range.tanggalMulai, -days),
+    tanggalAkhir: shiftDateKey(range.tanggalMulai, -1),
+  };
+}
+
+/** Cara grafik dikelompokkan: per jam (1 hari), per hari, atau per minggu. */
+function getChartMode(period, range) {
+  if (period === "harian") return "jam";
+  if (period === "mingguan") return "hari";
+  if (period === "bulanan") return "minggu";
+  const days = countDays(range);
+  if (days <= 1) return "jam";
+  return days <= MAX_DAILY_CHART_DAYS ? "hari" : "minggu";
+}
+
 function getPeriodLabel(period, range) {
   if (period === "harian") {
     return `Hari ini, ${formatTanggalSingkat(range.tanggalAkhir)}`;
+  }
+  if (range.tanggalMulai === range.tanggalAkhir) {
+    return formatTanggalSingkat(range.tanggalMulai);
   }
   return `${formatTanggalSingkat(range.tanggalMulai)} – ${formatTanggalSingkat(
     range.tanggalAkhir
@@ -86,21 +149,49 @@ function buildHourlyPoints(revenue) {
   return points;
 }
 
-/** Omzet per hari selama 7 hari dari data /api/reports/revenue. */
+/**
+ * Omzet per hari untuk setiap tanggal dalam rentang dari data /api/reports/revenue.
+ * Rentang <= 7 hari memakai nama hari, lebih panjang memakai tanggal.
+ */
 function buildDailyPoints(revenue, range) {
   const byDate = new Map(revenue.map((item) => [item.tanggal, item]));
+  const days = countDays(range);
   const points = [];
-  for (let i = 0; i < 7; i += 1) {
+  for (let i = 0; i < days; i += 1) {
     const dateKey = shiftDateKey(range.tanggalMulai, i);
     const item = byDate.get(dateKey);
     const weekday = new Date(`${dateKey}T00:00:00Z`).getUTCDay();
     points.push({
-      label: WEEKDAY_LABELS[weekday],
+      label: days <= 7 ? WEEKDAY_LABELS[weekday] : String(Number(dateKey.slice(8, 10))),
       tanggal: dateKey,
       omzet: Number(item?.omzet || 0),
       jumlahTransaksi: Number(item?.jumlahTransaksi || 0),
     });
   }
+  return points;
+}
+
+/** Omzet per 7 hari berturut-turut sejak tanggal mulai (untuk rentang kustom panjang). */
+function buildRollingWeeklyPoints(revenue, range) {
+  const days = countDays(range);
+  const points = Array.from({ length: Math.ceil(days / 7) }, (_, idx) => {
+    const start = shiftDateKey(range.tanggalMulai, idx * 7);
+    return {
+      label: `${Number(start.slice(8, 10))}/${Number(start.slice(5, 7))}`,
+      omzet: 0,
+      jumlahTransaksi: 0,
+    };
+  });
+
+  revenue.forEach((item) => {
+    if (!isWithinRange(item.tanggal, range)) return;
+    const offset = countDays({ tanggalMulai: range.tanggalMulai, tanggalAkhir: item.tanggal }) - 1;
+    const point = points[Math.floor(offset / 7)];
+    if (!point) return;
+    point.omzet += Number(item.omzet || 0);
+    point.jumlahTransaksi += Number(item.jumlahTransaksi || 0);
+  });
+
   return points;
 }
 
@@ -129,9 +220,14 @@ function buildWeeklyPoints(revenue, range) {
 export default function OwnerLaporanPage() {
   const [todayKey] = useState(() => toDateKey(new Date()));
   const [period, setPeriod] = useState("harian");
+  const [customRange, setCustomRange] = useState(() => ({
+    tanggalMulai: shiftDateKey(toDateKey(new Date()), -6),
+    tanggalAkhir: toDateKey(new Date()),
+  }));
   const [reloadKey, setReloadKey] = useState(0);
 
   const [summary, setSummary] = useState(EMPTY_SUMMARY);
+  const [previousSummary, setPreviousSummary] = useState(null);
   const [revenue, setRevenue] = useState([]);
   const [topProducts, setTopProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -142,9 +238,11 @@ export default function OwnerLaporanPage() {
   const [statusMessage, setStatusMessage] = useState("");
 
   const range = useMemo(
-    () => getPeriodRange(period, todayKey),
-    [period, todayKey]
+    () => getPeriodRange(period, todayKey, customRange),
+    [period, todayKey, customRange]
   );
+  const previousRange = useMemo(() => getPreviousRange(period, range), [period, range]);
+  const chartMode = getChartMode(period, range);
   const periodLabel = getPeriodLabel(period, range);
 
   const showFlashMessage = useCallback((msg) => {
@@ -160,15 +258,20 @@ export default function OwnerLaporanPage() {
       apiGetReportSummary(range),
       apiGetReportRevenue({
         ...range,
-        interval: period === "harian" ? "jam" : undefined,
+        interval: chartMode === "jam" ? "jam" : undefined,
       }),
       apiGetReportTopProducts(range),
+      // Pembanding bersifat opsional: bila gagal, kartu tetap tampil tanpa persentase
+      apiGetReportSummary(previousRange).catch(() => null),
     ])
-      .then(([summaryRes, revenueRes, topRes]) => {
+      .then(([summaryRes, revenueRes, topRes, previousRes]) => {
         if (ignore) return;
         setSummary({ ...EMPTY_SUMMARY, ...(summaryRes?.data || {}) });
         setRevenue(Array.isArray(revenueRes?.data) ? revenueRes.data : []);
         setTopProducts(Array.isArray(topRes?.data) ? topRes.data : []);
+        setPreviousSummary(
+          previousRes?.data ? { ...EMPTY_SUMMARY, ...previousRes.data } : null
+        );
       })
       .catch((err) => {
         if (ignore) return;
@@ -180,19 +283,40 @@ export default function OwnerLaporanPage() {
     return () => {
       ignore = true;
     };
-  }, [period, range, reloadKey]);
+  }, [range, previousRange, chartMode, reloadKey]);
 
   const chartPoints = useMemo(() => {
-    if (period === "harian") return buildHourlyPoints(revenue);
-    if (period === "mingguan") return buildDailyPoints(revenue, range);
-    return buildWeeklyPoints(revenue, range);
-  }, [period, revenue, range]);
+    if (chartMode === "jam") return buildHourlyPoints(revenue);
+    if (chartMode === "hari") return buildDailyPoints(revenue, range);
+    if (period === "bulanan") return buildWeeklyPoints(revenue, range);
+    return buildRollingWeeklyPoints(revenue, range);
+  }, [chartMode, period, revenue, range]);
 
   const handlePeriodChange = (nextPeriod) => {
     if (nextPeriod === period) return;
     setIsLoading(true);
     setApiError("");
     setPeriod(nextPeriod);
+  };
+
+  // Tanggal mulai tidak boleh melewati tanggal akhir (dan sebaliknya), maks. hari ini
+  const handleCustomRangeChange = (field, value) => {
+    if (!value) return;
+    const clamped = value > todayKey ? todayKey : value;
+    const next = { ...customRange, [field]: clamped };
+    if (next.tanggalMulai > next.tanggalAkhir) {
+      if (field === "tanggalMulai") next.tanggalAkhir = next.tanggalMulai;
+      else next.tanggalMulai = next.tanggalAkhir;
+    }
+    if (
+      next.tanggalMulai === customRange.tanggalMulai &&
+      next.tanggalAkhir === customRange.tanggalAkhir
+    ) {
+      return;
+    }
+    setIsLoading(true);
+    setApiError("");
+    setCustomRange(next);
   };
 
   const handleRetry = () => {
@@ -270,6 +394,9 @@ export default function OwnerLaporanPage() {
         period={period}
         onPeriodChange={handlePeriodChange}
         periodLabel={periodLabel}
+        customRange={customRange}
+        onCustomRangeChange={handleCustomRangeChange}
+        maxDate={todayKey}
         onDownloadPdf={handleDownloadPdf}
         isDownloadDisabled={isLoading || Boolean(apiError)}
         isDownloading={isDownloading}
@@ -289,10 +416,9 @@ export default function OwnerLaporanPage() {
       ) : (
         <>
           <ReportSummaryCards
-            totalOmzet={summary.totalOmzet}
-            totalTransaksi={summary.totalTransaksi}
-            totalTerjual={summary.totalTerjual}
-            totalMasuk={summary.totalMasuk}
+            summary={summary}
+            previousSummary={previousSummary}
+            compareLabel={COMPARE_LABELS[period]}
             periodLabel={periodLabel}
           />
 
@@ -302,7 +428,7 @@ export default function OwnerLaporanPage() {
             className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_300px] xl:grid-cols-[minmax(0,1fr)_340px] 2xl:grid-cols-[minmax(0,1fr)_360px] gap-4 items-start"
           >
             <div className="flex flex-col gap-4 min-w-0">
-              <RevenueChart title={CHART_TITLES[period]} points={chartPoints} />
+              <RevenueChart title={CHART_TITLES[chartMode]} points={chartPoints} />
               <ReportAutoSendPanel onSaved={showFlashMessage} />
             </div>
 
