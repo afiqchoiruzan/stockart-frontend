@@ -22,23 +22,8 @@ const WEEKDAY_OPTIONS = [
   { value: 0, label: "Minggu" },
 ];
 
-const STATUS_META = {
-  sent: {
-    label: "Terkirim",
-    badgeClass: "bg-[#E6F2EC] text-[#245942]",
-  },
-  failed: {
-    label: "Gagal Mengirim",
-    badgeClass: "bg-[#F8E8E6] text-[#8c322b]",
-  },
-  email_not_configured: {
-    label: "Email Belum Dikonfigurasi",
-    badgeClass: "bg-[#FBF1DC] text-[#7a5612]",
-  },
-};
-
 const INPUT_CLASS =
-  "w-full min-h-[40px] px-3 bg-white border border-[#E1E4E0] rounded-lg text-[13px] text-[#1F2A27] focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15";
+  "min-h-[34px] px-2.5 bg-white border border-[#E1E4E0] rounded-lg text-xs text-[#1F2A27] focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15";
 
 function formatWibDateTime(isoString) {
   if (!isoString) return "-";
@@ -58,23 +43,16 @@ function formatWibDateTime(isoString) {
   );
 }
 
-function ToggleRow({ id, label, description, checked, onChange, disabled = false }) {
+function InlineSwitch({ id, label, checked, onChange, disabled = false, title }) {
   return (
     <label
       htmlFor={id}
-      className={`flex items-start justify-between gap-3 ${
-        disabled ? "opacity-60 cursor-not-allowed" : "cursor-pointer"
+      title={title}
+      className={`inline-flex items-center gap-2 text-[13px] font-semibold text-[#1F2A27] ${
+        disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
       }`}
     >
-      <div>
-        <div className="text-[13px] font-semibold text-[#1F2A27]">{label}</div>
-        {description && (
-          <p className="text-[11px] text-[#6B7773] mt-0.5 leading-relaxed">
-            {description}
-          </p>
-        )}
-      </div>
-      <span className="relative inline-flex shrink-0 mt-0.5">
+      <span className="relative inline-flex shrink-0">
         <input
           id={id}
           type="checkbox"
@@ -93,6 +71,7 @@ function ToggleRow({ id, label, description, checked, onChange, disabled = false
           className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-transform peer-checked:translate-x-4"
         />
       </span>
+      {label}
     </label>
   );
 }
@@ -190,78 +169,60 @@ export default function ReportAutoSendPanel({ onSaved }) {
     }
   };
 
-  const effectiveLastStatus =
-    serverData?.emailConfigured &&
-    serverData?.lastDigestStatus === "email_not_configured"
-      ? null
-      : serverData?.lastDigestStatus;
-  const lastStatusMeta = effectiveLastStatus
-    ? STATUS_META[effectiveLastStatus] || {
-        label: effectiveLastStatus,
-        badgeClass: "bg-[#F5F6F4] text-[#6B7773]",
-      }
-    : null;
+  const lastFailed =
+    serverData?.lastDigestStatus === "failed" ? serverData.lastDigestError : "";
 
   return (
     <section
       aria-label="Kirim Laporan Otomatis"
-      className="bg-white border border-[#E1E4E0] rounded-lg flex flex-col"
+      className="bg-white border border-[#E1E4E0] rounded-lg px-4 py-3 flex flex-col gap-2.5"
     >
-      <div className="px-4 py-3 border-b border-[#E1E4E0]">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-sm font-semibold text-[#1F2A27]">
           Kirim Laporan Otomatis
         </h2>
-        <p className="text-[11px] text-[#6B7773] mt-0.5">
-          Laporan dikirim ke email owner sesuai jadwal (WIB).
-        </p>
+        {serverData && (
+          <span className="text-[11px] text-[#6B7773]">
+            {serverData.digestFrequency === "off" ? (
+              "Nonaktif"
+            ) : (
+              <>
+                Berikutnya:{" "}
+                <span className="font-semibold text-[#1F2A27]">
+                  {formatWibDateTime(serverData.nextRunAt)}
+                </span>
+              </>
+            )}
+          </span>
+        )}
       </div>
 
       {isLoading ? (
-        <div className="p-6 text-center text-sm text-[#6B7773]">
-          Memuat pengaturan jadwal…
-        </div>
+        <p className="text-xs text-[#6B7773]">Memuat pengaturan jadwal…</p>
       ) : loadError ? (
-        <div className="p-4">
-          <div className="p-3 border border-[#C4574F] bg-[#F8E8E6] text-[#8c322b] rounded-md text-xs leading-relaxed">
-            {loadError}
-          </div>
-        </div>
+        <p role="alert" className="text-xs text-[#8c322b] leading-relaxed">
+          {loadError}
+        </p>
       ) : (
-        <form onSubmit={handleSubmit} className="p-4 flex flex-col gap-3.5">
-          {serverData?.emailConfigured === false && (
-            <div
-              role="alert"
-              className="p-3 border border-[#D9A441] bg-[#FBF1DC] text-[#7a5612] rounded-md text-[11px] leading-relaxed"
-            >
-              <strong>Konfigurasi email belum aktif di server.</strong> Jadwal tetap
-              disimpan, namun pengiriman membutuhkan <code>BREVO_API_KEY</code> atau{" "}
-              <code>SMTP_USER</code>/<code>SMTP_PASS</code> di backend.
-            </div>
-          )}
-
-          {saveError && (
-            <div
-              role="alert"
-              className="p-3 border border-[#C4574F] bg-[#F8E8E6] text-[#8c322b] rounded-md text-xs"
-            >
-              {saveError}
-            </div>
-          )}
-
-          <ToggleRow
+        <form
+          onSubmit={handleSubmit}
+          className="flex flex-wrap items-center gap-x-3 gap-y-2.5"
+        >
+          <InlineSwitch
             id="report-auto-email"
-            label="Kirim ke email owner"
-            description="Aktifkan untuk mengirim laporan berkala tanpa menekan tombol."
+            label="Email"
             checked={isEnabled}
             onChange={setIsEnabled}
           />
 
           {isEnabled && (
             <>
+              <span aria-hidden="true" className="h-5 w-px bg-[#E1E4E0]" />
+
               <div
                 role="group"
                 aria-label="Frekuensi laporan otomatis"
-                className="grid grid-cols-3 gap-2"
+                className="inline-flex p-0.5 bg-white border border-[#E1E4E0] rounded-lg"
               >
                 {FREQUENCY_OPTIONS.map((opt) => {
                   const active = digestFrequency === opt.value;
@@ -271,148 +232,116 @@ export default function ReportAutoSendPanel({ onSaved }) {
                       type="button"
                       onClick={() => setDigestFrequency(opt.value)}
                       aria-pressed={active}
-                      className={`px-2.5 py-2 rounded-md border text-left transition-colors cursor-pointer ${
+                      title={opt.desc}
+                      className={`min-h-[30px] px-3 rounded-md text-xs font-semibold transition-colors cursor-pointer ${
                         active
-                          ? "border-[#2F6F5E] bg-[#E6F0ED] text-[#1F2A27]"
-                          : "border-[#E1E4E0] bg-white hover:bg-[#F5F6F4] text-[#1F2A27]"
+                          ? "bg-[#E6F0ED] text-[#2F6F5E]"
+                          : "text-[#6B7773] hover:bg-[#F5F6F4] hover:text-[#1F2A27]"
                       }`}
                     >
-                      <div className="text-xs font-semibold">{opt.label}</div>
-                      <div className="text-[11px] text-[#6B7773] mt-0.5">
-                        {opt.desc}
-                      </div>
+                      {opt.label}
                     </button>
                   );
                 })}
               </div>
 
-              <div className="grid grid-cols-2 gap-2.5">
-                {digestFrequency === "weekly" && (
-                  <div>
-                    <label
-                      htmlFor="report-weekday"
-                      className="block text-[11px] font-semibold text-[#6B7773] mb-1"
-                    >
-                      Hari
-                    </label>
-                    <select
-                      id="report-weekday"
-                      value={digestWeekday}
-                      onChange={(e) => setDigestWeekday(Number(e.target.value))}
-                      className={INPUT_CLASS}
-                    >
-                      {WEEKDAY_OPTIONS.map((d) => (
-                        <option key={d.value} value={d.value}>
-                          {d.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                {digestFrequency === "monthly" && (
-                  <div>
-                    <label
-                      htmlFor="report-dom"
-                      className="block text-[11px] font-semibold text-[#6B7773] mb-1"
-                    >
-                      Tanggal
-                    </label>
-                    <select
-                      id="report-dom"
-                      value={digestDayOfMonth}
-                      onChange={(e) => setDigestDayOfMonth(Number(e.target.value))}
-                      className={INPUT_CLASS}
-                    >
-                      {Array.from({ length: 28 }, (_, i) => i + 1).map((day) => (
-                        <option key={day} value={day}>
-                          Tanggal {day}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-
-                <div className={digestFrequency === "daily" ? "col-span-2" : ""}>
-                  <label
-                    htmlFor="report-time"
-                    className="block text-[11px] font-semibold text-[#6B7773] mb-1"
-                  >
-                    Jam Kirim (WIB)
+              {digestFrequency === "weekly" && (
+                <>
+                  <label htmlFor="report-weekday" className="sr-only">
+                    Hari kirim
                   </label>
-                  <input
-                    id="report-time"
-                    type="time"
-                    required
-                    value={digestTime}
-                    onChange={(e) => setDigestTime(e.target.value)}
+                  <select
+                    id="report-weekday"
+                    value={digestWeekday}
+                    onChange={(e) => setDigestWeekday(Number(e.target.value))}
                     className={INPUT_CLASS}
-                  />
-                </div>
-              </div>
-            </>
-          )}
-
-          <ToggleRow
-            id="report-auto-drive"
-            label="Simpan ke Google Drive"
-            description={
-              serverData?.driveConfigured
-                ? "Salinan PDF laporan otomatis ikut disimpan ke folder Drive owner."
-                : "Belum tersedia: GDRIVE_WEBHOOK_URL belum diatur di backend."
-            }
-            checked={Boolean(saveToDrive) && Boolean(serverData?.driveConfigured)}
-            onChange={setSaveToDrive}
-            disabled={!serverData?.driveConfigured}
-          />
-
-          {serverData && (
-            <div className="pt-3 border-t border-[#EEF0EC] flex flex-col gap-1.5 text-[11px]">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[#6B7773]">Jadwal berikutnya</span>
-                <span className="font-semibold text-[#1F2A27] text-right">
-                  {serverData.digestFrequency === "off"
-                    ? "Nonaktif"
-                    : formatWibDateTime(serverData.nextRunAt)}
-                </span>
-              </div>
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-[#6B7773]">Pengiriman terakhir</span>
-                {lastStatusMeta ? (
-                  <span
-                    className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold ${lastStatusMeta.badgeClass}`}
                   >
-                    {lastStatusMeta.label}
-                  </span>
-                ) : (
-                  <span className="text-[#6B7773]">Belum pernah berjalan</span>
-                )}
-              </div>
-              {serverData.lastDigestSentAt && (
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-[#6B7773]">Waktu kirim terakhir</span>
-                  <span className="text-[#1F2A27] text-right">
-                    {formatWibDateTime(serverData.lastDigestSentAt)}
-                  </span>
-                </div>
+                    {WEEKDAY_OPTIONS.map((d) => (
+                      <option key={d.value} value={d.value}>
+                        {d.label}
+                      </option>
+                    ))}
+                  </select>
+                </>
               )}
-              {serverData.lastDigestStatus === "failed" &&
-                serverData.lastDigestError && (
-                  <div className="text-[11px] text-[#8c322b] bg-[#F8E8E6] px-2.5 py-1.5 rounded">
-                    Error terakhir: {serverData.lastDigestError}
-                  </div>
-                )}
-            </div>
+
+              {digestFrequency === "monthly" && (
+                <>
+                  <label htmlFor="report-dom" className="sr-only">
+                    Tanggal kirim
+                  </label>
+                  <select
+                    id="report-dom"
+                    value={digestDayOfMonth}
+                    onChange={(e) => setDigestDayOfMonth(Number(e.target.value))}
+                    className={INPUT_CLASS}
+                  >
+                    {Array.from({ length: 28 }, (_, i) => i + 1).map((day) => (
+                      <option key={day} value={day}>
+                        Tanggal {day}
+                      </option>
+                    ))}
+                  </select>
+                </>
+              )}
+
+              <label htmlFor="report-time" className="sr-only">
+                Jam kirim (WIB)
+              </label>
+              <input
+                id="report-time"
+                type="time"
+                required
+                value={digestTime}
+                onChange={(e) => setDigestTime(e.target.value)}
+                className={INPUT_CLASS}
+              />
+
+              <InlineSwitch
+                id="report-auto-drive"
+                label="Google Drive"
+                title={
+                  serverData?.driveConfigured
+                    ? "Salinan PDF laporan otomatis ikut disimpan ke folder Drive owner"
+                    : "Belum tersedia: GDRIVE_WEBHOOK_URL belum diatur di backend"
+                }
+                checked={Boolean(saveToDrive) && Boolean(serverData?.driveConfigured)}
+                onChange={setSaveToDrive}
+                disabled={!serverData?.driveConfigured}
+              />
+            </>
           )}
 
           <button
             type="submit"
             disabled={isSaving || !hasChanges}
-            className="inline-flex items-center justify-center min-h-[40px] px-3.5 rounded-lg bg-[#2F6F5E] hover:bg-[#255a4c] text-[13px] font-semibold text-white transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            className="ml-auto inline-flex items-center justify-center min-h-[34px] px-3.5 rounded-lg bg-[#2F6F5E] hover:bg-[#255a4c] text-xs font-semibold text-white transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isSaving ? "Menyimpan…" : "Simpan Jadwal"}
+            {isSaving ? "Menyimpan…" : "Simpan"}
           </button>
         </form>
+      )}
+
+      {serverData?.emailConfigured === false && (
+        <p role="alert" className="text-[11px] text-[#7a5612]">
+          Email belum dikonfigurasi di server, jadwal tersimpan tapi belum bisa mengirim.
+        </p>
+      )}
+
+      {saveError && (
+        <p role="alert" className="text-[11px] text-[#8c322b]">
+          {saveError}
+        </p>
+      )}
+
+      {lastFailed && (
+        <p role="alert" className="text-[11px] text-[#8c322b]">
+          Pengiriman terakhir gagal
+          {serverData.lastDigestSentAt
+            ? ` (terakhir berhasil ${formatWibDateTime(serverData.lastDigestSentAt)})`
+            : ""}
+          : {lastFailed}
+        </p>
       )}
     </section>
   );
