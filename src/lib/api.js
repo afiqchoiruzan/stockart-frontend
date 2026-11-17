@@ -868,3 +868,29 @@ export async function apiDownloadReportPdf(params = {}) {
 
   return res.blob();
 }
+
+/**
+ * Mengambil daftar semua akun kasir (GET /api/auth/cashiers) — khusus pemilik.
+ */
+export async function apiGetCashiers() {
+  return apiFetch("/api/auth/cashiers");
+}
+
+/**
+ * Mendaftarkan akun kasir baru (POST /api/auth/register) — khusus pemilik.
+ */
+export async function apiCreateCashier({ nama, username, password }) {
+  return apiFetch("/api/auth/register", {
+    method: "POST",
+    body: JSON.stringify({ nama, username, password }),
+  });
+}
+
+/**
+ * Menghapus akun kasir berdasarkan ID (DELETE /api/auth/cashiers/:id) — khusus pemilik.
+ */
+export async function apiDeleteCashier(id) {
+  return apiFetch(`/api/auth/cashiers/${id}`, {
+    method: "DELETE",
+  });
+}

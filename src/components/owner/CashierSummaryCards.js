@@ -14,6 +14,7 @@ export default function CashierSummaryCards({
   selectedKasirId = "semua",
   onSelectKasir,
   selectedDate = "",
+  onManageCashiers,
 }) {
   const dateLabel = selectedDate
     ? formatTanggalSingkat(selectedDate)
@@ -39,6 +40,16 @@ export default function CashierSummaryCards({
             {selectedDate ? `Tanggal: ${dateLabel}` : "Periode: Semua tanggal"}
           </span>
         </div>
+
+        {typeof onManageCashiers === "function" && (
+          <button
+            type="button"
+            onClick={onManageCashiers}
+            className="inline-flex items-center gap-1.5 min-h-10 sm:min-h-8 px-3 rounded-lg border border-[#2F6F5E] bg-white hover:bg-[#E6F0ED] text-xs font-semibold text-[#2F6F5E] transition-colors cursor-pointer shrink-0"
+          >
+            + Kelola Kasir
+          </button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3 sm:gap-3.5">

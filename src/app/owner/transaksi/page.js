@@ -5,8 +5,10 @@ import {
   fetchTransactionsFromApi,
   fetchTransactionDetailFromApi,
   buildCashierRoster,
+  apiGetCashiers,
 } from "@/lib/api";
 import CashierSummaryCards from "@/components/owner/CashierSummaryCards";
+import CashierManageModal from "@/components/owner/CashierManageModal";
 import TransactionToolbar from "@/components/owner/TransactionToolbar";
 import TransactionTable from "@/components/owner/TransactionTable";
 import TransactionDetailPanel from "@/components/owner/TransactionDetailPanel";
@@ -14,6 +16,8 @@ import { matchesTransactionStatusFilter } from "@/lib/mockTransactions";
 
 export default function OwnerTransaksiPage() {
   const [transactions, setTransactions] = useState([]);
+  const [cashiersFromApi, setCashiersFromApi] = useState(null);
+  const [isManageCashiersOpen, setIsManageCashiersOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [apiError, setApiError] = useState("");
 
@@ -24,11 +28,30 @@ export default function OwnerTransaksiPage() {
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTrxId, setSelectedTrxId] = useState(null);
 
+  const loadCashiersFromBackend = useCallback(async () => {
+    try {
+      const res = await apiGetCashiers();
+      const list = Array.isArray(res?.data)
+        ? res.data.map((u) => ({
+            id: String(u._id),
+            nama: u.nama || "Kasir",
+            username: u.username || "",
+          }))
+        : [];
+      setCashiersFromApi(list);
+    } catch {
+      // Fallback ke buildCashierRoster jika endpoint belum tersedia
+    }
+  }, []);
+
   const loadFromBackend = useCallback(async () => {
     setIsLoading(true);
     setApiError("");
     try {
-      const data = await fetchTransactionsFromApi();
+      const [data] = await Promise.all([
+        fetchTransactionsFromApi(),
+        loadCashiersFromBackend(),
+      ]);
       setTransactions(data);
       if (data.length > 0) {
         setSelectedTrxId((prev) => prev || data[0].id);
@@ -38,14 +61,26 @@ export default function OwnerTransaksiPage() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [loadCashiersFromBackend]);
 
   useEffect(() => {
     let ignore = false;
-    fetchTransactionsFromApi()
-      .then((data) => {
+    Promise.all([
+      fetchTransactionsFromApi(),
+      apiGetCashiers().catch(() => null),
+    ])
+      .then(([data, cashiersRes]) => {
         if (ignore) return;
         setTransactions(data);
+        if (Array.isArray(cashiersRes?.data)) {
+          setCashiersFromApi(
+            cashiersRes.data.map((u) => ({
+              id: String(u._id),
+              nama: u.nama || "Kasir",
+              username: u.username || "",
+            }))
+          );
+        }
         if (data.length > 0) {
           setSelectedTrxId((prev) => prev || data[0].id);
         }
@@ -63,8 +98,9 @@ export default function OwnerTransaksiPage() {
   }, []);
 
   const activeCashiers = useMemo(() => {
+    if (Array.isArray(cashiersFromApi)) return cashiersFromApi;
     return buildCashierRoster(transactions, true);
-  }, [transactions]);
+  }, [cashiersFromApi, transactions]);
 
   const filteredTransactions = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -157,6 +193,14 @@ export default function OwnerTransaksiPage() {
         selectedKasirId={selectedKasirId}
         onSelectKasir={setSelectedKasirId}
         selectedDate={selectedDate}
+        onManageCashiers={() => setIsManageCashiersOpen(true)}
+      />
+
+      <CashierManageModal
+        open={isManageCashiersOpen}
+        onClose={() => setIsManageCashiersOpen(false)}
+        cashiers={activeCashiers}
+        onRefreshCashiers={loadCashiersFromBackend}
       />
 
       {/* Toolbar Pencarian & Filter */}
