@@ -22,8 +22,8 @@ export default function RecipientEmailRow({
 
   const hasFieldFromServer = maskedRecipient !== undefined;
   const displayText = !hasFieldFromServer
-    ? "Default server (.env)"
-    : maskedRecipient || "Belum diatur (OWNER_EMAIL di server)";
+    ? "Email owner (backend belum diperbarui)"
+    : maskedRecipient || "Belum diatur";
   const isMissing = hasFieldFromServer && !maskedRecipient;
 
   const commitSave = async (nextValue) => {
@@ -58,28 +58,19 @@ export default function RecipientEmailRow({
         <div className="flex flex-wrap items-center justify-end gap-1.5 min-w-0">
           <span
             className={`font-mono font-medium break-all ${
-              isMissing ? "text-[#8c322b]" : "text-[#1F2A27]"
+              isMissing || !hasFieldFromServer
+                ? "text-[#8c322b]"
+                : "text-[#1F2A27]"
             }`}
           >
             {displayText}
           </span>
-          {hasFieldFromServer && maskedRecipient && (
-            <span
-              className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${
-                isCustomRecipient
-                  ? "bg-[#E6F0ED] text-[#2F6F5E]"
-                  : "bg-[#F5F6F4] text-[#6B7773]"
-              }`}
-            >
-              {isCustomRecipient ? "Kustom" : "Default"}
-            </span>
-          )}
           {savedNotice && (
             <span className="text-[11px] font-medium text-[#2F6F5E]">
               Tersimpan
             </span>
           )}
-          {!isEditing && typeof onSave === "function" && (
+          {!isEditing && hasFieldFromServer && typeof onSave === "function" && (
             <button
               type="button"
               disabled={disabled}
@@ -122,8 +113,8 @@ export default function RecipientEmailRow({
             }`}
           />
           <p className="text-[11px] text-[#6B7773] leading-snug">
-            Disimpan permanen untuk pengiriman otomatis maupun manual. Kosongkan
-            untuk kembali ke default server.
+            Berlaku permanen untuk pengiriman otomatis &amp; manual. Kosongkan
+            untuk kembali ke email bawaan.
           </p>
           {error && (
             <p role="alert" className="text-[11px] text-[#8c322b]">
