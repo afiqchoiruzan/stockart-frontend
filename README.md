@@ -28,10 +28,10 @@ Seluruh data terhubung langsung ke backend `stockart-backend` (Express + MongoDB
 
 ## Poin Nilai Tambah
 
-- **Penyimpanan Berkas di Google Drive:** Laporan penjualan PDF dapat diarsipkan ke Google Drive melalui webhook backend (`GDRIVE_WEBHOOK_URL`).
-- **Pengiriman Email Otomatis:** Notifikasi stok menipis (*digest* terjadwal WIB & *critical alert* stok = 0) dan pengiriman laporan penjualan PDF otomatis ke beberapa email penerima (`RecipientEmailRow`) melalui Brevo HTTP API.
-- **Payment Gateway:** Pembayaran **QRIS Dinamis** terintegrasi **Midtrans Core API (Sandbox)** (`QrisPaymentModal.js`) lengkap dengan QR Code SVG, hitung mundur 15 menit, polling status, dan verifikasi webhook.
-- **Deployment Selain Vercel:** Frontend di-deploy di **Vercel** (`https://stockartweb.vercel.app`), sedangkan backend Express + *scheduler* di-deploy di **Railway Cloud** (`https://stockart-backend-production-5896718b.up.railway.app`) dengan **MongoDB Atlas (Replica Set)**.
+- **Penyimpanan Berkas di Google Drive:** Laporan penjualan PDF dapat diarsipkan ke Google Drive melalui webhook backend (`GDRIVE_WEBHOOK_URL`). Lihat [Penyimpanan Laporan di Google Drive](#penyimpanan-laporan-di-google-drive).
+- **Pengiriman Email Otomatis:** Notifikasi stok menipis (*digest* terjadwal WIB & *critical alert* stok = 0) dan pengiriman laporan penjualan PDF otomatis ke beberapa email penerima (`RecipientEmailRow`) melalui Brevo HTTP API. Lihat [Pengiriman Email Otomatis](#pengiriman-email-otomatis).
+- **Payment Gateway:** Pembayaran **QRIS Dinamis** terintegrasi **Midtrans Core API (Sandbox)** (`QrisPaymentModal.js`) lengkap dengan QR Code SVG, hitung mundur 15 menit, polling status, dan verifikasi webhook. Lihat [Pembayaran QRIS](#pembayaran-qris-midtrans-sandbox).
+- **Deployment Selain Vercel:** Frontend di-deploy di **Vercel** (`https://stockartweb.vercel.app`), sedangkan backend Express + *scheduler* di-deploy di **Railway Cloud** (`https://stockart-backend-production-5896718b.up.railway.app`) dengan **MongoDB Atlas (Replica Set)**. Lihat [Deployment](#deployment).
 
 ## Menjalankan
 
@@ -188,6 +188,161 @@ ditutup, status final, QR dibuat ulang, atau pindah halaman. Alur **Tunai** tida
   backend tetap mencatatnya lunas dan memotong stok, tetapi POS tidak lagi menampilkannya.
 - Hitung mundur memakai jam perangkat kasir; status kedaluwarsa resmi tetap ditentukan backend.
 - Uang bayar/kembalian disimpan di `localStorage` (sama seperti tunai), jadi di perangkat lain tampil "-".
+
+## Penyimpanan Laporan di Google Drive
+
+Setiap kali laporan penjualan dikirim lewat email, backend bisa ikut menyimpan salinannya ke **Google Drive**.
+Backend tidak memakai Google API langsung; ia mengirim laporan ke **Google Apps Script Web App** yang
+alamatnya diatur di `GDRIVE_WEBHOOK_URL`. Bila variabel ini kosong, fitur Drive dilewati dan email tetap terkirim.
+
+### Alur
+
+1. Owner mengirim laporan (manual atau terjadwal, lihat [Pengiriman Email Otomatis](#pengiriman-email-otomatis)).
+2. Backend mengirim isi laporan ke Web App dengan nama file `Laporan_Stockart_<YYYY-MM-DD>.pdf`.
+3. Web App menyimpan file ke folder **`Stockart_Reports`** (dibuat otomatis bila belum ada) dan membagikan
+   folder ke email owner.
+4. Email laporan memuat tautan ke **file** dan ke **folder** `Stockart_Reports`. Pesan sukses di UI berubah menjadi
+   `Laporan berhasil dikirim ke email owner (<email>) dan disimpan ke Google Drive`.
+
+### Di UI Owner (`/owner/laporan`)
+
+- **Kirim Laporan → Kirim Sekarang:** salinan selalu disimpan ke Drive bila `GDRIVE_WEBHOOK_URL` sudah diatur
+  (dropdown menampilkan keterangan *"Salinan disimpan ke Google Drive jika sudah diaktifkan di server"*).
+- **Panel Kirim Laporan Otomatis:** sakelar **Google Drive** menentukan apakah laporan terjadwal ikut diarsipkan.
+  Sakelar nonaktif (abu-abu) dengan keterangan *"Belum tersedia: GDRIVE_WEBHOOK_URL belum diatur di backend"*
+  bila backend belum dikonfigurasi.
+
+### Konfigurasi (backend `.env`)
+
+```env
+GDRIVE_WEBHOOK_URL=https://script.google.com/macros/s/<id-deployment>/exec
+OWNER_EMAIL=owner@example.com   # email yang diberi akses folder Drive
+```
+
+### Keterbatasan
+
+- Upload Drive dijalankan **sebelum** email dikirim. Jika Web App mengembalikan error, pengiriman laporan
+  dianggap gagal dan email tidak terkirim — cek URL Web App bila muncul pesan
+  `Respons Google Drive Web App tidak valid` atau `Gagal menyimpan laporan ke Google Drive`.
+
+### Struktur kode terkait
+
+```
+../stockart-backend/services/driveService.js     # uploadReportToDrive → POST ke GDRIVE_WEBHOOK_URL
+../stockart-backend/services/reportService.js    # sendReport: upload Drive (opsional) lalu kirim email
+src/components/owner/SendReportDropdown.js       # tombol Kirim Laporan (manual)
+src/components/owner/ReportAutoSendPanel.js      # sakelar Google Drive pada jadwal otomatis
+src/lib/api.js                                   # apiSendReportEmail, apiGet/UpdateReportAutoSendSettings
+```
+
+## Pengiriman Email Otomatis
+
+Backend mengirim email melalui **Brevo HTTP API** (`https://api.brevo.com/v3/smtp/email`) bila `BREVO_API_KEY`
+diatur; bila tidak, backend memakai cadangan SMTP Gmail (`SMTP_USER`/`SMTP_PASS`). Ada tiga jenis email:
+**rekap stok menipis**, **alert kritis stok habis**, dan **laporan penjualan PDF**.
+
+Semua jadwal memakai zona **WIB**. *Scheduler* berjalan di dalam proses backend dan mengecek jadwal
+**setiap 60 detik**; saat backend baru menyala, jadwal yang terlewat langsung dikejar (*catch-up*).
+Pengiriman yang gagal dicoba ulang hingga **3 kali** per slot jadwal.
+
+### Email penerima (`RecipientEmailRow`)
+
+- Baris **Email Tujuan** menampilkan alamat penerima yang disamarkan. Klik **Ubah**/**Atur**,
+  isi satu atau beberapa email dipisah koma, lalu **Simpan Email**.
+- **Reset Default** mengembalikan penerima ke `OWNER_EMAIL` di backend.
+- Format diperiksa sebelum dikirim; pesan `Format email tidak valid. Pisahkan dengan koma jika lebih dari satu.`
+  muncul bila ada alamat yang salah.
+
+### Notifikasi stok menipis — Owner (`/owner/produk`)
+
+Buka ikon **peringatan stok menipis** di halaman produk → **Atur Jadwal** untuk membuka modal **Jadwal Alert Stok**.
+
+1. **Frekuensi Rekap Email Otomatis** (*digest*): **Mati** (hanya manual & kritis), **Harian**, **Mingguan**
+   (pilih hari), atau **Bulanan** (pilih tanggal 1–28), ditambah **jam kirim (WIB)**.
+   Rekap berisi semua produk dengan `stok <= stokMinimum`. Bila tidak ada produk menipis, status terakhir
+   tercatat **Dilewati (Semua Stok Aman)** dan email tidak dikirim.
+2. **Alert Instan Saat Stok Produk Habis (0)** (*critical alert*): email dikirim **sekali** segera setelah
+   transaksi membuat stok produk menjadi 0 — baik transaksi tunai maupun QRIS yang lunas lewat webhook.
+   Alert untuk produk yang sama baru bisa terkirim lagi setelah stoknya kembali > 0 (restock, edit produk,
+   atau transaksi dibatalkan).
+3. **Kirim Rekap Sekarang (N)** mengirim rekap saat itu juga tanpa menunggu jadwal.
+4. Modal menampilkan jadwal berikutnya dan status terakhir: **Terkirim**, **Dilewati (Semua Stok Aman)**,
+   **Gagal Mengirim**, atau **Email Belum Dikonfigurasi**.
+
+### Laporan penjualan PDF — Owner (`/owner/laporan`)
+
+- **Kirim Laporan → Kirim Sekarang:** mengirim laporan periode yang sedang difilter. Kolom email boleh
+  dikosongkan (memakai penerima default) atau diisi beberapa email dipisah koma.
+  Lampiran PDF sama dengan file hasil tombol unduh PDF.
+- **Panel Kirim Laporan Otomatis:** nyalakan sakelar **Email**, lalu pilih:
+
+  | Frekuensi | Periode laporan | Pengaturan tambahan |
+  |---|---|---|
+  | **Harian** | Laporan kemarin | Jam kirim |
+  | **Mingguan** | 7 hari terakhir | Hari + jam kirim |
+  | **Bulanan** | 1 bulan terakhir | Tanggal (1–28) + jam kirim |
+
+  Klik **Simpan** → muncul `Jadwal laporan otomatis disimpan. Pengiriman berikutnya: <tanggal> WIB.`
+  Panel juga menampilkan **Berikutnya: …** dan pesan **Pengiriman terakhir gagal** beserta alasannya bila ada.
+
+Bila backend belum punya kredensial email, jadwal tetap tersimpan tetapi muncul peringatan
+*"Email belum dikonfigurasi di server"*.
+
+### Konfigurasi (backend `.env`)
+
+```env
+BREVO_API_KEY=xkeysib-xxxxxxxx      # utama (Brevo HTTP API)
+EMAIL_FROM=pengirim@domain.com      # alamat pengirim yang sudah diverifikasi di Brevo
+OWNER_EMAIL=owner@example.com       # penerima default (boleh beberapa, dipisah koma)
+# Cadangan bila BREVO_API_KEY kosong:
+# SMTP_USER=akun@gmail.com
+# SMTP_PASS=app-password-gmail
+```
+
+### Struktur kode terkait
+
+```
+src/components/owner/LowStockDropdown.js            # daftar stok menipis + tombol Atur Jadwal
+src/components/owner/LowStockAlertSettingsModal.js  # jadwal digest, alert kritis, Kirim Rekap Sekarang
+src/components/owner/RecipientEmailRow.js           # ubah / reset email penerima
+src/components/owner/SendReportDropdown.js          # kirim laporan manual
+src/components/owner/ReportAutoSendPanel.js         # jadwal laporan otomatis
+src/lib/emailValidation.js                          # validasi beberapa email dipisah koma
+src/lib/api.js                                      # notifyLowStockInApi, apiGet/UpdateLowStockAlertSettings, apiSendReportEmail
+../stockart-backend/services/emailService.js        # Brevo API / SMTP + template email
+../stockart-backend/services/lowStockDigestService.js, reportScheduleService.js  # scheduler
+../stockart-backend/services/lowStockAlertService.js                             # critical alert stok = 0
+```
+
+## Deployment
+
+| Bagian | Platform | URL |
+|---|---|---|
+| Frontend (Next.js) | **Vercel** | https://stockartweb.vercel.app |
+| Backend (Express + *scheduler*) | **Railway Cloud** | https://stockart-backend-production-5896718b.up.railway.app |
+| Database | **MongoDB Atlas** (Replica Set) | — |
+
+### Mengapa backend tidak di Vercel
+
+- *Scheduler* email (rekap stok & laporan otomatis) berjalan sebagai proses yang terus hidup dan mengecek
+  jadwal setiap 60 detik. Railway menjalankan backend sebagai server permanen (`npm start` → `node index.js`),
+  sedangkan fungsi serverless Vercel hanya hidup saat ada request.
+- Webhook Midtrans (`/api/payments/webhook`) butuh URL HTTPS publik yang stabil — disediakan oleh domain Railway.
+
+### Mengapa MongoDB Atlas Replica Set
+
+Checkout memakai **transaksi MongoDB** (`mongoose.connection.transaction`) agar pengecekan stok, pemotongan stok,
+dan penyimpanan transaksi terjadi atomik. Transaksi MongoDB hanya berjalan di Replica Set; cluster Atlas
+sudah berbentuk Replica Set secara bawaan.
+
+### Variabel lingkungan
+
+- **Vercel (frontend):** `NEXT_PUBLIC_API_URL=https://stockart-backend-production-5896718b.up.railway.app`.
+  Variabel `NEXT_PUBLIC_*` ditanam saat build, jadi **redeploy** frontend setiap kali nilainya diubah.
+- **Railway (backend):** `MONGO_URI`, `JWT_SECRET`, `CORS_ORIGIN` (harus memuat `https://stockartweb.vercel.app`),
+  `MIDTRANS_SERVER_KEY`, `MIDTRANS_BASE_URL`, `BREVO_API_KEY`, `EMAIL_FROM`, `OWNER_EMAIL`, dan `GDRIVE_WEBHOOK_URL`.
+- **Midtrans dashboard (sandbox):** *Notification URL* =
+  `https://stockart-backend-production-5896718b.up.railway.app/api/payments/webhook`.
 
 ## Referensi Next.js
 
