@@ -3,7 +3,17 @@
 UI POS & inventaris **Toko Kelontong "Berkah"** — dibangun dengan **Next.js 16 (App Router)**, **React 19**, dan **Tailwind CSS 4**.  
 Seluruh data terhubung langsung ke backend `stockart-backend` (Express + MongoDB Atlas).
 
-- **Live Web Frontend (Vercel):** https://stockartweb.vercel.app
+- **Live Web Frontend (Vercel):** https://stockartweb.vercel.app — **akun demo untuk mencoba ada di bawah** 👇
+
+  > **🔑 Akun Demo (login di https://stockartweb.vercel.app/login)**
+  >
+  > | Role | Username | Password | Halaman setelah login |
+  > |:---:|:---:|:---:|:---|
+  > | **Owner / Pemilik** | `pemilik` | `gantidulu123` | `/owner/*` (produk, transaksi, laporan) |
+  > | **Kasir** | `kasir_amel` | `kasir12345` | `/kasir/*` (POS, katalog, riwayat) |
+  >
+  > Pilih peran yang sesuai di halaman login. Akun kasir hanya bisa aktif di **1 perangkat** sekaligus.
+
 - **Live Server Backend API (Railway):** https://stockart-backend-production-5896718b.up.railway.app
 - **Repositori GitHub Frontend:** https://github.com/afiqchoiruzan/stockart-frontend
 - **Repositori GitHub Backend:** https://github.com/AfiqMir/stockart-backend
