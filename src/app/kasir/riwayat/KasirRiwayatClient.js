@@ -2,13 +2,23 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
+import TransactionTable from "@/components/owner/TransactionTable";
 import {
   formatRupiah,
   formatTanggalSingkat,
+  getPaymentStatusBadge,
+  matchesTransactionStatusFilter,
   normalizeTransaction,
+  TRANSACTION_STATUS_OPTIONS,
 } from "@/lib/mockTransactions";
 import { apiGetTransactions } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+
+function getTodayWibDate() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jakarta",
+  }).format(new Date());
+}
 
 export default function KasirRiwayatClient() {
   const { user } = useAuth();
@@ -16,15 +26,16 @@ export default function KasirRiwayatClient() {
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedMethod, setSelectedMethod] = useState("ALL");
-  const [selectedDate, setSelectedDate] = useState("ALL");
+  const [selectedStatus, setSelectedStatus] = useState("semua");
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState("");
+  const todayWib = useMemo(() => getTodayWibDate(), []);
 
-  // Fetch transaksi milik kasir yang sedang login dari backend
+  // Fetch transaksi hari ini milik kasir yang sedang login dari backend
   const userId = user?._id;
   const loadTransactions = useCallback(() => {
     if (!userId) return Promise.resolve();
-    return apiGetTransactions({ kasir: userId })
+    return apiGetTransactions({ kasir: userId, tanggal: todayWib })
       .then((res) => {
         setErrorMsg("");
         const normalized = (res?.data || []).map(normalizeTransaction);
@@ -45,7 +56,7 @@ export default function KasirRiwayatClient() {
       .finally(() => {
         setLoading(false);
       });
-  }, [userId]);
+  }, [userId, todayWib]);
 
   useEffect(() => {
     loadTransactions();
@@ -56,44 +67,36 @@ export default function KasirRiwayatClient() {
     loadTransactions();
   };
 
-  // Daftar tanggal unik
-  const availableDates = useMemo(() => {
-    const dates = Array.from(
-      new Set(transactions.map((t) => t.tanggal).filter(Boolean))
-    );
-    return dates.sort((a, b) => b.localeCompare(a));
-  }, [transactions]);
-
-  // Filter transaksi
+  // Filter transaksi (hanya transaksi hari ini)
   const filteredTransactions = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return transactions.filter((t) => {
-      const matchDate = selectedDate === "ALL" || t.tanggal === selectedDate;
+      const matchDate = t.tanggal === todayWib;
       const metode = t.metodePembayaran || "Tunai";
       const matchMethod =
         selectedMethod === "ALL" ||
         metode.toLowerCase() === selectedMethod.toLowerCase();
+      const matchStatus = matchesTransactionStatusFilter(t, selectedStatus);
       const matchQ =
         q === "" ||
         t.noInvoice.toLowerCase().includes(q) ||
         t.detailBarang.some((it) =>
           it.namaProduk.toLowerCase().includes(q)
         );
-      return matchDate && matchMethod && matchQ;
+      return matchDate && matchMethod && matchStatus && matchQ;
     });
-  }, [transactions, searchQuery, selectedMethod, selectedDate]);
-
-  const totalNilai = useMemo(() => {
-    return filteredTransactions.reduce(
-      (sum, t) => sum + (t.status === "batal" ? 0 : Number(t.totalHarga || 0)),
-      0
-    );
-  }, [filteredTransactions]);
+  }, [transactions, searchQuery, selectedMethod, selectedStatus, todayWib]);
 
   const activeSelection =
     filteredTransactions.find((t) => t.id === selectedTransaction?.id) ||
     filteredTransactions[0] ||
     null;
+
+  const handleResetFilters = () => {
+    setSearchQuery("");
+    setSelectedMethod("ALL");
+    setSelectedStatus("semua");
+  };
 
   return (
     <div className="flex flex-col gap-4 max-w-7xl mx-auto">
@@ -113,9 +116,9 @@ export default function KasirRiwayatClient() {
         </div>
       )}
 
-      {/* Search & Date Filter Toolbar */}
-      <div className="flex flex-wrap items-center gap-2.5">
-        <div className="relative basis-full sm:basis-auto sm:flex-1 sm:min-w-[240px]">
+      {/* Search & Filter Toolbar */}
+      <div className="flex flex-wrap lg:flex-nowrap items-center gap-2">
+        <div className="relative basis-full sm:basis-auto sm:flex-1 min-w-[180px]">
           <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#6B7773] pointer-events-none">
             <svg
               className="w-4 h-4"
@@ -142,7 +145,7 @@ export default function KasirRiwayatClient() {
         <select
           value={selectedMethod}
           onChange={(e) => setSelectedMethod(e.target.value)}
-          className="flex-1 sm:flex-none min-w-0 max-w-full h-11 lg:h-9 px-3 border border-[#E1E4E0] rounded-lg text-[13px] font-medium text-[#1F2A27] bg-white focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15 cursor-pointer"
+          className="flex-1 sm:flex-none min-w-0 max-w-full h-11 lg:h-9 px-2.5 border border-[#E1E4E0] rounded-lg text-[13px] font-medium text-[#1F2A27] bg-white focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15 cursor-pointer lg:shrink-0"
         >
           <option value="ALL">Semua metode</option>
           <option value="Tunai">Tunai</option>
@@ -150,140 +153,39 @@ export default function KasirRiwayatClient() {
         </select>
 
         <select
-          value={selectedDate}
-          onChange={(e) => setSelectedDate(e.target.value)}
-          className="flex-1 sm:flex-none min-w-0 max-w-full h-11 lg:h-9 px-3 border border-[#E1E4E0] rounded-lg text-[13px] font-medium text-[#1F2A27] bg-white focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15 cursor-pointer"
+          aria-label="Filter status transaksi"
+          value={selectedStatus}
+          onChange={(e) => setSelectedStatus(e.target.value)}
+          className="flex-1 sm:flex-none min-w-0 max-w-full h-11 lg:h-9 px-2.5 border border-[#E1E4E0] rounded-lg text-[13px] font-medium text-[#1F2A27] bg-white focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15 cursor-pointer lg:shrink-0"
         >
-          <option value="ALL">Semua tanggal</option>
-          {availableDates.map((d) => (
-            <option key={d} value={d}>
-              {formatTanggalSingkat(d)}
+          {TRANSACTION_STATUS_OPTIONS.map((s) => (
+            <option key={s.value} value={s.value}>
+              {s.label}
             </option>
           ))}
         </select>
+
+        <span className="inline-flex items-center h-11 lg:h-9 px-3 rounded-lg border border-[#E1E4E0] bg-[#FAFBF9] text-[13px] font-medium text-[#6B7773] shrink-0">
+          Hari ini: {formatTanggalSingkat(todayWib)}
+        </span>
       </div>
 
       {/* Split Layout: Table + Receipt Panel */}
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_300px] xl:grid-cols-[minmax(0,1fr)_340px] gap-4 items-start">
-        {/* Left: Transaction Table */}
-        <div className="min-w-0 bg-white border border-[#E1E4E0] rounded-lg overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-[13px] border-collapse">
-              <thead>
-                <tr className="bg-[#FAFBF9] border-b border-[#E1E4E0]">
-                  <th className="text-left px-3 sm:px-3.5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.04em] text-[#6B7773]">
-                    Invoice
-                  </th>
-                  <th className="hidden sm:table-cell lg:hidden xl:table-cell text-left px-3.5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.04em] text-[#6B7773]">
-                    Waktu
-                  </th>
-                  <th className="text-left px-3 sm:px-3.5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.04em] text-[#6B7773]">
-                    Metode
-                  </th>
-                  <th className="text-right px-3 sm:px-3.5 py-2.5 text-[11px] font-semibold uppercase tracking-[0.04em] text-[#6B7773]">
-                    Total
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#EEF0EC]">
-                {loading && filteredTransactions.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={4}
-                      className="px-4 py-10 text-center text-[#6B7773]"
-                    >
-                      Memuat data transaksi…
-                    </td>
-                  </tr>
-                ) : filteredTransactions.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={4}
-                      className="px-4 py-10 text-center text-[#6B7773]"
-                    >
-                      Belum ada transaksi.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredTransactions.map((trx) => {
-                    const isSelected = activeSelection?.id === trx.id;
-                    const itemCount = trx.detailBarang.reduce(
-                      (s, i) => s + Number(i.jumlah || 0),
-                      0
-                    );
-                    const metode = trx.metodePembayaran || "Tunai";
-
-                    return (
-                      <tr
-                        key={trx.id}
-                        onClick={() => setSelectedTransaction(trx)}
-                        className={`cursor-pointer transition-colors ${
-                          isSelected
-                            ? "bg-[#E6F0ED]"
-                            : "hover:bg-[#FAFBF9]"
-                        }`}
-                      >
-                        <td
-                          className={`px-3 sm:px-3.5 py-2.5 ${
-                            isSelected
-                              ? "border-l-[3px] border-l-[#2F6F5E]"
-                              : ""
-                          }`}
-                        >
-                          <div className="font-mono font-semibold whitespace-nowrap text-[#1F2A27]">
-                            {trx.noInvoice}
-                          </div>
-                          <div className="text-[11px] text-[#6B7773]">
-                            {itemCount} item
-                            <span className="sm:hidden lg:inline xl:hidden">
-                              {" "}&middot; {formatTanggalSingkat(trx.tanggal)}, {trx.waktu}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="hidden sm:table-cell lg:hidden xl:table-cell px-3.5 py-2.5 font-mono whitespace-nowrap text-[#6B7773]">
-                          {formatTanggalSingkat(trx.tanggal)}, {trx.waktu}
-                        </td>
-                        <td className="px-3 sm:px-3.5 py-2.5">
-                          <span
-                            className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${
-                              metode === "QRIS"
-                                ? "bg-[#E8F0F6] text-[#4A7FA7]"
-                                : "bg-[#E6F2EC] text-[#3E8E6A]"
-                            }`}
-                          >
-                            {metode}
-                          </span>
-                        </td>
-                        <td className="px-3 sm:px-3.5 py-2.5 text-right font-mono font-semibold whitespace-nowrap text-[#1F2A27]">
-                          <span
-                            className={
-                              trx.status === "batal"
-                                ? "line-through text-[#6B7773]"
-                                : ""
-                            }
-                          >
-                            {formatRupiah(trx.totalHarga)}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
+        {/* Left: Transaction Table (disamakan dengan Owner, tanpa kolom Kasir) */}
+        {loading && transactions.length === 0 ? (
+          <div className="min-w-0 bg-white border border-[#E1E4E0] rounded-lg px-4 py-10 text-center text-[13px] text-[#6B7773]">
+            Memuat data transaksi…
           </div>
-
-          {/* Table Summary Footer */}
-          <div className="px-3 sm:px-3.5 py-2.5 border-t border-[#E1E4E0] bg-[#FAFBF9] flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs text-[#6B7773]">
-            <span>{filteredTransactions.length} transaksi</span>
-            <span className="font-mono">
-              Total:{" "}
-              <strong className="text-[#1F2A27]">
-                {formatRupiah(totalNilai)}
-              </strong>
-            </span>
-          </div>
-        </div>
+        ) : (
+          <TransactionTable
+            transactions={filteredTransactions}
+            selectedTransactionId={activeSelection?.id}
+            onSelectTransaction={setSelectedTransaction}
+            showKasirColumn={false}
+            onResetFilter={handleResetFilters}
+          />
+        )}
 
         {/* Right: Receipt Detail Panel */}
         <div
@@ -294,9 +196,16 @@ export default function KasirRiwayatClient() {
             <>
               <div className="px-4 py-3 border-b border-[#E1E4E0] flex items-center justify-between print:hidden">
                 <h3 className="text-sm font-semibold text-[#1F2A27]">Struk</h3>
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#E6F2EC] text-[#3E8E6A]">
-                  Lunas
-                </span>
+                {(() => {
+                  const badge = getPaymentStatusBadge(activeSelection);
+                  return (
+                    <span
+                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${badge.className}`}
+                    >
+                      {badge.label}
+                    </span>
+                  );
+                })()}
               </div>
 
               <div className="p-4 text-xs">

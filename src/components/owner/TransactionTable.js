@@ -3,7 +3,9 @@
 import {
   formatRupiah,
   formatTanggalSingkat,
+  getPaymentStatusBadge,
   getTotalItemCount,
+  isTransactionPaid,
 } from "@/lib/mockTransactions";
 
 export default function TransactionTable({
@@ -49,7 +51,7 @@ export default function TransactionTable({
   }
 
   const totalSum = transactions.reduce(
-    (sum, t) => sum + Number(t.totalHarga || 0),
+    (sum, t) => sum + (isTransactionPaid(t) ? Number(t.totalHarga || 0) : 0),
     0
   );
 
@@ -67,7 +69,7 @@ export default function TransactionTable({
               <th className="py-2.5 px-3.5 hidden 2xl:table-cell">
                 Ringkasan Barang
               </th>
-              <th className="py-2.5 px-3.5 hidden sm:table-cell whitespace-nowrap">
+              <th className="py-2.5 px-2.5 sm:px-3.5 whitespace-nowrap">
                 Metode
               </th>
               <th className="py-2.5 px-3 sm:px-3.5 text-right whitespace-nowrap">
@@ -82,20 +84,20 @@ export default function TransactionTable({
               const firstItem = trx.detailBarang?.[0]?.namaProduk || "-";
               const extraCount = (trx.detailBarang?.length || 0) - 1;
               const metode = trx.metodePembayaran || "Tunai";
+              const isPaid = isTransactionPaid(trx);
+              const statusBadge = getPaymentStatusBadge(trx);
 
               return (
                 <tr
                   key={trx.id}
                   onClick={() => onSelectTransaction(trx)}
-                  className={`cursor-pointer transition-colors ${
-                    isSelected ? "bg-[#E6F0ED]" : "hover:bg-[#FAFBF9]"
-                  }`}
+                  className={`cursor-pointer transition-colors ${isSelected ? "bg-[#E6F0ED]" : "hover:bg-[#FAFBF9]"
+                    }`}
                 >
                   {/* Invoice */}
                   <td
-                    className={`py-2.5 px-3 sm:px-3.5 font-mono font-semibold whitespace-nowrap text-[#1F2A27] ${
-                      isSelected ? "border-l-[3px] border-l-[#2F6F5E]" : ""
-                    }`}
+                    className={`py-2.5 px-3 sm:px-3.5 font-mono font-semibold whitespace-nowrap text-[#1F2A27] ${isSelected ? "border-l-[3px] border-l-[#2F6F5E]" : ""
+                      }`}
                   >
                     {trx.noInvoice.replace(/^#/, "")}
                     {/* Waktu ditampilkan di bawah invoice pada layar kecil */}
@@ -141,13 +143,12 @@ export default function TransactionTable({
                   </td>
 
                   {/* Metode */}
-                  <td className="py-2.5 px-3.5 hidden sm:table-cell whitespace-nowrap">
+                  <td className="py-2.5 px-2.5 sm:px-3.5 whitespace-nowrap">
                     <span
-                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${
-                        metode === "QRIS"
+                      className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${metode === "QRIS"
                           ? "bg-[#E8F0F6] text-[#4A7FA7]"
                           : "bg-[#E6F2EC] text-[#3E8E6A]"
-                      }`}
+                        }`}
                     >
                       {metode}
                     </span>
@@ -155,7 +156,14 @@ export default function TransactionTable({
 
                   {/* Total */}
                   <td className="py-2.5 px-3 sm:px-3.5 text-right font-mono font-semibold whitespace-nowrap text-[#1F2A27]">
-                    {formatRupiah(trx.totalHarga)}
+                    <span className={!isPaid ? "line-through text-[#6B7773]" : ""}>
+                      {formatRupiah(trx.totalHarga)}
+                    </span>
+                    {!isPaid && (
+                      <div className="font-sans text-[10px] font-semibold text-[#C4574F]">
+                        {statusBadge.label}
+                      </div>
+                    )}
                   </td>
                 </tr>
               );
