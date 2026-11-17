@@ -887,6 +887,16 @@ export async function apiCreateCashier({ nama, username, password }) {
 }
 
 /**
+ * Memperbarui data, password, atau status aktif kasir (PATCH /api/auth/cashiers/:id) — khusus pemilik.
+ */
+export async function apiUpdateCashier(id, payload) {
+  return apiFetch(`/api/auth/cashiers/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
  * Menghapus akun kasir berdasarkan ID (DELETE /api/auth/cashiers/:id) — khusus pemilik.
  */
 export async function apiDeleteCashier(id) {

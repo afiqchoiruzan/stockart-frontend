@@ -36,6 +36,7 @@ export default function OwnerTransaksiPage() {
             id: String(u._id),
             nama: u.nama || "Kasir",
             username: u.username || "",
+            aktif: u.aktif !== false,
           }))
         : [];
       setCashiersFromApi(list);
@@ -78,6 +79,7 @@ export default function OwnerTransaksiPage() {
               id: String(u._id),
               nama: u.nama || "Kasir",
               username: u.username || "",
+              aktif: u.aktif !== false,
             }))
           );
         }
@@ -97,10 +99,14 @@ export default function OwnerTransaksiPage() {
     };
   }, []);
 
-  const activeCashiers = useMemo(() => {
+  const allCashiers = useMemo(() => {
     if (Array.isArray(cashiersFromApi)) return cashiersFromApi;
     return buildCashierRoster(transactions, true);
   }, [cashiersFromApi, transactions]);
+
+  const activeCashiers = useMemo(() => {
+    return allCashiers.filter((c) => c.aktif !== false);
+  }, [allCashiers]);
 
   const filteredTransactions = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -199,7 +205,7 @@ export default function OwnerTransaksiPage() {
       <CashierManageModal
         open={isManageCashiersOpen}
         onClose={() => setIsManageCashiersOpen(false)}
-        cashiers={activeCashiers}
+        cashiers={allCashiers}
         onRefreshCashiers={loadCashiersFromBackend}
       />
 
