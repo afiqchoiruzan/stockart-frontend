@@ -9,21 +9,29 @@ Seluruh data terhubung langsung ke backend `stockart-backend` (Express + MongoDB
 - **Repositori GitHub Backend:** https://github.com/AfiqMir/stockart-backend
 - **Documenter Postman:** https://documenter.getpostman.com/view/42234832/2sBYB4M79y
 - **Laporan PDF (Google Drive):** https://drive.google.com/drive/folders/1q-CFouyNM72jy04lbFyb3o5WhMakrGxF?usp=sharing
+- **Video Presentasi (Google Drive):** https://drive.google.com/drive/folders/1Ath5WSGdlr-lRYSO6i36MprdxjWcDUcn?usp=sharing
 
 ## Tim Pengembang & Pembagian Tugas Frontend
 
 | No | Nama Anggota | NIM | Modul / Pembagian Tugas Frontend |
 |:--:|:---|:---:|:---|
-| 1 | **Muhammad Afiq Mirza Choiruzan** | 24/537942/TK/59646 | **Modul `owner/transaksi` & Integrasi Auth**<br>• Halaman monitoring transaksi Owner (`/owner/transaksi`)<br>• Kartu ringkasan performa per kasir (`CashierSummaryCards`), filter kasir, metode bayar, status, & tanggal (`TransactionToolbar`)<br>• Panel detail struk & cetak (`TransactionDetailPanel`)|
-| 2 | **Bagas Adjie Pamungkas** | 24/544718/TK/60547 | **Modul `owner/produk`**<br>• Halaman manajemen produk & inventaris Owner (`/owner/produk`)<br>• Form tambah/ubah produk, quick restock, soft delete/restore, & input barcode (`ProductFormDrawer`)<br>• Daftar kartu & filter produk (`ProductCard`, `ProductToolbar`)<br>• Indikator stok menipis & modal pengaturan jadwal alert (`LowStockDropdown`, `LowStockAlertSettingsModal`) |
+| 1 | **Muhammad Afiq Mirza Choiruzan** | 24/537942/TK/59646 | **Modul `owner/transaksi` & Integrasi Auth**<br>• Halaman monitoring transaksi Owner (`/owner/transaksi`)<br>• Kartu ringkasan performa per kasir (`CashierSummaryCards`), filter kasir, metode bayar, status, & tanggal (`TransactionToolbar`)<br>• Modal Kelola Akun Kasir (`CashierManageModal`: tambah, edit username/password, nonaktifkan/aktifkan, & hapus)<br>• Panel detail struk & cetak (`TransactionDetailPanel`) |
+| 2 | **Bagas Adjie Pamungkas** | 24/544718/TK/60547 | **Modul `owner/produk`**<br>• Halaman manajemen produk & inventaris Owner (`/owner/produk`)<br>• Form tambah/ubah produk, quick restock, soft delete/restore, & input barcode (`ProductFormDrawer`)<br>• Daftar kartu & filter produk (`ProductCard`, `ProductToolbar`)<br>• Indikator stok menipis, modal jadwal alert, & input multi-penerima email (`LowStockDropdown`, `LowStockAlertSettingsModal`, `RecipientEmailRow`) |
 | 3 | **Amelia Ocha Maharani** | 24/534372/TK/59229 | **Modul `kasir`**<br>• Halaman POS Kasir (`/kasir/transaksi`), keranjang belanja, pembayaran Tunai & QRIS (`QrisPaymentModal`), serta scan barcode (`BarcodeScanner`)<br>• Halaman katalog produk kasir (`/kasir/produk`) & cetak struk (`/kasir/transaksi/invoice/[id]`)<br>• Halaman riwayat transaksi kasir hari ini (`/kasir/riwayat`) dengan filter metode & status pembayaran |
 | 4 | **Muhammad Izzuddin Prakoso** | 24/537712/TK/59618 | **Modul `owner/laporan`**<br>• Halaman laporan penjualan Owner (`/owner/laporan`)<br>• Filter periode tanggal & kartu ringkasan KPI (`ReportToolbar`, `ReportSummaryCards`)<br>• Grafik tren omzet & produk terlaris (`RevenueChart`, `TopProductsPanel`)<br>• Ekspor PDF & pengiriman laporan PDF ke email / jadwal otomatis (`SendReportDropdown`, `ReportAutoSendPanel`) |
 
 ## Ringkasan Fitur & Hak Akses
 
 - **Login Terpadu (`/login`):** Memilih peran **Owner** atau **Kasir** dengan validasi kecocokan role dari backend, JWT berlaku **8 jam** dengan auto-logout timer, serta pembatasan **1 perangkat aktif** untuk akun kasir.
-- **Panel Owner (`/owner/*`):** Manajemen produk & restock, monitoring transaksi seluruh kasir (filter kasir, metode `Tunai`/`QRIS`, status `Lunas`/`Menunggu`/`Kedaluwarsa`/`Gagal`/`Dibatalkan`, & tanggal), laporan penjualan + grafik + ekspor CSV/email PDF, serta pengaturan jadwal notifikasi stok menipis.
+- **Panel Owner (`/owner/*`):** Manajemen produk & restock, **Kelola Akun Kasir** (tambah, edit username/reset password, *soft-deactivate* agar riwayat lama tetap terjaga, & hapus), monitoring transaksi seluruh kasir (filter kasir, metode `Tunai`/`QRIS`, status `Lunas`/`Menunggu`/`Kedaluwarsa`/`Gagal`/`Dibatalkan`, & tanggal), laporan penjualan + grafik + unduh/kirim PDF ke banyak penerima email, serta pengaturan jadwal notifikasi stok menipis.
 - **Panel Kasir (`/kasir/*`):** Transaksi POS cepat (search/scan barcode, Tunai & QRIS), cetak struk, katalog produk aktif (tanpa `hargaBeli`), serta riwayat transaksi kasir yang terkunci hanya untuk **hari ini (WIB)**.
+
+## Poin Nilai Tambah
+
+- **Penyimpanan Berkas di Google Drive:** Laporan penjualan PDF dapat diarsipkan ke Google Drive melalui webhook backend (`GDRIVE_WEBHOOK_URL`).
+- **Pengiriman Email Otomatis:** Notifikasi stok menipis (*digest* terjadwal WIB & *critical alert* stok = 0) dan pengiriman laporan penjualan PDF otomatis ke beberapa email penerima (`RecipientEmailRow`) melalui Brevo HTTP API.
+- **Payment Gateway:** Pembayaran **QRIS Dinamis** terintegrasi **Midtrans Core API (Sandbox)** (`QrisPaymentModal.js`) lengkap dengan QR Code SVG, hitung mundur 15 menit, polling status, dan verifikasi webhook.
+- **Deployment Selain Vercel:** Frontend di-deploy di **Vercel** (`https://stockartweb.vercel.app`), sedangkan backend Express + *scheduler* di-deploy di **Railway Cloud** (`https://stockart-backend-production-5896718b.up.railway.app`) dengan **MongoDB Atlas (Replica Set)**.
 
 ## Menjalankan
 
