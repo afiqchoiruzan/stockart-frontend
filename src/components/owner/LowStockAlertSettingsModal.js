@@ -5,6 +5,7 @@ import {
   apiGetLowStockAlertSettings,
   apiUpdateLowStockAlertSettings,
 } from "@/lib/api";
+import RecipientEmailRow from "@/components/owner/RecipientEmailRow";
 
 const FREQUENCY_OPTIONS = [
   { value: "off", label: "Mati", desc: "Hanya manual & kritis" },
@@ -377,9 +378,21 @@ function ModalContent({
                   />
                 </label>
 
-                {/* Info Jadwal & Status Terakhir */}
+                {/* Info Jadwal, Penerima & Status Terakhir */}
                 {serverData && (
                   <div className="p-3.5 border border-[#E1E4E0] rounded-md bg-white flex flex-col gap-2 text-xs">
+                    <RecipientEmailRow
+                      label="Email Tujuan"
+                      maskedRecipient={serverData.maskedRecipient}
+                      isCustomRecipient={Boolean(serverData.isCustomRecipient)}
+                      disabled={isSaving || isNotifying}
+                      onSave={async (nextEmail) => {
+                        const updated = await apiUpdateLowStockAlertSettings({
+                          recipientEmail: nextEmail,
+                        });
+                        setServerData(updated);
+                      }}
+                    />
                     <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5">
                       <span className="text-[#6B7773]">Jadwal Berikutnya:</span>
                       <span className="font-semibold text-[#1F2A27] text-right">
@@ -422,7 +435,7 @@ function ModalContent({
             )}
           </div>
 
-          {/* Footer */}
+          {/* Footer (UI lama: Kirim Rekap Sekarang di kiri sejajar dengan Batal & Simpan Jadwal) */}
           <div className="px-4 sm:px-5 py-3.5 border-t border-[#E1E4E0] bg-[#F5F6F4] flex flex-col-reverse sm:flex-row sm:flex-wrap sm:items-center justify-between gap-2 shrink-0">
             {typeof onNotifyNow === "function" ? (
               <button

@@ -236,6 +236,7 @@ export default function OwnerLaporanPage() {
   const [isSending, setIsSending] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
+  const [defaultRecipient, setDefaultRecipient] = useState("");
 
   const range = useMemo(
     () => getPeriodRange(period, todayKey, customRange),
@@ -405,6 +406,7 @@ export default function OwnerLaporanPage() {
             onSend={handleSendReport}
             isSending={isSending}
             disabled={isLoading || Boolean(apiError)}
+            defaultRecipient={defaultRecipient}
           />
         }
       />
@@ -429,7 +431,12 @@ export default function OwnerLaporanPage() {
           >
             <div className="flex flex-col gap-4 min-w-0">
               <RevenueChart title={CHART_TITLES[chartMode]} points={chartPoints} />
-              <ReportAutoSendPanel onSaved={showFlashMessage} />
+              <ReportAutoSendPanel
+                onSaved={showFlashMessage}
+                onSettingsLoaded={(data) =>
+                  setDefaultRecipient(data?.maskedRecipient || "")
+                }
+              />
             </div>
 
             <TopProductsPanel products={topProducts} />

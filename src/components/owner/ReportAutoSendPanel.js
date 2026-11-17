@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useEffectEvent } from "react";
 import {
   apiGetReportAutoSendSettings,
   apiUpdateReportAutoSendSettings,
 } from "@/lib/api";
+import RecipientEmailRow from "@/components/owner/RecipientEmailRow";
 
 const FREQUENCY_OPTIONS = [
   { value: "daily", label: "Harian", desc: "Laporan kemarin" },
@@ -76,7 +77,7 @@ function InlineSwitch({ id, label, checked, onChange, disabled = false, title })
   );
 }
 
-export default function ReportAutoSendPanel({ onSaved }) {
+export default function ReportAutoSendPanel({ onSaved, onSettingsLoaded }) {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [loadError, setLoadError] = useState("");
@@ -104,12 +105,17 @@ export default function ReportAutoSendPanel({ onSaved }) {
     setSaveToDrive(data.saveToDrive !== false);
   };
 
+  const notifySettingsLoaded = useEffectEvent((data) => {
+    onSettingsLoaded?.(data);
+  });
+
   useEffect(() => {
     let cancelled = false;
     apiGetReportAutoSendSettings()
       .then((data) => {
         if (cancelled || !data) return;
         applyServerData(data);
+        notifySettingsLoaded(data);
       })
       .catch((err) => {
         if (cancelled) return;
@@ -196,6 +202,22 @@ export default function ReportAutoSendPanel({ onSaved }) {
           </span>
         )}
       </div>
+
+      {serverData && (
+        <RecipientEmailRow
+          label="Email Tujuan"
+          maskedRecipient={serverData.maskedRecipient}
+          isCustomRecipient={Boolean(serverData.isCustomRecipient)}
+          disabled={isSaving}
+          onSave={async (nextEmail) => {
+            const updated = await apiUpdateReportAutoSendSettings({
+              recipientEmail: nextEmail,
+            });
+            applyServerData(updated);
+            onSettingsLoaded?.(updated);
+          }}
+        />
+      )}
 
       {isLoading ? (
         <p className="text-xs text-[#6B7773]">Memuat pengaturan jadwal…</p>
