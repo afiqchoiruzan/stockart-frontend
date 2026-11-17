@@ -5,6 +5,7 @@ import {
   formatRupiah,
   formatTanggalSingkat,
   getTotalItemCount,
+  isTransactionPaid,
 } from "@/lib/mockTransactions";
 
 export default function CashierSummaryCards({
@@ -45,7 +46,8 @@ export default function CashierSummaryCards({
           const kasirTrx = transactions.filter(
             (t) =>
               t.kasirId === kasir.id &&
-              (!selectedDate || t.tanggal === selectedDate)
+              (!selectedDate || t.tanggal === selectedDate) &&
+              isTransactionPaid(t)
           );
           const totalOmzet = kasirTrx.reduce(
             (sum, t) => sum + Number(t.totalHarga || 0),

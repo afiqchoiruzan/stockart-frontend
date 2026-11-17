@@ -93,6 +93,56 @@ function firstName(nama = "") {
  * Backend: { _id, kasir: {_id, nama, username}, detailBarang: [...], totalHarga, status,
  *            createdAt, dibatalkanPada, dibatalkanOleh }
  */
+function formatPaymentMethod(rawMethod, fallback = "Tunai") {
+  if (!rawMethod) return fallback;
+  const lower = String(rawMethod).trim().toLowerCase();
+  if (lower === "qris") return "QRIS";
+  if (lower === "cash" || lower === "tunai" || rawMethod === "Tunai / POS") {
+    return "Tunai";
+  }
+  return rawMethod;
+}
+
+export function isTransactionPaid(t = {}) {
+  return (
+    t.status !== "batal" &&
+    (!t.paymentStatus || t.paymentStatus === "paid")
+  );
+}
+
+export const TRANSACTION_STATUS_OPTIONS = [
+  { value: "semua", label: "Semua status" },
+  { value: "paid", label: "Lunas" },
+  { value: "pending", label: "Menunggu" },
+  { value: "expired", label: "Kedaluwarsa" },
+  { value: "failed", label: "Gagal" },
+  { value: "batal", label: "Dibatalkan" },
+];
+
+export function matchesTransactionStatusFilter(t = {}, filterValue = "semua") {
+  if (!filterValue || filterValue === "semua") return true;
+  if (filterValue === "batal") return t.status === "batal";
+  if (t.status === "batal") return false;
+  const payStatus = t.paymentStatus || "paid";
+  return payStatus === filterValue;
+}
+
+export function getPaymentStatusBadge(t = {}) {
+  if (t.status === "batal") {
+    return { label: "Dibatalkan", className: "bg-[#F8E8E6] text-[#C4574F]" };
+  }
+  if (t.paymentStatus === "expired") {
+    return { label: "Kedaluwarsa", className: "bg-[#F8E8E6] text-[#C4574F]" };
+  }
+  if (t.paymentStatus === "failed") {
+    return { label: "Gagal", className: "bg-[#F8E8E6] text-[#C4574F]" };
+  }
+  if (t.paymentStatus === "pending") {
+    return { label: "Menunggu", className: "bg-[#FEF3C7] text-[#B45309]" };
+  }
+  return { label: "Lunas", className: "bg-[#E6F2EC] text-[#3E8E6A]" };
+}
+
 export function normalizeTransaction(t = {}) {
   const id = t._id || t.id;
   const createdAt = t.createdAt ? new Date(t.createdAt) : new Date();
@@ -100,6 +150,11 @@ export function normalizeTransaction(t = {}) {
   const kasirId = kasirObj?._id || (typeof t.kasir === "string" ? t.kasir : "");
   const namaKasir = kasirObj?.nama || "Kasir";
   const payment = readPayments()[id] || {};
+  const metodePembayaran = formatPaymentMethod(
+    t.paymentMethod || t.metodePembayaran || payment.metodePembayaran,
+    "Tunai"
+  );
+  const paymentStatus = t.paymentStatus || "paid";
 
   const dibatalkanPada = t.dibatalkanPada
     ? `${formatTanggalSingkat(toDateKey(new Date(t.dibatalkanPada)))}, ${toTimeLabel(
@@ -117,7 +172,9 @@ export function normalizeTransaction(t = {}) {
     tanggal: toDateKey(createdAt),
     waktu: toTimeLabel(createdAt),
     createdAt: createdAt.toISOString(),
-    metodePembayaran: payment.metodePembayaran || "Tunai",
+    metodePembayaran,
+    paymentMethod: t.paymentMethod || (metodePembayaran === "QRIS" ? "qris" : "cash"),
+    paymentStatus,
     status: t.status || "selesai",
     totalHarga: Number(t.totalHarga || 0),
     uangBayar: payment.uangBayar ?? null,

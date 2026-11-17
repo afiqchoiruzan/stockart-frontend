@@ -3,6 +3,7 @@
 import {
   formatRupiah,
   formatTanggalSingkat,
+  getPaymentStatusBadge,
 } from "@/lib/mockTransactions";
 
 export default function TransactionDetailPanel({
@@ -28,6 +29,7 @@ export default function TransactionDetailPanel({
 
   const displayInvoice = transaction.noInvoice.replace(/^#/, "");
   const metode = transaction.metodePembayaran || "Tunai";
+  const statusBadge = getPaymentStatusBadge(transaction);
   const dibayar =
     transaction.uangBayar !== null && transaction.uangBayar !== undefined
       ? transaction.uangBayar
@@ -46,8 +48,10 @@ export default function TransactionDetailPanel({
       {/* Header Panel (Disembunyikan saat cetak) */}
       <div className="px-4 py-3 border-b border-[#E1E4E0] flex items-center justify-between gap-2 print:hidden">
         <h2 className="text-sm font-semibold text-[#1F2A27]">Struk</h2>
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#E6F2EC] text-[#3E8E6A]">
-          Lunas
+        <span
+          className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${statusBadge.className}`}
+        >
+          {statusBadge.label}
         </span>
       </div>
 

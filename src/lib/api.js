@@ -188,9 +188,20 @@ export function normalizeBackendTransaction(raw) {
       ? Number(savedPayment.kembalian)
       : Math.max(0, uangBayar - totalHarga);
   const rawMetode =
-    raw.metodePembayaran || savedPayment.metodePembayaran || "Tunai";
+    raw.paymentMethod ||
+    raw.metodePembayaran ||
+    savedPayment.metodePembayaran ||
+    "Tunai";
+  const normalizedMetode = String(rawMetode).trim().toLowerCase();
   const metodePembayaran =
-    rawMetode === "Tunai / POS" ? "Tunai" : rawMetode;
+    normalizedMetode === "qris"
+      ? "QRIS"
+      : normalizedMetode === "cash" ||
+        normalizedMetode === "tunai" ||
+        rawMetode === "Tunai / POS"
+      ? "Tunai"
+      : rawMetode;
+  const paymentStatus = raw.paymentStatus || "paid";
 
   const detailBarang = Array.isArray(raw.detailBarang)
     ? raw.detailBarang.map((item, idx) => {
@@ -226,6 +237,8 @@ export function normalizeBackendTransaction(raw) {
     tanggal: raw.tanggal || tanggal,
     waktu: raw.waktu || waktu,
     metodePembayaran,
+    paymentMethod: raw.paymentMethod || (metodePembayaran === "QRIS" ? "qris" : "cash"),
+    paymentStatus,
     status: raw.status || "selesai",
     stokDipotong: Boolean(raw.stokDipotong),
     totalHarga,

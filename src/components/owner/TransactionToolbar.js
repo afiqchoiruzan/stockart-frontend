@@ -1,6 +1,9 @@
 "use client";
 
-import { CASHIERS } from "@/lib/mockTransactions";
+import {
+  CASHIERS,
+  TRANSACTION_STATUS_OPTIONS,
+} from "@/lib/mockTransactions";
 
 const PAYMENT_METHODS = [
   { value: "semua", label: "Semua metode" },
@@ -17,6 +20,8 @@ export default function TransactionToolbar({
   showKasirFilter = true,
   selectedMethod = "semua",
   onMethodChange,
+  selectedStatus = "semua",
+  onStatusChange,
   selectedDate = "",
   onDateChange,
 }) {
@@ -24,19 +29,21 @@ export default function TransactionToolbar({
     searchQuery.trim() !== "" ||
     (showKasirFilter && selectedKasirId !== "semua") ||
     selectedMethod !== "semua" ||
+    selectedStatus !== "semua" ||
     selectedDate !== "";
 
   const handleResetAll = () => {
     onSearchChange("");
     if (showKasirFilter && onKasirChange) onKasirChange("semua");
     if (onMethodChange) onMethodChange("semua");
+    if (onStatusChange) onStatusChange("semua");
     onDateChange("");
   };
 
   return (
-    <div className="w-full flex flex-wrap items-center gap-2.5">
+    <div className="w-full flex flex-wrap lg:flex-nowrap items-center gap-2">
       {/* Search Input Bar */}
-      <div className="relative basis-full sm:basis-auto sm:flex-1 sm:min-w-[240px]">
+      <div className="relative basis-full sm:basis-auto sm:flex-1 min-w-[160px]">
         <label htmlFor="transaction-search" className="sr-only">
           Cari no. invoice, nama barang, atau kasir
         </label>
@@ -77,7 +84,7 @@ export default function TransactionToolbar({
 
       {/* Dropdown Pilih Kasir */}
       {showKasirFilter && (
-        <div className="flex-1 basis-[40%] min-w-0 sm:basis-auto sm:flex-none">
+        <div className="flex-1 basis-[40%] min-w-0 sm:basis-auto sm:flex-none lg:shrink-0">
           <label htmlFor="filter-kasir" className="sr-only">
             Filter kasir
           </label>
@@ -85,7 +92,7 @@ export default function TransactionToolbar({
             id="filter-kasir"
             value={selectedKasirId}
             onChange={(e) => onKasirChange && onKasirChange(e.target.value)}
-            className="w-full sm:w-auto max-w-full min-h-11 lg:min-h-[40px] px-3.5 bg-white border border-[#E1E4E0] rounded-lg text-[13px] font-medium text-[#1F2A27] focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15 cursor-pointer"
+            className="w-full sm:w-auto max-w-full min-h-11 lg:min-h-[40px] px-2.5 bg-white border border-[#E1E4E0] rounded-lg text-[13px] font-medium text-[#1F2A27] focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15 cursor-pointer"
           >
             <option value="semua">Semua kasir</option>
             {cashiers.map((k) => (
@@ -99,7 +106,7 @@ export default function TransactionToolbar({
 
       {/* Dropdown Metode Pembayaran */}
       {typeof onMethodChange === "function" && (
-        <div className="flex-1 basis-[40%] min-w-0 sm:basis-auto sm:flex-none">
+        <div className="flex-1 basis-[40%] min-w-0 sm:basis-auto sm:flex-none lg:shrink-0">
           <label htmlFor="filter-metode" className="sr-only">
             Filter metode pembayaran
           </label>
@@ -107,7 +114,7 @@ export default function TransactionToolbar({
             id="filter-metode"
             value={selectedMethod}
             onChange={(e) => onMethodChange(e.target.value)}
-            className="w-full sm:w-auto max-w-full min-h-11 lg:min-h-[40px] px-3.5 bg-white border border-[#E1E4E0] rounded-lg text-[13px] font-medium text-[#1F2A27] focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15 cursor-pointer"
+            className="w-full sm:w-auto max-w-full min-h-11 lg:min-h-[40px] px-2.5 bg-white border border-[#E1E4E0] rounded-lg text-[13px] font-medium text-[#1F2A27] focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15 cursor-pointer"
           >
             {PAYMENT_METHODS.map((m) => (
               <option key={m.value} value={m.value}>
@@ -118,8 +125,29 @@ export default function TransactionToolbar({
         </div>
       )}
 
+      {/* Dropdown Status Transaksi */}
+      {typeof onStatusChange === "function" && (
+        <div className="flex-1 basis-[40%] min-w-0 sm:basis-auto sm:flex-none lg:shrink-0">
+          <label htmlFor="filter-status" className="sr-only">
+            Filter status transaksi
+          </label>
+          <select
+            id="filter-status"
+            value={selectedStatus}
+            onChange={(e) => onStatusChange(e.target.value)}
+            className="w-full sm:w-auto max-w-full min-h-11 lg:min-h-[40px] px-2.5 bg-white border border-[#E1E4E0] rounded-lg text-[13px] font-medium text-[#1F2A27] focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15 cursor-pointer"
+          >
+            {TRANSACTION_STATUS_OPTIONS.map((s) => (
+              <option key={s.value} value={s.value}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
       {/* Filter Tanggal */}
-      <div className="basis-full sm:basis-auto">
+      <div className="basis-full sm:basis-auto lg:shrink-0">
         <label htmlFor="filter-tanggal" className="sr-only">
           Filter tanggal transaksi
         </label>
@@ -128,7 +156,7 @@ export default function TransactionToolbar({
           type="date"
           value={selectedDate}
           onChange={(e) => onDateChange(e.target.value)}
-          className="w-full sm:w-auto min-h-11 lg:min-h-[40px] px-3.5 bg-white border border-[#E1E4E0] rounded-lg text-[13px] text-[#1F2A27] focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15"
+          className="w-full sm:w-auto min-h-11 lg:min-h-[40px] px-2.5 bg-white border border-[#E1E4E0] rounded-lg text-[13px] text-[#1F2A27] focus:outline-none focus:border-[#2F6F5E] focus:ring-3 focus:ring-[#2F6F5E]/15"
         />
       </div>
     </div>

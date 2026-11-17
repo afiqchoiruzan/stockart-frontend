@@ -10,6 +10,7 @@ import CashierSummaryCards from "@/components/owner/CashierSummaryCards";
 import TransactionToolbar from "@/components/owner/TransactionToolbar";
 import TransactionTable from "@/components/owner/TransactionTable";
 import TransactionDetailPanel from "@/components/owner/TransactionDetailPanel";
+import { matchesTransactionStatusFilter } from "@/lib/mockTransactions";
 
 export default function OwnerTransaksiPage() {
   const [transactions, setTransactions] = useState([]);
@@ -19,6 +20,7 @@ export default function OwnerTransaksiPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedKasirId, setSelectedKasirId] = useState("semua");
   const [selectedMethod, setSelectedMethod] = useState("semua");
+  const [selectedStatus, setSelectedStatus] = useState("semua");
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTrxId, setSelectedTrxId] = useState(null);
 
@@ -76,6 +78,7 @@ export default function OwnerTransaksiPage() {
       const matchMethod =
         selectedMethod === "semua" ||
         metode.toLowerCase() === selectedMethod.toLowerCase();
+      const matchStatus = matchesTransactionStatusFilter(trx, selectedStatus);
       const matchDate = !selectedDate || trx.tanggal === selectedDate;
       const matchQuery =
         q === "" ||
@@ -87,9 +90,9 @@ export default function OwnerTransaksiPage() {
             item.namaProduk.toLowerCase().includes(q) ||
             item.kodeProduk.toLowerCase().includes(q)
         );
-      return matchKasir && matchMethod && matchDate && matchQuery;
+      return matchKasir && matchMethod && matchStatus && matchDate && matchQuery;
     });
-  }, [transactions, searchQuery, selectedKasirId, selectedMethod, selectedDate]);
+  }, [transactions, searchQuery, selectedKasirId, selectedMethod, selectedStatus, selectedDate]);
 
   const activeTransaction = useMemo(() => {
     if (filteredTransactions.length === 0) return null;
@@ -125,6 +128,7 @@ export default function OwnerTransaksiPage() {
     setSearchQuery("");
     setSelectedKasirId("semua");
     setSelectedMethod("semua");
+    setSelectedStatus("semua");
     setSelectedDate("");
   };
 
@@ -165,6 +169,8 @@ export default function OwnerTransaksiPage() {
         showKasirFilter={true}
         selectedMethod={selectedMethod}
         onMethodChange={setSelectedMethod}
+        selectedStatus={selectedStatus}
+        onStatusChange={setSelectedStatus}
         selectedDate={selectedDate}
         onDateChange={setSelectedDate}
         totalResults={filteredTransactions.length}
